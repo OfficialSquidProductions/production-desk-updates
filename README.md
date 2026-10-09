@@ -5,9 +5,5 @@ I wanted a offline, self hosted solution for doing script breakdowns and creatin
 # Mac update
 [Download Production Desk 1.4.3 for Mac](https://productiondesk.squidproductions.org/).
 
-Production settings now includes **Delete production…**, with confirmation and Undo support. The sidebar reads “Made for your productions.” The download website uses the app’s dark background and simplified copy.
-
-Only the newest Mac version is kept in this repository and update feed. Existing installations can use **Production Desk → Check for Updates…** to install it.
-
 # iPhone and iPad
 The offline iOS app source is in [`ios/`](ios/README.md). Open `ios/ProductionDesk.xcodeproj` in Xcode and run the `ProductionDesk` scheme on an iOS 17 or later simulator. See the [setup guide](ios/README.md), [iOS installer](ios/INSTALL.md) and [verification notes](ios/VERIFICATION.md) for build commands, file interchange and device signing requirements.
