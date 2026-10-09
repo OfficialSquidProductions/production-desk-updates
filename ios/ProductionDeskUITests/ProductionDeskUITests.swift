@@ -12,8 +12,21 @@ final class ProductionDeskUITests: XCTestCase {
         let paste = web.textViews.firstMatch
         XCTAssertTrue(paste.waitForExistence(timeout:5)); paste.tap()
         paste.typeText("1 INT. LIGHTHOUSE - DAWN\n\nThe first light crosses the water.\n\nMAYA\nWe have one chance.\n\n2 EXT. HARBOUR - DAY\n\nA boat waits at the dock.")
+        // On iPad the keyboard accessory can cover the dialog footer.
+        // Dismiss it explicitly so the tap reaches the import action.
+        let dismissKeyboard = {
+            let hideKeyboard = app.keyboards.buttons.matching(NSPredicate(format:"label CONTAINS[c] %@", "hide")).firstMatch
+            if hideKeyboard.exists && hideKeyboard.isHittable {
+                hideKeyboard.tap()
+                let dismissed = XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"), object:app.keyboards.firstMatch)
+                XCTAssertEqual(XCTWaiter.wait(for:[dismissed], timeout:5), .completed)
+            }
+        }
+        dismissKeyboard()
         let submit = web.buttons["Import locally"]
-        XCTAssertTrue(submit.exists); submit.tap()
+        XCTAssertTrue(submit.exists && submit.isHittable); submit.tap()
+        let imported = XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"), object:web.buttons["Close dialog"])
+        XCTAssertEqual(XCTWaiter.wait(for:[imported], timeout:10), .completed)
         let breakdown = web.buttons["Main breakdown"]
         XCTAssertTrue(breakdown.waitForExistence(timeout:10))
         XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@", "LIGHTHOUSE")).firstMatch.waitForExistence(timeout:10))
@@ -26,6 +39,7 @@ final class ProductionDeskUITests: XCTestCase {
                 description.typeText("Maya watches the first light over the harbour")
                 let keyboard = XCTAttachment(screenshot:app.screenshot())
                 keyboard.name="Shot creation with keyboard"; keyboard.lifetime = .keepAlways; add(keyboard)
+                dismissKeyboard()
                 web.buttons["Add shot"].tap()
                 XCTAssertTrue(web.staticTexts["Maya watches the first light over the harbour"].firstMatch.waitForExistence(timeout:10))
             }
