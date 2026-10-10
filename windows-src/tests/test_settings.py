@@ -42,7 +42,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(self.request(), (200, {'preferences': {'theme': 'dark'}}))
         self.assertEqual(self.request(value={'theme': 'light', 'calendarId': 'ignored'}),
                          (200, {'preferences': {'theme': 'light'}}))
-        self.assertEqual(json.loads(self.path.read_text()), {'theme': 'light'})
+        self.assertEqual(json.loads(self.path.read_text(encoding='utf-8')), {'theme': 'light'})
         self.assertEqual(self.request(), (200, {'preferences': {'theme': 'light'}}))
         if os.name != 'nt':
             self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)

@@ -120,7 +120,7 @@ class ShotTests(unittest.TestCase):
         validate_uss(self.project)
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'backup.json';atomic_save(path,self.project)
-            restored=json.loads(path.read_text());validate_uss(restored)
+            restored=json.loads(path.read_text(encoding='utf-8'));validate_uss(restored)
             self.assertEqual(restored['_shots'],[self.shot])
     def test_shots_follow_scene_id_across_days(self):
         scenario=self.project['stripboards'][0]
@@ -162,13 +162,13 @@ class PersistenceTests(unittest.TestCase):
             path=Path(directory)/'workspace.json'
             atomic_save(path,{'title':'First'})
             atomic_save(path,{'title':'Café — draft two'})
-            self.assertEqual(json.loads(path.read_text())['title'],'Café — draft two')
-            self.assertEqual(json.loads(path.with_suffix('.previous.json').read_text())['title'],'First')
+            self.assertEqual(json.loads(path.read_text(encoding='utf-8'))['title'],'Café — draft two')
+            self.assertEqual(json.loads(path.with_suffix('.previous.json').read_text(encoding='utf-8'))['title'],'First')
             self.assertEqual(list(Path(directory).glob('*.tmp')),[])
     def test_nonfinite_json_never_overwrites_good_data(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'workspace.json';atomic_save(path,{'ok':True})
             with self.assertRaises(ValueError): atomic_save(path,{'pages':float('nan')})
-            self.assertEqual(json.loads(path.read_text()),{'ok':True})
+            self.assertEqual(json.loads(path.read_text(encoding='utf-8')),{'ok':True})
 
 if __name__=='__main__': unittest.main()
