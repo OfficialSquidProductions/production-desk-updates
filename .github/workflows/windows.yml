@@ -1,0 +1,54 @@
+name: Windows installer
+on:
+  push:
+    branches: [main]
+    paths: ['windows-src/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: windows-src
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Python build dependencies
+        run: python -m pip install -r desktop/windows/requirements-build.txt
+      - name: Test shared backend
+        run: python -m unittest discover -s tests -v
+      - name: Build complete offline EXE installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: python tools/build_windows.py
+      - name: Test packaged app, silent installation and upgrade preservation
+        run: python tools/check_windows.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-verification
+          path: windows-src/build/windows-check
+      - name: Publish verified installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content desktop/release.json | ConvertFrom-Json).version
+          $tag = "windows-$version-build-${{ github.run_number }}"
+          $exe = 'dist/windows/Production-Desk-Windows-Setup.exe'
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Production-Desk-Windows-Setup.exe" | Out-File dist/windows/Production-Desk-Windows-Setup.sha256 -Encoding ascii
+          gh release create $tag $exe dist/windows/Production-Desk-Windows-Setup.sha256 dist/windows/latest.yml dist/windows/Production-Desk-Windows-Setup.exe.blockmap --repo ${{ github.repository }} --target ${{ github.sha }} --title "Production Desk $version for Windows" --notes "Single offline EXE installer for Windows 10/11 x64. Includes the complete app, Python runtime, PDF reader and desktop web engine. Installs for the current user without administrator access. Existing projects survive reinstall and upgrades. Unsigned personal build; Windows may display a SmartScreen prompt. Automated packaged-app, installer and data-preservation checks passed." --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

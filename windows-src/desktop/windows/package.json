@@ -1,0 +1,29 @@
+{
+  "name": "production-desk",
+  "version": "1.4.3",
+  "description": "Offline film scheduling, script breakdowns and shot lists",
+  "author": "Squid Productions",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {"dist": "electron-builder --win nsis --x64 --publish never"},
+  "dependencies": {"electron-updater": "6.8.9"},
+  "devDependencies": {"electron": "44.7.0", "electron-builder": "26.15.3"},
+  "build": {
+    "appId": "org.squidproductions.productiondesk",
+    "productName": "Production Desk",
+    "directories": {"output": "../../dist/windows", "buildResources": "assets"},
+    "files": ["main.cjs", "preload.cjs", "smoke.cjs", "package.json"],
+    "extraResources": [{"from": "../../build/windows/backend/ProductionDeskServer", "to": "backend"}],
+    "publish": [{"provider": "generic", "url": "https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/"}],
+    "win": {"target": "nsis", "icon": "assets/icon.ico", "artifactName": "Production-Desk-Windows-Setup.exe", "verifyUpdateCodeSignature": false},
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    }
+  }
+}
