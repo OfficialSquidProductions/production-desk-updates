@@ -3,21 +3,18 @@
     <channel>
         <title>Production Desk</title>
         <item>
-            <title>1.4.3</title>
-            <pubDate>Fri, 09 Oct 2026 19:28:56 -0400</pubDate>
-            <sparkle:version>13</sparkle:version>
-            <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
+            <title>1.4.4</title>
+            <pubDate>Sat, 10 Oct 2026 11:40:07 -0400</pubDate>
+            <sparkle:version>14</sparkle:version>
+            <sparkle:shortVersionString>1.4.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Production Desk 1.4.3</h2>
+            <description><![CDATA[<h2>Production Desk 1.4.4</h2>
 <ul>
-  <li>Delete an unneeded production from Production settings, with confirmation and Undo support.</li>
-  <li>Deleting the last production opens a new blank production.</li>
-  <li>Corrected the sidebar message to “Made for your productions.”</li>
-  <li>Simplified the download website and matched its background to Production Desk’s dark appearance.</li>
+  <li>Use “Squid Productions” consistently in the sidebar, Mac About window, and website credits.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.4.3-13.zip" length="17885718" type="application/octet-stream" sparkle:edSignature="5Kr8xUIbVfbuXfpUTcEGf4sXkbSceo2nYKt2Rm6BOlXYjZAys1S7qykof+2JUZnAjBYT1e+wMVSPZ5IWwopDCg=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.4.4-14.zip" length="17887107" type="application/octet-stream" sparkle:edSignature="apK3c+mLUQdgE/KnG4BQXgoG+gWQM6x8PEx5DqTNEak0efwxefEmCVtiMED2lMF0FMB3eFe4L1ZGv5k43l/HAg=="/>
         </item>
     </channel>
 </rss>
