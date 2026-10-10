@@ -16,6 +16,7 @@ def main():
         raise SystemExit('Run this check on Windows.')
     output = ROOT / 'build/windows-check'
     output.mkdir(parents=True, exist_ok=True)
+    sys.path.insert(0, str(ROOT))
     sys.path.insert(0, str(ROOT / 'tests'))
     from test_slate import simple_pdf
     (output / 'fixture.pdf').write_bytes(simple_pdf())

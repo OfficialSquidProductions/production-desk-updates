@@ -40,7 +40,11 @@ jobs:
         if: always()
         with:
           name: windows-verification
-          path: windows-src/build/windows-check
+          path: |
+            windows-src/build/windows-check/*.json
+            windows-src/build/windows-check/*.png
+            windows-src/build/windows-check/*.pdf
+            windows-src/build/windows-check/smoke-user-data/server.log
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}

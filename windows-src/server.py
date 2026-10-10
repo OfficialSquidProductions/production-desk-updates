@@ -235,7 +235,7 @@ class Handler(SimpleHTTPRequestHandler):
     def preferences(self):
         path = self.server.datafile.parent / 'app-settings.json'
         try:
-            value = json.loads(path.read_text())
+            value = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             value = {}
         theme = value.get('theme') if isinstance(value, dict) else None
@@ -406,6 +406,10 @@ class Handler(SimpleHTTPRequestHandler):
             self.reply({"error": "Local file operation failed: " + str(e)}, 500)
 
 def main():
+    if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     parser = argparse.ArgumentParser(description="Production Desk — offline film scheduling")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--data", type=Path, default=ROOT / "data" / "workspace.json")
