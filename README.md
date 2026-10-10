@@ -6,3 +6,19 @@ I wanted a offline, self hosted solution for doing script breakdowns and creatin
 [Download Production Desk 1.4.3](https://productiondesk.squidproductions.org/).
 # iPhone and iPad
 The offline iOS app source is in [`ios/`](ios/README.md). Open `ios/ProductionDesk.xcodeproj` in Xcode and run the `ProductionDesk` scheme on an iOS 17 or later simulator. See the [setup guide](ios/README.md), [iOS installer](ios/INSTALL.md) and [verification notes](ios/VERIFICATION.md) for build commands, file interchange and device signing requirements.
+
+## Open source
+
+Production Desk is free and open source under the [MIT license](LICENSE),
+like our scene planner [Scenic](https://scenic.squidproductions.org/).
+You can use, modify, and redistribute the source under that license.
+
+- [Mac and Windows source and build instructions](windows-src/README.md)
+- [iPhone and iPad source and setup](ios/README.md)
+- [Contributing](CONTRIBUTING.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+The desktop source directory retains its original `windows-src/` name and now
+includes the native Mac shell, installer, updater, PDF helper, build tools, and tests.
+The existing iOS source is licensed under MIT as well. User productions,
+proprietary fonts, signing credentials, and local caches are not part of the source.

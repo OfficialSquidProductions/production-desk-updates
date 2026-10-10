@@ -8,3 +8,17 @@ ios/dist/
 *.ipa
 *.xcarchive/
 __pycache__/
+
+# Shared desktop build output, user data, and signing material
+windows-src/.cache/
+windows-src/dist/
+windows-src/build/
+windows-src/data/
+node_modules/
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+.env
+.env.*

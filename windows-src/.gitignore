@@ -1,0 +1,10 @@
+data/*.json
+data/.slate-*
+.cache/
+__pycache__/
+tools/extract_pdf
+.DS_Store
+dist/
+build/
+node_modules/
+desktop/windows/assets/icon.ico
