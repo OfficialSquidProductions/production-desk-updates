@@ -4,7 +4,7 @@ The existing phone screenshot (`evidence/iphone.png`) spends roughly half the sc
 
 ## Preserve the visual identity
 
-Keep the original transparent SP mark, **Production Desk**, Squid Production credit, Spanish Red `#E60026`, existing Futura heading stack and Courier screenplay stack. The tracked 1.4.1 archive and bundled `Web/style.css`, `Web/themes.css`, `Web/assets/sp-logo.png` are the reference. Use red for the primary creation action, selected section and small structural accents. Quiet neutral surfaces should give the screenplay and stripboard more emphasis. Keep the existing scene-color semantics and custom strip colors.
+Keep the original transparent SP mark, **Production Desk**, Squid Productions credit, Spanish Red `#E60026`, existing Futura heading stack and Courier screenplay stack. The tracked 1.4.1 archive and bundled `Web/style.css`, `Web/themes.css`, `Web/assets/sp-logo.png` are the reference. Use red for the primary creation action, selected section and small structural accents. Quiet neutral surfaces should give the screenplay and stripboard more emphasis. Keep the existing scene-color semantics and custom strip colors.
 
 ## Phone composition
 

@@ -193,7 +193,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     @objc func undoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('undo');}else{document.getElementById('undo').click();}", completionHandler: nil) }
     @objc func redoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('redo');}else{document.getElementById('redo').click();}", completionHandler: nil) }
     @objc func openData() { if let support = support { NSWorkspace.shared.open(support) } }
-    @objc func showAbout() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Production Desk", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "A Squid Production™ Software\nLocal film scheduling, breakdowns, and shot lists.")]) }
+    @objc func showAbout() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Production Desk", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "A Squid Productions™ Software\nLocal film scheduling, breakdowns, and shot lists.")]) }
     func fail(_ title: String, detail: String) {
         let alert = NSAlert(); alert.messageText = title; alert.informativeText = detail
         alert.addButton(withTitle: "OK")
