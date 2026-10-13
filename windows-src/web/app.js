@@ -307,8 +307,21 @@ function bindContent() {
   $$('[data-sort-day]').forEach(button=>button.addEventListener('click',()=>mutate(()=>activeBoard().breakdownIds[Number(button.dataset.sortDay)].sort((a,b)=>slug(breakdown(a)).localeCompare(slug(breakdown(b)),undefined,{numeric:true})))));
   $('#element-search')?.addEventListener('input',e=>{elementSearch=e.target.value;const caret=e.target.selectionStart;render();$('#element-search').focus();$('#element-search').setSelectionRange(caret,caret);});
   $('#element-filter')?.addEventListener('change',e=>{elementCategory=e.target.value;render();});
-  $$('[data-element-name]').forEach(input=>input.addEventListener('change',()=>{if(!input.value.trim()){render();return;}const e=project.elements.find(e=>e.id===input.dataset.elementName);if(e.name!==input.value.trim())mutate(()=>e.name=input.value.trim());}));
-  $$('[data-element-id]').forEach(input=>input.addEventListener('change',()=>{const e=project.elements.find(e=>e.id===input.dataset.elementId),value=input.value||null;if(e.elementId!==value)mutate(()=>e.elementId=value);}));
+  $$('[data-element-name], [data-element-id]').forEach(input=>{
+    const key=input.dataset.elementName?'name':'elementId';
+    const element=project.elements.find(e=>e.id===(input.dataset.elementName||input.dataset.elementId));
+    let editing=false;
+    const update=()=>{
+      const value=key==='name'?input.value.trim():input.value||null;
+      input.setCustomValidity(key==='name'&&!value?'Enter an element name.':'');
+      if(!input.checkValidity()||element[key]===value)return;
+      if(!editing){history.push(clone(workspace));if(history.length>40)history.shift();future=[];editing=true;}
+      element[key]=value;mark();updateUndo();
+    };
+    input.addEventListener('input',update);
+    input.addEventListener('change',()=>{update();editing=false;});
+    input.addEventListener('blur',()=>{editing=false;input.value=element[key]??'';input.setCustomValidity('');});
+  });
   if(view==='elements')elementActions.bind($('#content'));
   $$('[data-availability]').forEach(button=>button.addEventListener('click',()=>availabilityModal(button.dataset.availability)));
   $$('[data-report]').forEach(button=>button.addEventListener('click',()=>{report=button.dataset.report;render();}));
@@ -465,7 +478,7 @@ function exportModal() {
   $('#export-shots').onclick=()=>shotDesk.csv();
   $('#export-print').onclick=()=>{report='oneline';$('#modal').close();action('print');};
 }
-function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Save and share as files.</strong> Every change saves locally. Export USS for interchange and a full Production Desk backup to preserve scripts and shots.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p><section class="help-bug-report" aria-labelledby="bug-report-title"><h3 id="bug-report-title">Report a bug</h3><p>Email <a href="mailto:alexanderhosier@squidproductions.org">alexanderhosier@squidproductions.org</a>.</p><p>Include Production Desk 1.4.3, your operating system version, steps to reproduce the problem, what you expected, and what happened. Screenshots are helpful.</p></section>`);}
+function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Save and share as files.</strong> Every change saves locally. Export USS for interchange and a full Production Desk backup to preserve scripts and shots.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p><section class="help-bug-report" aria-labelledby="bug-report-title"><h3 id="bug-report-title">Report a bug</h3><p>Email <a href="mailto:alexanderhosier@squidproductions.org">alexanderhosier@squidproductions.org</a>.</p><p>Include Production Desk 1.4.5, your operating system version, steps to reproduce the problem, what you expected, and what happened. Screenshots are helpful.</p></section>`);}
 
 const shotDesk=createShotDesk({
   esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,

@@ -58,3 +58,13 @@ after these checks pass.
 Source is published under `windows-src/` in the release repository. This is a
 shared desktop source tree with both Windows and Mac build tools, licensed under MIT. Project files, local
 caches, proprietary fonts, Mac signing keys and Apple frameworks are excluded.
+
+## Publishing updates
+
+Increase `desktop/release.json`'s version for every new Windows release, and keep
+`desktop/windows/package.json` and `package-lock.json` in sync. The workflow validates
+code changes and pull requests, but publishes only a newer application version on
+`main`. Equal-version rebuilds are validation only; older versions are rejected.
+Documentation-only edits do not trigger installer builds. The packaged smoke checks
+exercise focused element edits, invalid shot numbers, malformed imports, repaired
+backups, and the real updater's version selection before publication.

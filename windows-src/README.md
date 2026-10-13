@@ -37,6 +37,7 @@ On an Apple Silicon Mac with macOS 12 or later and Xcode installed:
 python3 tools/fetch_sparkle.py
 python3 tools/build_macos.py --app-only --no-share
 python3 tools/check_macos_updates.py
+python3 tools/check_macos_desktop.py
 ```
 
 The first command downloads the pinned Sparkle release and verifies its checksum.

@@ -17,6 +17,7 @@ export function createShotDesk(c) {
   const total=s=>s.setupMinutes+s.shootMinutes;
   const active=s=>s.status!=='Omitted';
   const done=s=>s.status==='Done';
+  const numberKey=value=>value.trim().toUpperCase();
   function sync() {
     if(production!==p().id){production=p().id;selected=undefined;day='all';scene='all';status='all';search='';}
     const validDays=groups().map((g,i)=>String(i));
@@ -30,7 +31,7 @@ export function createShotDesk(c) {
   function scope(){return p()._shots.filter(s=>day==='all'||dayOf(s)===day);}
   function filtered(){return scope().filter(s=>(scene==='all'||s.sceneId===scene)&&(status==='all'||s.status===status)&&`${label(s)} ${s.description} ${s.camera} ${s.lens} ${s.notes} ${c.slug(sceneOf(s))}`.toLowerCase().includes(search.toLowerCase()));}
   function nextNumber(sceneId){
-    const used=new Set(p()._shots.filter(s=>s.sceneId===sceneId).map(s=>s.number.toUpperCase()));
+    const used=new Set(p()._shots.filter(s=>s.sceneId===sceneId).map(s=>numberKey(s.number)));
     for(let n=0;n<10000;n++){let v=n+1,result='';while(v){v--;result=String.fromCharCode(65+v%26)+result;v=Math.floor(v/26);}if(!used.has(result))return result;}
     return String(p()._shots.length+1);
   }
@@ -85,12 +86,15 @@ export function createShotDesk(c) {
     document.querySelectorAll('[data-shot-field]').forEach(input=>{
       let editing=false;const target=shot();
       const update=()=>{
+        input.setCustomValidity('');
         if(!target||!input.reportValidity())return;
-        const key=input.dataset.shotField,value=input.type==='number'?(key==='actualMinutes'&&input.value===''?null:Number(input.value)):input.value;
-        if((key==='number'||key==='sceneId')&&p()._shots.some(s=>s.id!==target.id&&s.sceneId===(key==='sceneId'?value:target.sceneId)&&s.number.toUpperCase()===(key==='number'?value:target.number).toUpperCase())){input.setCustomValidity('This scene already has that shot number.');input.reportValidity();input.setCustomValidity('');return;}
+        const key=input.dataset.shotField,value=input.type==='number'?(key==='actualMinutes'&&input.value===''?null:Number(input.value)):key==='number'?input.value.trim():input.value;
+        if(key==='number'&&!value){input.setCustomValidity('Enter a shot number.');input.reportValidity();return;}
+        if((key==='number'||key==='sceneId')&&p()._shots.some(s=>s.id!==target.id&&s.sceneId===(key==='sceneId'?value:target.sceneId)&&numberKey(s.number)===numberKey(key==='number'?value:target.number))){input.setCustomValidity('This scene already has that shot number.');input.reportValidity();return;}
+        if(target[key]===value)return;
         c.edit(()=>target[key]=value,!editing);editing=true;refreshList();
       };
-      input.oninput=update;input.onchange=()=>{update();editing=false;};input.onblur=()=>editing=false;
+      input.oninput=update;input.onchange=()=>{update();editing=false;};input.onblur=()=>{editing=false;if(input.dataset.shotField==='number'){input.value=target.number;input.setCustomValidity('');}};
     });
   }
   function insertShot(data,after) {
@@ -119,7 +123,7 @@ export function createShotDesk(c) {
       const form=document.querySelector('#new-shot-form');if(!form.reportValidity())return;
       const sceneId=document.querySelector('#new-shot-scene').value,number=document.querySelector('#new-shot-number').value.trim(),description=document.querySelector('#new-shot-description').value.trim();
       if(!number||!description)return;
-      if(p()._shots.some(s=>s.sceneId===sceneId&&s.number.toUpperCase()===number.toUpperCase())){document.querySelector('#modal-error').textContent='This scene already has that shot number.';return;}
+      if(p()._shots.some(s=>s.sceneId===sceneId&&numberKey(s.number)===numberKey(number))){document.querySelector('#modal-error').textContent='This scene already has that shot number.';return;}
       const data={id:id(),created:stamp(),sceneId,number,description,size:document.querySelector('#new-shot-size').value,movement:'Static',camera:'A',lens:'',equipment:'Tripod',setupMinutes:Number(document.querySelector('#new-shot-setup').value),shootMinutes:Number(document.querySelector('#new-shot-shoot').value),actualMinutes:null,takes:0,circleTake:'',priority:'Essential',notes:'',status:'Planned'};
       insertShot(data);
     };

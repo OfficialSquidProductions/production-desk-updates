@@ -16,12 +16,19 @@ import io
 from functools import lru_cache
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
-from film import empty_project, import_script, validate_uss, element
+from film import empty_project, import_script, prepare_project, element
 
 ROOT = Path(__file__).resolve().parent
 LOCK = threading.Lock()
 EXPORTS = {}
 MAX_BODY = 40 * 1024 * 1024
+
+
+def json_object(raw):
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError('Expected a JSON object.')
+    return value
 
 @lru_cache(maxsize=5)
 def local_font(family='heading', style='regular'):
@@ -315,9 +322,13 @@ class Handler(SimpleHTTPRequestHandler):
                 with LOCK:
                     if not self.server.datafile.exists():
                         atomic_save(self.server.datafile, demo_workspace())
-                    value = json.loads(self.server.datafile.read_text(encoding="utf-8"))
+                    value = json_object(self.server.datafile.read_text(encoding="utf-8"))
+                    if not isinstance(value.get('projects'), list) or not value['projects']:
+                        raise ValueError('The workspace must contain a production.')
+                    for project in value['projects']:
+                        prepare_project(project)
                 self.reply(value)
-            except (OSError, ValueError) as e:
+            except (OSError, ValueError, KeyError, TypeError) as e:
                 self.reply({"error": "Could not read local workspace: " + str(e)}, 500)
         elif path.startswith("/api/"):
             self.reply({"error": "Not found"}, 404)
@@ -335,7 +346,7 @@ class Handler(SimpleHTTPRequestHandler):
             raw = self.rfile.read(length)
             path = urlsplit(self.path).path
             if path == '/api/settings':
-                value = json.loads(raw)
+                value = json_object(raw)
                 if not isinstance(value, dict) or value.get('theme') not in ('light', 'dark'):
                     raise ValueError('Choose Light or Dark appearance.')
                 with LOCK:
@@ -343,7 +354,7 @@ class Handler(SimpleHTTPRequestHandler):
                     atomic_save(self.server.datafile.parent / 'app-settings.json', preferences)
                 self.reply({'preferences': preferences})
             elif path == "/api/export":
-                value = json.loads(raw)
+                value = json_object(raw)
                 filename = value.get("filename", "")
                 content = value.get("content")
                 mime = value.get("mime")
@@ -360,12 +371,12 @@ class Handler(SimpleHTTPRequestHandler):
                     EXPORTS[token] = (filename, mime, content.encode("utf-8"), time.monotonic())
                 self.reply({"url": "/api/download/" + token})
             elif path == "/api/workspace":
-                value = json.loads(raw)
+                value = json_object(raw)
                 if not isinstance(value, dict) or not isinstance(value.get("projects"), list):
                     raise ValueError("Invalid workspace.")
                 ids = []
                 for p in value["projects"]:
-                    validate_uss(p)
+                    prepare_project(p)
                     ids.append(p["id"])
                 if len(set(ids)) != len(ids) or value.get("activeProject") not in ids:
                     raise ValueError("Invalid active project or duplicate project IDs.")
@@ -373,25 +384,19 @@ class Handler(SimpleHTTPRequestHandler):
                     atomic_save(self.server.datafile, value)
                 self.reply({"saved": True})
             elif path == "/api/new":
-                self.reply(empty_project(json.loads(raw).get("title") or "Untitled production"))
+                self.reply(empty_project(json_object(raw).get("title") or "Untitled production"))
             elif path == "/api/import":
                 filename = self.headers.get("X-Filename", "script.txt")
                 from urllib.parse import unquote
                 filename = Path(unquote(filename)).name
                 if filename.lower().endswith((".uss", ".json")):
-                    value = json.loads(raw)
+                    value = json_object(raw)
                     if "universalScheduleStandard" in value:
-                        p = validate_uss(value["universalScheduleStandard"])
-                        # Add scheduling containers for breakdown-only USS files.
-                        if not p["stripboards"]:
-                            defaults = empty_project()
-                            p["stripboards"] = defaults["stripboards"]
-                            p["calendars"] += defaults["calendars"]
-                            p["stripboards"][0]["boards"][1]["breakdownIds"] = [b["id"] for b in p["breakdowns"]]
+                        p = prepare_project(value["universalScheduleStandard"])
                         self.reply({"project": p})
                     elif value.get("version") == 1 and isinstance(value.get("projects"), list):
                         for p in value["projects"]:
-                            validate_uss(p)
+                            prepare_project(p)
                         self.reply({"workspace": value})
                     else:
                         raise ValueError("Select a USS file or a Production Desk workspace backup.")

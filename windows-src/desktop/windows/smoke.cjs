@@ -24,6 +24,25 @@ module.exports = async ({win, origin, dataFolder, output, flush}) => {
     assert.ok(await js('document.querySelector("#content").textContent.trim().length > 20'));
   }
   checks.push('All five shared application views render');
+  const regressionChecks = await require('./regressions.cjs')({
+    js, flush, waitFor,
+    readWorkspace:async() => (await fetch(origin+'/api/workspace')).json(),
+    post:(route,body,headers={}) => fetch(origin+route,{method:'POST',headers:{'X-Slate-Local':'1',...headers},body}),
+    reload:async() => {
+      await new Promise(resolve => {win.webContents.once('did-finish-load',resolve);win.reload();});
+      await waitFor('document.querySelector("#project-picker")?.options.length > 0');
+    }
+  });
+  checks.push(...regressionChecks);
+  const {autoUpdater} = require('electron-updater');
+  const currentVersion=autoUpdater.currentVersion;
+  try {
+    autoUpdater.currentVersion=new currentVersion.constructor('1.4.4');
+    assert.equal(await autoUpdater.isUpdateAvailable({version:require('./package.json').version}),true);
+    assert.equal(await autoUpdater.isUpdateAvailable({version:'1.4.4'}),false);
+  } finally {autoUpdater.currentVersion=currentVersion;}
+  checks.push('The real Windows updater recognizes newer versions and rejects equal-version rebuilds');
+
   await js(`document.querySelector('[data-view="shots"]').click(); document.querySelector('#add-scene').click();
     document.querySelector('#new-shot-description').value='Windows packaged application test';
     document.querySelector('#new-shot-save').click();`);

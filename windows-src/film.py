@@ -197,15 +197,19 @@ def validate_uss(project):
             check_id(event)
             if event.get("type") not in ("start", "dayOff", "event"):
                 raise ValueError("Unknown calendar event type.")
+            date = event.get("date")
+            if not isinstance(date, str):
+                raise ValueError("Invalid event date.")
             try:
-                datetime.fromisoformat(event["date"].replace("Z", "+00:00"))
+                datetime.fromisoformat(date.replace("Z", "+00:00"))
             except (KeyError, TypeError, ValueError):
                 raise ValueError("Invalid event date.")
     for c in project["calendars"] + project["elements"]:
         days = c.get("daysOff", [])
         if not isinstance(days, list) or any(type(d) is not int or d < 0 or d > 6 for d in days) or len(set(days)) != len(days):
             raise ValueError("daysOff must contain distinct weekdays from 0 through 6.")
-        events_check(c.get("events") or [])
+        events = c.get('events')
+        events_check([] if events is None else events)
     for s in project["stripboards"]:
         if s.get("calendar") is not None and s["calendar"] not in calendars:
             raise ValueError("Stripboard references an unknown calendar.")
@@ -240,7 +244,7 @@ def validate_uss(project):
         number = shot['number'].strip()
         if not number or len(number) > 24:
             raise ValueError('Shot number must contain 1 through 24 characters.')
-        pair = (shot['sceneId'], number.casefold())
+        pair = (shot['sceneId'], number.upper())
         if pair in numbers:
             raise ValueError('Duplicate shot number in the same scene.')
         numbers.add(pair)
@@ -257,4 +261,19 @@ def validate_uss(project):
     settings = project.get('_shotSettings', {'startTime': '07:00'})
     if not isinstance(settings, dict) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', str(settings.get('startTime', ''))):
         raise ValueError('Shot start time must use HH:MM.')
+    return project
+
+
+def prepare_project(project):
+    """Make validated breakdown-only imports and older workspaces editable."""
+    validate_uss(project)
+    if not project['stripboards']:
+        defaults = empty_project()
+        project['stripboards'] = defaults['stripboards']
+        project['calendars'].extend(defaults['calendars'])
+        project['stripboards'][0]['boards'][1]['breakdownIds'] = [b['id'] for b in project['breakdowns']]
+    # Missing event lists are permitted by USS; the editor expects arrays.
+    for item in project['calendars'] + project['elements']:
+        if item.get('events') is None:
+            item['events'] = []
     return project
