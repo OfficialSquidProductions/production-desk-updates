@@ -1,24 +1,100 @@
 # Production Desk
-This is a tool I vibe coded for myself to use on a couple of productions. I'm not a professional software designer but I do want to share this with the world so it can be improved and others can use it. I'll do my best to support it and hopefully it helps others as it did me. 
-# The Features? 
-I wanted a offline, self hosted solution for doing script breakdowns and creating schedules. The shot list functionality was added it at the request of a friend. I hope to continue to develop it FOR FREE and allow people to have a easier time making productions themselves! 
-# Download Here
-[Download Production Desk](https://productiondesk.squidproductions.org/).
-# iPhone and iPad
-The offline iOS app source is in [`ios/`](ios/README.md). Open `ios/ProductionDesk.xcodeproj` in Xcode and run the `ProductionDesk` scheme on an iOS 17 or later simulator. See the [setup guide](ios/README.md), [iOS installer](ios/INSTALL.md) and [verification notes](ios/VERIFICATION.md) for build commands, file interchange and device signing requirements.
 
-## Open source
+**Free, offline script breakdowns, film scheduling, and shot lists for macOS and Windows.**
 
-Production Desk is free and open source under the [MIT license](LICENSE),
-like our scene planner [Scenic](https://scenic.squidproductions.org/).
-You can use, modify, and redistribute the source under that license.
+Production Desk helps filmmakers turn a screenplay into a practical shooting plan.
+Import a script, tag cast and production elements, arrange scenes on a stripboard,
+and plan camera setups—all on your own computer, without an account or subscription.
+Built by Squid Productions for real productions and shared under the [MIT license](LICENSE).
 
-- [Mac and Windows source and build instructions](windows-src/README.md)
-- [iPhone and iPad source and setup](ios/README.md)
-- [Contributing](CONTRIBUTING.md)
+## Download
+
+| Platform | Download | Requirements |
+| --- | --- | --- |
+| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.4.4-14.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
+| Windows | [Download Windows installer](https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/Production-Desk-Windows-Setup.exe) | Windows 10/11, x64. Run the single `.exe` installer; installation is for the current user. |
+
+Visit the [Production Desk website](https://productiondesk.squidproductions.org/) for the
+download page. Packaged desktop apps include their runtimes; you do not need to install
+Python or a separate browser. The Mac build is not Apple-notarized, and the Windows build
+is unsigned, so your operating system may request first-launch approval.
+
+macOS and Windows are the currently supported editions. The previous iPhone/iPad edition
+has been withdrawn while it is being reworked.
+
+## What you can do
+
+- **Import screenplays:** selectable-text PDF, Final Draft (`.fdx`), Fountain, and plain text.
+- **Break down scenes:** tag cast, props, wardrobe, locations, and other production elements;
+  edit scene details, page counts, notes, and estimated shooting time.
+- **Build shooting schedules:** drag scene strips into shooting days, add banners, set days
+  off, flag element availability conflicts, and compare alternative schedule scenarios.
+- **Plan shot lists:** record camera setups, lenses, setup/shoot estimates, takes, and completion.
+- **Create reports:** one-line schedules, scene breakdowns, cast workdays, and printable PDFs.
+- **Move your work:** export full JSON backups, USS schedules, and CSV reports.
+- **Work locally:** automatic disk saves, Undo/Redo, and light/dark appearance.
+
+## Get started
+
+1. Open the desktop app and explore the fictional sample production, **The Last Light**,
+   or choose **New production**.
+2. Choose **Import script / USS** to bring in a screenplay or schedule. Imports create a
+   separate production and preserve your existing projects.
+3. Review the imported scene headings, cast, and page estimates in **Main breakdown**.
+4. Open **Shooting schedule**, set your production calendar, and drag scenes into shooting days.
+5. Add camera coverage in **Shot list**, then export or print your reports.
+
+Use **Export → Full Production Desk backup** regularly. Full backups preserve all productions,
+script text, shots, and schedules and can be transferred between Mac and Windows.
+USS interchange files omit script text and shot lists.
+
+## Your files and privacy
+
+Production work is processed and stored locally. The app has no analytics or advertising,
+and local work continues without an internet connection. Desktop update checks use the
+internet and do not upload production files.
+
+- **Mac data:** `~/Library/Application Support/Slate/`
+- **Windows data:** `%APPDATA%/production-desk/`
+
+Choose **Production Desk → Open Data Folder** to find your workspace and previous-save backup.
+Updating or reinstalling the app preserves this separate data folder. Exported backups
+also protect against loss of the computer or disk.
+
+## Current limits
+
+PDF import requires selectable text; OCR is not included. Imported cast, scene numbering,
+and page counts need review. Production Desk does not yet include collaborative editing,
+call sheets, script revision reconciliation, automatic schedule optimization, or advanced
+cast hold/drop/pickup calculations. USS compatibility with other applications should be
+tested with their importers.
+
+## Source and development
+
+The shared Mac and Windows source is in [`windows-src/`](windows-src/README.md).
+That directory retains its original name for compatibility with the Windows release workflow.
+The repository root also hosts the Mac update feed and its download archives.
+
+- [Run from source and build the Mac app](windows-src/README.md)
+- [Build and verify the Windows installer](windows-src/desktop/windows/README.md)
+- [Contribute or report a bug](CONTRIBUTING.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-The desktop source directory retains its original `windows-src/` name and now
-includes the native Mac shell, installer, updater, PDF helper, build tools, and tests.
-The existing iOS source is licensed under MIT as well. User productions,
-proprietary fonts, signing credentials, and local caches are not part of the source.
+To run from source with Python 3.9 or later:
+
+```sh
+cd windows-src
+python3 server.py
+```
+
+Open `http://127.0.0.1:8765`. See the [desktop guide](windows-src/README.md) for PDF dependencies,
+tests, and packaging instructions.
+
+## Support
+
+[Open a GitHub issue](https://github.com/OfficialSquidProductions/production-desk-updates/issues/new)
+or email [alexanderhosier@squidproductions.org](mailto:alexanderhosier@squidproductions.org).
+Include the app version, operating system, steps to reproduce, and expected versus actual
+behavior. Keep private scripts and production data out of public reports.
+
+Also from Squid Productions: [Scenic](https://scenic.squidproductions.org/), our scene planner.

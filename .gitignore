@@ -1,10 +1,7 @@
-# iOS builds and personal Xcode settings
-ios/build/
-ios/DerivedData/
+# Local editor settings and caches
 *.xcuserstate
 xcuserdata/
 .DS_Store
-ios/dist/
 *.ipa
 *.xcarchive/
 __pycache__/

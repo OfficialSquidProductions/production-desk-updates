@@ -8,15 +8,14 @@ steps to reproduce, and expected versus actual behavior in bug reports.
 
 - `windows-src/` contains the shared desktop app and both Mac and Windows build tools.
   The directory keeps its original name for compatibility with the release workflow.
-- `ios/` contains the native iPhone/iPad app, its bundled web interface, and tests.
 - Files at the repository root host the existing Mac update feed and download page.
   The main download website is maintained in [fr0nkle/productiondesk](https://github.com/fr0nkle/productiondesk).
 
 ## Development
 
 Use a feature branch and synthetic productions. See
-[desktop setup](windows-src/README.md), [Windows build instructions](windows-src/desktop/windows/README.md),
-and [iOS setup](ios/README.md). Run the existing tests for each affected platform.
+[desktop setup](windows-src/README.md) and [Windows build instructions](windows-src/desktop/windows/README.md).
+Run the existing tests for each affected platform.
 Preserve existing project formats, portable backups, offline operation, and
 save-before-update behavior. Keep native bridge validation and local-origin checks intact.
 

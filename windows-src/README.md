@@ -6,7 +6,6 @@ release workflow; it is shared by both desktop platforms. Production Desk is fre
 open source under the [MIT license](../LICENSE).
 
 Download the packaged app from [productiondesk.squidproductions.org](https://productiondesk.squidproductions.org/).
-The iPhone/iPad edition is in [`../ios/`](../ios/README.md).
 
 ## Run from source
 
