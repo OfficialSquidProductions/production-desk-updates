@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    app = ROOT / 'dist/Production Desk.app'
+    app = ROOT / ('dist/Production Desk Beta.app' if json.loads((ROOT / 'desktop/release.json').read_text()).get('channel') == 'beta' else 'dist/Production Desk.app')
     python = app / 'Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9'
     runtime = app / 'Contents/Resources/runtime'
     binary = ROOT / '.cache/check-desktop-webkit'
@@ -29,7 +29,7 @@ def main():
                         raise RuntimeError('Packaged Mac server did not start.')
                     time.sleep(.05)
                 url = json.loads(ready.read_text())['url']
-                subprocess.run([str(binary), url], check=True, timeout=60)
+                subprocess.run([str(binary), url, str(ROOT)], check=True, timeout=150)
             finally:
                 server.terminate()
                 server.wait(timeout=10)

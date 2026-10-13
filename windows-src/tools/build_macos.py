@@ -23,7 +23,7 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
     sparkle = sparkle_distribution(config)
     dist = ROOT / "dist"
     dist.mkdir(exist_ok=True)
-    app = dist / "Production Desk.app"
+    app = dist / ("Production Desk Beta.app" if config.get("channel") == "beta" else "Production Desk.app")
     # Only replace generated build outputs; never touch the user's workspace.
     if app.exists(): shutil.rmtree(app)
     contents = app / "Contents"
@@ -40,7 +40,7 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
     shutil.copytree(framework, frameworks / "Python3.framework", symlinks=True)
     shutil.copytree(sparkle / "Sparkle.framework", frameworks / "Sparkle.framework", symlinks=True)
     shutil.copy2(sparkle / "LICENSE", resources / "Sparkle-LICENSE.txt")
-    for name in ["server.py", "film.py"]: shutil.copy2(ROOT / name, runtime / name)
+    for name in ["server.py", "film.py", "lined.py"]: shutil.copy2(ROOT / name, runtime / name)
     shutil.copytree(ROOT / "web", runtime / "web")
     (runtime / "tools").mkdir()
     run("swiftc", "-O", "-module-cache-path", ROOT / ".cache" / "swift", "-target", "arm64-apple-macos12.0", ROOT / "tools" / "extract_pdf.swift", "-o", runtime / "tools" / "extract_pdf")
@@ -52,20 +52,23 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
     run("iconutil", "-c", "icns", iconset, "-o", resources / "ProductionDesk.icns")
     shutil.copy2(ROOT / "README.md", resources / "README.md")
     with open(contents / "Info.plist", "wb") as file:
-        plistlib.dump({"CFBundleExecutable":"ProductionDesk", "CFBundleIdentifier":"local.slate.filmscheduler", "CFBundleName":"Production Desk", "CFBundleDisplayName":"Production Desk", "CFBundlePackageType":"APPL", "CFBundleShortVersionString":config["version"], "CFBundleVersion":config["build"], "CFBundleIconFile":"ProductionDesk.icns", "LSMinimumSystemVersion":"12.0", "NSHighResolutionCapable":True, "NSPrincipalClass":"NSApplication", "NSAppTransportSecurity":{"NSAllowsLocalNetworking":True}, "NSHumanReadableCopyright":"Production Desk — Local Film Scheduler. Bundled Python and Sparkle are covered by their included licenses.", **updater_plist(config)}, file)
+        plistlib.dump({"CFBundleExecutable":"ProductionDesk", "CFBundleIdentifier":"local.slate.filmscheduler.beta" if config.get("channel") == "beta" else "local.slate.filmscheduler", "CFBundleName":app.stem, "CFBundleDisplayName":app.stem, "ProductionDeskBeta":config.get("channel") == "beta", "CFBundlePackageType":"APPL", "CFBundleShortVersionString":config["version"], "CFBundleVersion":config["build"], "CFBundleIconFile":"ProductionDesk.icns", "LSMinimumSystemVersion":"12.0", "NSHighResolutionCapable":True, "NSPrincipalClass":"NSApplication", "NSAppTransportSecurity":{"NSAllowsLocalNetworking":True}, "NSHumanReadableCopyright":"Production Desk — Local Film Scheduler. Bundled Python and Sparkle are covered by their included licenses.", **updater_plist(config)}, file)
     run("codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", app)
     run("codesign", "--verify", "--deep", "--strict", app)
     python = frameworks / "Python3.framework/Versions/3.9/bin/python3.9"
     run(python, "-I", "-B", "-c", "import json, http.server, uuid, xml.etree.ElementTree; print('Bundled runtime verified')")
     run(python, "-E", "-s", "-B", runtime / "server.py", "--help")
     if dmg:
-        stage = dist / "installer"
+        beta = config.get("channel") == "beta"
+        stage = dist / ("beta-installer" if beta else "installer")
         if stage.exists(): shutil.rmtree(stage)
         stage.mkdir()
-        shutil.copytree(app, stage / "Production Desk.app", symlinks=True)
+        shutil.copytree(app, stage / app.name, symlinks=True)
         (stage / "Applications").symlink_to("/Applications", target_is_directory=True)
         (stage / "Install Production Desk.txt").write_text("Install Production Desk\n\n1. Drag Production Desk.app to Applications.\n2. Open Production Desk from Applications or Spotlight.\n3. To launch with one click, drag Production Desk to your Dock.\n\nNo Terminal, Python installation, account, or internet connection is required.\nProjects are stored in ~/Library/Application Support/Slate/.\nThis build is for Apple Silicon Macs running macOS 12 or newer.\nThis app is locally signed for personal use, not Apple-notarized for public distribution.\n", encoding="utf-8")
-        image = dist / "Production-Desk-macOS.dmg"
+        if beta:
+            (stage / "Install Production Desk.txt").write_text("Install Production Desk Beta\n\nDrag Production Desk Beta.app to Applications. It has its own data folder at ~/Library/Application Support/ProductionDeskBeta/. Production updates are disabled. Stable Production Desk is unchanged.\n", encoding="utf-8")
+        image = dist / ("Production-Desk-Beta-macOS.dmg" if beta else "Production-Desk-macOS.dmg")
         run("hdiutil", "create", "-ov", "-volname", "Production Desk", "-srcfolder", stage, "-format", "UDZO", image)
         run("hdiutil", "verify", image)
     if share: build_share_package(dist, app)
@@ -75,6 +78,12 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
 def build_share_package(dist, app):
     app_info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
     version, build_number = app_info["CFBundleShortVersionString"], app_info["CFBundleVersion"]
+    if app_info.get("ProductionDeskBeta"):
+        archive = dist / ("Production-Desk-Beta-" + version + "-macOS.zip")
+        run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, archive)
+        archive.with_suffix(".sha256").write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + "  " + archive.name + "\n")
+        print("Beta archive: " + str(archive), flush=True)
+        return
     folder = dist / "Production Desk — Share"
     if folder.exists(): shutil.rmtree(folder)
     folder.mkdir()

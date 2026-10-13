@@ -13,7 +13,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         window.title = "Production Desk regression checks"
         window.orderFront(nil)
         web.load(URLRequest(url: URL(string: CommandLine.arguments[1])!))
-        DispatchQueue.main.asyncAfter(deadline: .now() + 50) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 120) {
             print("FAIL: Native desktop regression check timed out")
             exit(1)
         }
@@ -65,13 +65,23 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         expect(document.querySelectorAll('.day-block').length===1,'Shooting day did not survive reload');
         return true;
         """
-        web.callAsyncJavaScript(setup + (phase == 0 ? checks : reloadChecks), arguments: [:], in: nil, in: .page) { result in
+        let root = URL(fileURLWithPath: CommandLine.arguments[2])
+        let fixture = try! Data(contentsOf: root.appendingPathComponent("tests/lined-script.pdf")).base64EncodedString()
+        let testSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/lined-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
+        let linedChecks = "const runLinedChecks = " + testSource + "; return {checks:await runLinedChecks(fixture),pdf:window.linedTestExport.content};"
+        web.callAsyncJavaScript(setup + (phase == 0 ? checks : reloadChecks.replacingOccurrences(of: "return true;", with: "") + linedChecks), arguments: ["fixture":fixture,"testSource":testSource], in: nil, in: .page) { result in
             switch result {
             case .failure(let error): print("FAIL: \(error)"); exit(1)
-            case .success:
+            case .success(let value):
                 if self.phase == 0 { self.phase = 1; self.web.reload() }
                 else {
                     print("Native macOS WebKit verified: focused element edits, valid shot-number persistence, malformed imports, repaired schedules, save and reload.")
+                    if let report = value as? [String:Any], let encoded = report["pdf"] as? String, let pdf = Data(base64Encoded:encoded) {
+                        let output = root.appendingPathComponent("build/lined-check")
+                        try! FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+                        try! pdf.write(to: output.appendingPathComponent("mac-lined-script.pdf"))
+                        print("Native lined-script checks: \(report["checks"] ?? [])")
+                    }
                     exit(0)
                 }
             }

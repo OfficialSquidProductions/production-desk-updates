@@ -4,9 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const {autoUpdater} = require('electron-updater');
+const isBeta = require('./package.json').name === 'production-desk-beta';
 
 const smokeIndex = process.argv.indexOf('--smoke-test');
 const smokeResult = smokeIndex >= 0 ? path.resolve(process.argv[smokeIndex + 1]) : null;
+if (isBeta && !smokeResult) app.setPath('userData', path.join(app.getPath('appData'), 'production-desk-beta'));
 if (smokeResult) app.setPath('userData', path.join(path.dirname(smokeResult), 'smoke-user-data'));
 const dataFolder = app.getPath('userData');
 const settingsFile = path.join(dataFolder, 'desktop-settings.json');
@@ -98,9 +100,9 @@ function buildMenu() {
     {label:'Production Desk', submenu:[
       {label:'About Production Desk', click:() => dialog.showMessageBox(win, {
         message:`Production Desk ${app.getVersion()}`, detail:'Offline film scheduling by Squid Productions.\nWindows x64'})},
-      {label:'Check for Updates…', click:() => checkUpdates(true)},
+      {label:'Check for Updates…', enabled:!isBeta, click:() => checkUpdates(true)},
       {label:'Continue Installing Update…', enabled:updateReady, click:installUpdate},
-      {label:'Updates', submenu:[
+      {label:'Updates', enabled:!isBeta, submenu:[
         {label:'Automatically Check for Updates', type:'checkbox', checked:settings.automaticChecks,
           click:item => {settings.automaticChecks=item.checked; persistSettings();}},
         {label:'Automatically Download and Install Updates on Exit', type:'checkbox', checked:settings.automaticInstall,
@@ -132,7 +134,7 @@ async function editUndo(redo) {
   else await click(redo ? '#redo' : '#undo');
 }
 async function checkUpdates(manual) {
-  if (checking || !app.isPackaged || smokeResult) return;
+  if (isBeta || checking || !app.isPackaged || smokeResult) return;
   checking = true; manualCheck = manual;
   try { await autoUpdater.checkForUpdates(); }
   catch (error) {
@@ -140,6 +142,7 @@ async function checkUpdates(manual) {
   } finally { checking = false; manualCheck = false; }
 }
 function configureUpdates() {
+  if (isBeta) return;
   autoUpdater.autoDownload = settings.automaticInstall;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.on('error', () => {});
@@ -193,7 +196,7 @@ async function start() {
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw new Error('Invalid local server address.');
   const bounds = settings.bounds || {};
   win = new BrowserWindow({width:bounds.width || 1440, height:bounds.height || 940,
-    minWidth:900, minHeight:650, title:'Production Desk', backgroundColor:'#191419', show:!smokeResult,
+    minWidth:900, minHeight:650, title:isBeta?'Production Desk Beta':'Production Desk', backgroundColor:'#191419', show:!smokeResult,
     webPreferences:{preload:path.join(__dirname,'preload.cjs'), nodeIntegration:false,
       contextIsolation:true, sandbox:true, spellcheck:false}});
   win.webContents.setWindowOpenHandler(({url}) => {external(url); return {action:'deny'};});

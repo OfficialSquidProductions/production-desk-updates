@@ -57,7 +57,15 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--require-newer', action='store_true')
     args = parser.parse_args()
-    candidate = json.loads((ROOT / 'desktop/release.json').read_text())['version']
+    config = json.loads((ROOT / 'desktop/release.json').read_text())
+    candidate = config['version']
+    if config.get('channel') == 'beta':
+        if args.require_newer:
+            raise ValueError('Beta builds cannot publish to the production update channel.')
+        if args.output:
+            args.output.write_text('publish=false\nprevious_version=\n', encoding='utf-8')
+        print('Beta build: validation only; production publication is disabled.')
+        return
     version_tuple(candidate)
     publish = False
     previous = None

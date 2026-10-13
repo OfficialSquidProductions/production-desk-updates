@@ -35,3 +35,21 @@ class WindowsReleaseTests(unittest.TestCase):
         self.assertEqual(package['version'], version)
         self.assertEqual(lock['version'], version)
         self.assertEqual(lock['packages']['']['version'], version)
+
+    def test_beta_cannot_publish_even_when_called_as_main(self):
+        import json
+        import sys
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'desktop').mkdir()
+            (root / 'desktop/release.json').write_text(json.dumps({'channel':'beta','version':'1.5.0-beta.1'}))
+            output = root / 'outputs'
+            args = ['gate','--repository','owner/repo','--event','push','--ref','refs/heads/main','--output',str(output)]
+            with patch.object(release,'ROOT',root), patch.object(sys,'argv',args), patch.object(release,'latest_version') as latest:
+                release.main()
+                self.assertIn('publish=false',output.read_text())
+                latest.assert_not_called()
+                with patch.object(sys,'argv',args+['--require-newer']), self.assertRaisesRegex(ValueError,'Beta'):
+                    release.main()

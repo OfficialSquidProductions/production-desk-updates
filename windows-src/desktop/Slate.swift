@@ -24,7 +24,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         web.navigationDelegate = self
         web.uiDelegate = self
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1440, height: 940), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Production Desk"
+        window.title = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Production Desk"
         window.minSize = NSSize(width: 900, height: 650)
         window.setFrameAutosaveName("SlateMainWindow")
         window.contentView = web
@@ -47,7 +47,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         main.addItem(appItem)
         let menu = NSMenu(title: "Production Desk")
         menu.addItem(withTitle: "About Production Desk", action: #selector(showAbout), keyEquivalent: "")
-        updates.addMenuItems(to: menu)
+        if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true { updates.addMenuItems(to: menu) }
         menu.addItem(withTitle: "Open Data Folder", action: #selector(openData), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Hide Production Desk", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
@@ -79,11 +79,11 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         let fm = FileManager.default
         let resources = Bundle.main.resourceURL!
         let runtime = resources.appendingPathComponent("runtime")
-        support = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("Slate", isDirectory: true)
+        support = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool == true ? "ProductionDeskBeta" : "Slate", isDirectory: true)
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
         let workspace = support.appendingPathComponent("workspace.json")
         // Migrate the original local workspace once; it is never embedded in the DMG.
-        if !fm.fileExists(atPath: workspace.path), let source = try? String(contentsOf: resources.appendingPathComponent("migration-source.txt"), encoding: .utf8) {
+        if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true, !fm.fileExists(atPath: workspace.path), let source = try? String(contentsOf: resources.appendingPathComponent("migration-source.txt"), encoding: .utf8) {
             let original = URL(fileURLWithPath: source.trimmingCharacters(in: .whitespacesAndNewlines))
             if fm.fileExists(atPath: original.path) {
                 let data = try Data(contentsOf: original)
@@ -121,7 +121,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
                 try? fm.removeItem(at: self.readyFile)
                 self.localOrigin = url
                 self.web.load(URLRequest(url: url))
-                self.updates.start()
+                if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true { self.updates.start() }
             } else if Date() > self.startupDeadline {
                 timer.invalidate()
                 self.fail("Production Desk took too long to start", detail: "Check desktop.log in the app data folder.")

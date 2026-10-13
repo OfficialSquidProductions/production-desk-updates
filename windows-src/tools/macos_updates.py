@@ -17,7 +17,7 @@ SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 
 def release_config():
     config = json.loads((ROOT / "desktop/release.json").read_text())
-    if not re.fullmatch(r"\d+\.\d+\.\d+", config["version"]):
+    if not re.fullmatch(r"\d+\.\d+\.\d+" + (r"-beta\.\d+" if config.get("channel") == "beta" else ""), config["version"]):
         raise ValueError("Release version must be major.minor.patch")
     if not re.fullmatch(r"[1-9]\d*", config["build"]):
         raise ValueError("Release build must be a positive, increasing integer")
@@ -43,13 +43,15 @@ def sparkle_distribution(config):
 def updater_plist(config):
     return {
         "SUFeedURL": config["feed_url"], "SUPublicEDKey": config["public_key"],
-        "SUEnableAutomaticChecks": True, "SUAutomaticallyUpdate": False,
+        "SUEnableAutomaticChecks": config.get("channel") != "beta", "SUAutomaticallyUpdate": False,
         "SUEnableSystemProfiling": False, "SUScheduledCheckInterval": 86400,
         "SUVerifyUpdateBeforeExtraction": True,
     }
 
 
 def build_update_release(app, config, notes=None):
+    if config.get("channel") == "beta":
+        raise ValueError("Beta builds cannot publish to the production Mac update feed.")
     distribution = sparkle_distribution(config)
     public_key = subprocess.check_output([str(distribution / "bin/generate_keys"), "--account", config["keychain_account"], "-p"], text=True).strip()
     if public_key != config["public_key"]:

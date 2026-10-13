@@ -1,7 +1,7 @@
 name: Windows installer
 on:
   push:
-    branches: [main]
+    branches: [main, 'beta/**']
     paths: ['windows-src/**', '!windows-src/**/*.md', '.github/workflows/windows.yml']
   pull_request:
     paths: ['windows-src/**', '!windows-src/**/*.md', '.github/workflows/windows.yml']
@@ -66,3 +66,10 @@ jobs:
           "$hash  Production-Desk-Windows-Setup.exe" | Out-File dist/windows/Production-Desk-Windows-Setup.sha256 -Encoding ascii
           gh release create $tag $exe dist/windows/Production-Desk-Windows-Setup.sha256 dist/windows/latest.yml dist/windows/Production-Desk-Windows-Setup.exe.blockmap --repo ${{ github.repository }} --target ${{ github.sha }} --title "Production Desk $version for Windows" --notes-file desktop/release-notes.txt --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Save isolated beta installer
+        if: startsWith(github.ref, 'refs/heads/beta/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-desk-beta-windows
+          path: windows-src/dist/windows/Production-Desk-Windows-Setup.exe

@@ -1,4 +1,8 @@
-# Production Desk
+# Production Desk — lined-script beta
+
+**Branch: `beta/lined-script` · Version: `1.5.0-beta.1` · Experimental, separate from the stable release.**
+
+See the [beta guide](windows-src/BETA.md) for lined-script tools, testing, and data isolation.
 
 **Free, offline script breakdowns, film scheduling, and shot lists for macOS and Windows.**
 

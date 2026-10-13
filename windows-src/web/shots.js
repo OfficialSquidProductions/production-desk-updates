@@ -1,3 +1,4 @@
+import {removeCoverage} from './lined-script.js';
 // Local shot lists are a Production Desk extension. USS scene IDs remain the source of truth.
 export function formatShotDuration(minutes) {
   const value=Math.max(0,Math.round(minutes)),days=Math.floor(value/1440),hours=Math.floor(value%1440/60),mins=value%60;
@@ -136,7 +137,7 @@ export function createShotDesk(c) {
     const s=shot();if(!s)return;
     if(name==='take')c.mutate(()=>s.takes=Math.min(10000,s.takes+1));
     if(name==='duplicate')insertShot({...structuredClone(s),id:id(),created:stamp(),number:nextNumber(s.sceneId),status:'Planned',actualMinutes:null,takes:0,circleTake:''},s);
-    if(name==='delete')c.confirm('Delete shot '+esc(label(s))+'?','You can undo this change.',()=>c.mutate(()=>{p()._shots=p()._shots.filter(x=>x.id!==s.id);selected=undefined;}));
+    if(name==='delete')c.confirm('Delete shot '+esc(label(s))+'?','You can undo this change.',()=>c.mutate(()=>{removeCoverage(p(),[s.id]);p()._shots=p()._shots.filter(x=>x.id!==s.id);selected=undefined;}));
     if(name==='up'||name==='down'){const visible=filtered(),i=visible.indexOf(s),neighbor=visible[i+(name==='up'?-1:1)];if(neighbor)c.mutate(()=>{const list=p()._shots,a=list.indexOf(s),b=list.indexOf(neighbor);[list[a],list[b]]=[list[b],list[a]];});}
   }
   return {render,bind,add,csv,print};

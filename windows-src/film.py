@@ -4,6 +4,7 @@ import math
 import uuid
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
+from lined import validate_lining
 
 def uid():
     return str(uuid.uuid4())
@@ -261,6 +262,7 @@ def validate_uss(project):
     settings = project.get('_shotSettings', {'startTime': '07:00'})
     if not isinstance(settings, dict) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', str(settings.get('startTime', ''))):
         raise ValueError('Shot start time must use HH:MM.')
+    validate_lining(project)
     return project
 
 

@@ -20,6 +20,16 @@ and logos are trademarks of their owner. No trademark rights are granted.
   within the desktop source directory.
 - Apple frameworks and Xcode are supplied separately by Apple under their own terms.
 
+## Offline PDF annotation dependencies
+
+- PDF.js 6.4.299 by Mozilla, licensed under Apache-2.0. The unmodified legacy
+  renderer, worker, character maps, standard fonts, WebAssembly resources, and
+  license are bundled under `web/vendor/pdfjs/` in the shared desktop source.
+- PDF-Lib 1.17.1, licensed under MIT. The unmodified distribution and license are
+  bundled under `web/vendor/pdf-lib/`.
+- `web/vendor/manifest.json` records the official npm tarball URLs and verified
+  SHA-512 package integrity values. Original script PDFs never go to these services.
+
 ## Data formats and optional fonts
 
 Production Desk implements the [Universal Schedule Standard](https://github.com/UniversalScheduleStandard/UniversalScheduleStandard)

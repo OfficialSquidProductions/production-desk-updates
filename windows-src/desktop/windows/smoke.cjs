@@ -110,5 +110,17 @@ module.exports = async ({win, origin, dataFolder, output, flush}) => {
   const blocked=await fetch(origin+'/api/workspace',{headers:{Origin:'https://example.com'}});
   assert.equal(blocked.status,403);
   checks.push('Cross-origin requests rejected');
+  const linedOriginal=await (await fetch(origin+'/api/workspace')).json();
+  const fixture=fs.readFileSync(path.join(output,'lined-script.pdf')).toString('base64');
+  checks.push(...await js('('+require('./lined-regressions.cjs').toString()+')('+JSON.stringify(fixture)+')'));
+  const exported=await js('window.linedTestExport.content');
+  fs.writeFileSync(path.join(output,'lined-script-export.pdf'),Buffer.from(exported,'base64'));
+  fs.writeFileSync(path.join(output,'lined-script.png'),(await win.webContents.capturePage()).toPNG());
+  const linedDownloaded=new Promise((resolve,reject)=>win.webContents.session.once('will-download',(_event,item)=>item.once('done',(_event,state)=>state==='completed'?resolve(item.getSavePath()):reject(Error('Lined PDF download '+state)))));
+  await js('document.querySelector("#lined-export").click()');
+  const linedPath=await Promise.race([linedDownloaded,delay(20000).then(()=>{throw Error('Lined PDF download timed out');})]);
+  assert.equal(fs.readFileSync(linedPath).subarray(0,4).toString(),'%PDF');
+  checks.push('Native lined PDF download completes in the installed desktop app');
+  assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};
 };

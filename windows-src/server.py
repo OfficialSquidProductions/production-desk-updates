@@ -13,10 +13,13 @@ import uuid
 import struct
 import sys
 import io
+import base64
+import re
 from functools import lru_cache
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from film import empty_project, import_script, prepare_project, element
+from lined import MAX_BACKUP, store_pdf, pdf_path, add_backup_pdfs, restore_backup_pdfs
 
 ROOT = Path(__file__).resolve().parent
 LOCK = threading.Lock()
@@ -249,7 +252,7 @@ class Handler(SimpleHTTPRequestHandler):
         return {'theme': theme if theme in ('light', 'dark') else 'light'}
 
     def end_headers(self):
-        self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; worker-src 'self'; font-src 'self' data: blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
@@ -276,6 +279,17 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def export_file(self, filename, mime, raw):
+        if not isinstance(filename, str) or not re.fullmatch(r'[\w .-]{1,200}', filename, re.ASCII):
+            raise ValueError('Invalid export filename.')
+        token = uuid.uuid4().hex
+        with LOCK:
+            for key in list(EXPORTS):
+                if time.monotonic() - EXPORTS[key][3] > 300:
+                    del EXPORTS[key]
+            EXPORTS[token] = (filename, mime, raw, time.monotonic())
+        return {'url': '/api/download/' + token}
+
     def do_GET(self):
         if not self.local_request():
             return
@@ -298,6 +312,18 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "font/ttf" if path.endswith('.ttf') else "font/otf")
             self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif path.startswith('/api/pdf/'):
+            try:
+                source = pdf_path(self.server.datafile, path.rsplit('/', 1)[-1])
+                raw = source.read_bytes()
+            except (ValueError, OSError):
+                self.reply({'error': 'Original PDF unavailable. Reattach the original file.'}, 404)
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('Content-Length', str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
         elif path.startswith("/api/download/"):
@@ -339,13 +365,31 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.local_request(mutation=True):
             return
         try:
+            path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > MAX_BODY:
-                self.reply({"error": "Choose a file smaller than 40 MB."}, 413)
+            backup_import = path == '/api/import' and self.headers.get('X-Filename', '').lower().endswith(('.json', '.uss'))
+            limit = MAX_BACKUP if backup_import or path == '/api/export' else MAX_BODY
+            if length <= 0 or length > limit:
+                self.reply({"error": "Request exceeds the " + str(limit // 1024 // 1024) + " MB limit."}, 413)
                 return
             raw = self.rfile.read(length)
-            path = urlsplit(self.path).path
-            if path == '/api/settings':
+            if path == '/api/pdf':
+                from urllib.parse import unquote
+                document = store_pdf(self.server.datafile, raw, unquote(self.headers.get('X-Filename', 'script.pdf')))
+                self.reply({'document': document})
+            elif path == '/api/backup':
+                value = json_object(raw)
+                workspace = value.get('workspace')
+                if not isinstance(workspace, dict) or not isinstance(workspace.get('projects'), list):
+                    raise ValueError('Invalid backup workspace.')
+                for project in workspace['projects']:
+                    prepare_project(project)
+                backup = add_backup_pdfs(self.server.datafile, workspace)
+                contents = json.dumps(backup, ensure_ascii=False, allow_nan=False, indent=2).encode('utf-8')
+                if len(contents) > MAX_BACKUP:
+                    raise ValueError('This backup exceeds 200 MB.')
+                self.reply(self.export_file(value.get('filename'), 'application/json', contents))
+            elif path == '/api/settings':
                 value = json_object(raw)
                 if not isinstance(value, dict) or value.get('theme') not in ('light', 'dark'):
                     raise ValueError('Choose Light or Dark appearance.')
@@ -361,15 +405,17 @@ class Handler(SimpleHTTPRequestHandler):
                 import re
                 if not isinstance(filename, str) or not re.fullmatch(r"[\w .-]{1,200}", filename, re.ASCII):
                     raise ValueError("Invalid export filename.")
-                if not isinstance(content, str) or mime not in ("application/json", "text/csv;charset=utf-8"):
+                if not isinstance(content, str) or mime not in ("application/json", "text/csv;charset=utf-8", 'application/pdf'):
                     raise ValueError("Invalid export contents.")
-                token = uuid.uuid4().hex
-                with LOCK:
-                    expired = [key for key, item in EXPORTS.items() if time.monotonic()-item[3] > 300]
-                    for key in expired:
-                        del EXPORTS[key]
-                    EXPORTS[token] = (filename, mime, content.encode("utf-8"), time.monotonic())
-                self.reply({"url": "/api/download/" + token})
+                if mime == 'application/pdf':
+                    if value.get('encoding') != 'base64':
+                        raise ValueError('Invalid PDF export encoding.')
+                    contents = base64.b64decode(content, validate=True)
+                    if not contents.startswith(b'%PDF-'):
+                        raise ValueError('Invalid PDF export.')
+                else:
+                    contents = content.encode('utf-8')
+                self.reply(self.export_file(filename, mime, contents))
             elif path == "/api/workspace":
                 value = json_object(raw)
                 if not isinstance(value, dict) or not isinstance(value.get("projects"), list):
@@ -397,12 +443,17 @@ class Handler(SimpleHTTPRequestHandler):
                     elif value.get("version") == 1 and isinstance(value.get("projects"), list):
                         for p in value["projects"]:
                             prepare_project(p)
+                        restore_backup_pdfs(self.server.datafile, value)
                         self.reply({"workspace": value})
                     else:
                         raise ValueError("Select a USS file or a Production Desk workspace backup.")
                 else:
                     text = extract_pdf(raw) if filename.lower().endswith(".pdf") else raw.decode("utf-8-sig")
-                    self.reply({"project": import_script(text, filename)})
+                    project = import_script(text, filename)
+                    if filename.lower().endswith('.pdf'):
+                        document = store_pdf(self.server.datafile, raw, filename)
+                        project['_linedScript'] = {'activePdf': document['sha256'], 'documents': [document]}
+                    self.reply({"project": project})
             else:
                 self.reply({"error": "Not found"}, 404)
         except (ValueError, KeyError, TypeError, UnicodeError, subprocess.TimeoutExpired) as e:

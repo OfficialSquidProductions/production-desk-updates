@@ -1,6 +1,6 @@
 {
-  "name": "production-desk",
-  "version": "1.4.5",
+  "name": "production-desk-beta",
+  "version": "1.5.0-beta.1",
   "description": "Offline film scheduling, script breakdowns and shot lists",
   "author": "Squid Productions",
   "private": true,
@@ -16,8 +16,8 @@
     "electron-builder": "26.15.3"
   },
   "build": {
-    "appId": "org.squidproductions.productiondesk",
-    "productName": "Production Desk",
+    "appId": "org.squidproductions.productiondesk.beta",
+    "productName": "Production Desk Beta",
     "directories": {
       "output": "../../dist/windows",
       "buildResources": "assets"
@@ -27,18 +27,13 @@
       "preload.cjs",
       "smoke.cjs",
       "package.json",
-      "regressions.cjs"
+      "regressions.cjs",
+      "lined-regressions.cjs"
     ],
     "extraResources": [
       {
         "from": "../../build/windows/backend/ProductionDeskServer",
         "to": "backend"
-      }
-    ],
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/"
       }
     ],
     "win": {
