@@ -61,7 +61,7 @@ module.exports = async ({win, origin, dataFolder, output, flush}) => {
     window.fetch=(url,options)=>String(url)==='/api/workspace' && options?.method==='POST'
       ? Promise.resolve(new Response('{"error":"Simulated disk failure"}',{status:500}))
       : window.realFetchForTest(url,options);
-    document.querySelector('[data-shot-field="notes"]').value='Recovered after failed save';
+    document.querySelector('[data-shot-field="notes"]').value+='\\nRecovered after failed save';
     document.querySelector('[data-shot-field="notes"]').dispatchEvent(new Event('change',{bubbles:true}));`);
   assert.equal(await flush(), false);
   await js('window.fetch=window.realFetchForTest; delete window.realFetchForTest;');

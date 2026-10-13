@@ -26,9 +26,11 @@ def main():
     def run_app(executable, label):
         if result.exists():
             result.unlink()
-        subprocess.run([str(executable), '--smoke-test', str(result)], check=True, timeout=90)
+        completed = subprocess.run([str(executable), '--smoke-test', str(result)], timeout=90)
+        if not result.exists():
+            raise RuntimeError('Packaged app check exited without a report: ' + str(completed.returncode))
         report = json.loads(result.read_text())
-        if not report.get('passed'):
+        if completed.returncode or not report.get('passed'):
             raise RuntimeError(report)
         shutil.copy2(result, output / (label + '.json'))
         print(label + ': ' + ', '.join(report['checks']), flush=True)
