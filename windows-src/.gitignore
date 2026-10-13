@@ -8,3 +8,8 @@ dist/
 build/
 node_modules/
 desktop/windows/assets/icon.ico
+# Pinned offline PDF libraries are source dependencies, not generated app outputs.
+!web/vendor/pdfjs/legacy/build/
+!web/vendor/pdfjs/legacy/build/*.mjs
+!web/vendor/pdf-lib/dist/
+!web/vendor/pdf-lib/dist/*.js
