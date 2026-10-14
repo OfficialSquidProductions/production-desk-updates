@@ -1,26 +1,19 @@
-<?xml version="1.0" standalone="yes"?>
+<?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-    <channel>
-        <title>Production Desk</title>
-        <item>
-            <title>1.5.2</title>
-            <pubDate>Wed, 14 Oct 2026 11:58:02 -0400</pubDate>
-            <sparkle:version>20</sparkle:version>
-            <sparkle:shortVersionString>1.5.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Production Desk 1.5.2</h2>
-<ul>
-  <li>Draw coverage, arrows, and notes across page boundaries with Continuous scroll in Lined script. Edge scrolling keeps long strokes moving; original PDFs and page exports retain their layout.</li>
-  <li>Create a scrollable copy from imported Final Draft, Fountain, or text script scenes when an original PDF is unavailable.</li>
-  <li>Right-click shots and coverage lines to delete them. Linked deletion removes both the shot and its linked coverage, with separate Don&#x27;t show again choices and Undo. Restore warnings from Settings.</li>
-  <li>Find New production as a plus above the production picker and Production settings at the bottom of the sidebar.</li>
-  <li>Find bug and crash reporting in Settings. The local-save notice now appears beneath the software credit.</li>
-  <li>Keep short coverage strokes usable in long scripts and release offscreen page images while scrolling.</li>
-</ul>
-<p>Existing productions and original PDFs are preserved. Full backups retain editable annotations and attached PDFs.</p>
-]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.2-20.zip" length="20912622" type="application/octet-stream" sparkle:edSignature="BytUQ1q53hiSGfr9P/pdpZHQuo+i0A356sUHKJqZejfsXMJtsxkYrAE6ALMZamVuYCpRR1p0Yi66hisLS3awBQ=="/>
-        </item>
-    </channel>
+  <channel>
+    <title>Production Desk</title>
+    <link>https://productiondesk.squidproductions.org/</link>
+    <language>en</language>
+    <item>
+      <title>Production Desk 1.5.3</title>
+      <pubDate>Wed, 14 Oct 2026 22:12:14 +0000</pubDate>
+      <description>&lt;h2&gt;Production Desk 1.5.3&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;Mac app and one-click installer are signed with Developer ID and notarized by Apple.&lt;/li&gt;&lt;li&gt;Stapled notarization tickets allow verification without an internet connection.&lt;/li&gt;&lt;li&gt;Existing productions, schedules, shot lists, and settings are preserved when updating.&lt;/li&gt;&lt;/ul&gt;
+</description>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>1.5.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.3-21.zip" length="21244416" type="application/octet-stream" sparkle:edSignature="Qwf8E0uvFnK/lW58o9TOjTWKeimc8He/y+a7CuCLckAll0CwOwjTtZMd3ma19C9i/e+GNWbBUHN+rMYqGuAtAg==" />
+    </item>
+  </channel>
 </rss>
