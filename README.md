@@ -11,7 +11,7 @@ Built by Squid Productions for real productions and shared under the [MIT licens
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.1-19.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
+| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.2-20.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
 | Windows | [Download Windows installer](https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/Production-Desk-Windows-Setup.exe) | Windows 10/11, x64. Run the single `.exe` installer; installation is for the current user. |
 
 Visit the [Production Desk website](https://productiondesk.squidproductions.org/) for the
