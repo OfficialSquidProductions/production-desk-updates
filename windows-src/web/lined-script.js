@@ -2,6 +2,12 @@
 const NS='http://www.w3.org/2000/svg';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const copy=value=>structuredClone(value);
+let textMeasure;
+function textWidth(value){
+  textMeasure||=document.createElement('canvas').getContext('2d');
+  textMeasure.font='11px Arial, sans-serif';
+  return textMeasure.measureText(value).width;
+}
 export function removeCoverage(project,shotIds){
   const removed=new Set(shotIds);
   for(const doc of project._linedScript?.documents||[])doc.marks=doc.marks.filter(m=>m.type!=='coverage'||!removed.has(m.shotId));
@@ -25,10 +31,15 @@ export function markPrimitives(mark,width,height,shotLabel,movement){
   const pos=p=>[p[0]*width,p[1]*height], result=[];
   const path=(points,alpha=1)=>result.push({kind:'path',points,color:mark.color,width:mark.width,alpha});
   const text=(content,anchor)=>{
-    const columns=Math.max(8,Math.min(36,Math.floor((width-16)/6.2)));
-    const lines=wrap(content,columns),boxWidth=Math.min(width-8,Math.max(...lines.map(l=>l.length),1)*6.2+14);
-    const boxHeight=lines.length*15+10;
-    result.push({kind:'text',lines,x:clamp(anchor[0],4,Math.max(4,width-boxWidth-4)),y:clamp(anchor[1],4,Math.max(4,height-boxHeight-4)),boxWidth,boxHeight,color:mark.color});
+    const maxColumns=Math.max(1,Math.floor((width-22)/11));
+    let columns=Math.min(36,maxColumns),lines=wrap(content,columns);
+    // Widen long notes before scaling them, keeping every word on the page.
+    while(lines.length*15+10>height-8&&columns<maxColumns){columns=Math.min(maxColumns,columns+8);lines=wrap(content,columns);}
+    if(lines.length*15+10>height-8)lines=wrap(String(content||'').replace(/\s+/g,' '),maxColumns);
+    const naturalWidth=Math.max(...lines.map(textWidth),1)+14,naturalHeight=lines.length*15+10;
+    const scale=Math.max(.001,Math.min(1,(width-8)/naturalWidth,(height-8)/naturalHeight));
+    const boxWidth=naturalWidth*scale,boxHeight=naturalHeight*scale;
+    result.push({kind:'text',lines,x:clamp(anchor[0],4,Math.max(4,width-boxWidth-4)),y:clamp(anchor[1],4,Math.max(4,height-boxHeight-4)),boxWidth,boxHeight,color:mark.color,fontSize:11*scale,padding:7*scale,baseline:16*scale,lineHeight:15*scale});
   };
   if(mark.type==='coverage'){
     const a=pos(mark.start),b=pos(mark.end),top=Math.min(a[1],b[1]),bottom=Math.max(a[1],b[1]);
@@ -56,8 +67,8 @@ function paint(context,primitives){
     }else{
       context.fillStyle='rgba(255,255,255,.94)';context.fillRect(item.x,item.y,item.boxWidth,item.boxHeight);
       context.strokeStyle=item.color;context.lineWidth=.6;context.strokeRect(item.x,item.y,item.boxWidth,item.boxHeight);
-      context.fillStyle=item.color;context.font='11px Arial, sans-serif';
-      item.lines.forEach((line,i)=>context.fillText(line,item.x+7,item.y+16+i*15));
+      context.fillStyle=item.color;context.font=`${item.fontSize}px Arial, sans-serif`;
+      item.lines.forEach((line,i)=>context.fillText(line,item.x+item.padding,item.y+item.baseline+i*item.lineHeight));
     }
     context.restore();
   }
@@ -128,7 +139,7 @@ export function createLinedDesk(c){
           group.append(svgNode('polyline',{points,fill:'none',stroke:item.color,'stroke-width':item.width,opacity:item.alpha,'stroke-linecap':'round','stroke-linejoin':'round'}));
         }else{
           group.append(svgNode('rect',{x:item.x,y:item.y,width:item.boxWidth,height:item.boxHeight,fill:'white','fill-opacity':'.94',stroke:item.color,'stroke-width':'.6',rx:2,...(item.handle?{'data-lined-handle':item.handle}:{})}));
-          item.lines.forEach((line,i)=>group.append(svgNode('text',{x:item.x+7,y:item.y+16+i*15,fill:item.color,'font-size':11,'font-family':'Arial, sans-serif',...(item.handle?{'data-lined-handle':item.handle}:{})},line)));
+          item.lines.forEach((line,i)=>group.append(svgNode('text',{x:item.x+item.padding,y:item.y+item.baseline+i*item.lineHeight,fill:item.color,'font-size':item.fontSize,'font-family':'Arial, sans-serif',...(item.handle?{'data-lined-handle':item.handle}:{})},line)));
         }
       }
       if(m.id===selectedId&&['coverage','arrow'].includes(m.type))for(const key of ['start','end'])group.append(svgNode('circle',{cx:m[key][0]*viewport.width,cy:m[key][1]*viewport.height,r:5,fill:'white',stroke:m.color,'stroke-width':1.5,'data-lined-handle':key}));

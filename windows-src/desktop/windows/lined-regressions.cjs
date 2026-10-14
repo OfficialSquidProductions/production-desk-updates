@@ -44,6 +44,13 @@ module.exports = async function runLinedChecks(fixture) {
   expect(Math.abs(current[6].end[0]-.8)<.001,'Zoom changed stored coordinates');
   $('#undo').click();await wait(()=>$('#lined-overlay')!==null);expect((await marks()).length===6,'Annotation Undo failed');
   $('#redo').click();await wait(()=>$('#lined-overlay')!==null);expect((await marks()).length===7,'Annotation Redo failed');
+  const {markPrimitives}=await import('/lined-script.js');
+  for(const text of ['Long camera direction '.repeat(100).slice(0,2000),'W'.repeat(2000),'Cut.\n'.repeat(400)]){
+    const box=markPrimitives({type:'text',start:[.95,.95],text,color:'#E60026',width:2},612,792).find(p=>p.kind==='text');
+    expect(box.x+box.boxWidth<=612&&box.y+box.boxHeight<=792,'Maximum-length note clips outside the page');
+    const measure=document.createElement('canvas').getContext('2d');measure.font=`${box.fontSize}px Arial, sans-serif`;
+    expect(box.lines.every(line=>measure.measureText(line).width+box.padding*2<=box.boxWidth+.01),'Long note overflows its box');
+  }
   const realFetch=window.fetch,realClick=HTMLAnchorElement.prototype.click;
   window.fetch=async(url,options)=>{if(String(url)==='/api/export')window.linedTestExport=JSON.parse(options.body);return realFetch(url,options);};
   HTMLAnchorElement.prototype.click=function(){if(!this.href.includes('/api/download/'))return realClick.call(this);};
@@ -54,5 +61,28 @@ module.exports = async function runLinedChecks(fixture) {
   const response=await fetch('/api/backup',{method:'POST',headers:{'X-Slate-Local':'1'},body:JSON.stringify({workspace:await(await fetch('/api/workspace')).json(),filename:'lined-backup.json'})});
   expect(response.ok,'Full PDF backup failed');const backup=await(await fetch((await response.json()).url)).json();
   expect(backup._pdfDocuments[before.activePdf]===fixture,'Full backup lost original PDF bytes');
-  return ['Original two-page PDF renders offline','Shot-linked coverage, shared camera movements and timing notes','Pen, highlighter, arrow, typed notes and movable coverage labels','Rotated/cropped page and zoom retain coordinates','Annotation Undo/Redo and disk save','Lined PDF export preserves originals and editable marks','Full backup contains the byte-identical original PDF'];
+  // A revision has distinct marks even when it contains the same page artwork.
+  {const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(fixture),c=>c.charCodeAt(0)),'\n% Beta revision\n'],'lined-revision.pdf',{type:'application/pdf'}));
+   $('#lined-file').files=transfer.files;$('#lined-file').dispatchEvent(new Event('change',{bubbles:true}));}
+  await wait(()=>$('#lined-document')?.options.length===2&&$('#lined-document').value!==before.activePdf&&$('#lined-status').textContent.includes('Marks save'));
+  const revision=$('#lined-document').value;drag('arrow',[.5,.4],[.65,.6]);
+  project=await saved();expect(project._linedScript.documents.find(d=>d.sha256===revision).marks.length===1,'Revision marks were not saved separately');
+  for(const digest of [before.activePdf,revision,before.activePdf]){
+    $('#lined-document').value=digest;$('#lined-document').dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  await wait(()=>$('#lined-status').textContent.includes('Marks save')&&$('#lined-pages').textContent==='Page 1 of 2');
+  expect($('#lined-overlay').querySelectorAll('[data-lined-mark]').length===5,'Rapid revision switching displayed stale marks');
+  const linkedId=before.documents[0].marks.find(m=>m.type==='coverage').shotId;
+  $('[data-view="shots"]').click();$(`[data-shot-select="${linkedId}"]`).click();
+  $('[data-shot-field="movement"]').value='Dolly right';$('[data-shot-field="movement"]').dispatchEvent(new Event('input',{bubbles:true}));
+  $('[data-view="lined"]').click();await wait(()=>$('#lined-overlay')?.textContent.includes('Dolly right'));
+  $('[data-view="shots"]').click();$(`[data-shot-select="${linkedId}"]`).click();$('[data-shot-action="delete"]').click();$('#modal-ok').click();
+  project=await saved();expect(!project._shots.some(s=>s.id===linkedId)&&project._linedScript.documents.every(d=>d.marks.every(m=>m.shotId!==linkedId)),'Shot deletion left orphan coverage');
+  $('#undo').click();project=await saved();expect(project._shots.some(s=>s.id===linkedId)&&project._linedScript.documents[0].marks.filter(m=>m.shotId===linkedId).length===2,'Undo did not restore shot coverage');
+  $('[data-view="lined"]').click();await wait(()=>$('#lined-status').textContent.includes('Marks save'));
+  document.documentElement.dataset.theme='dark';
+  expect(getComputedStyle($('.lined-toolbar')).backgroundColor===getComputedStyle($('.lined-desk')).backgroundColor,'Lined toolbar did not follow dark appearance');
+  expect(getComputedStyle($('.lined-page')).backgroundColor==='rgb(255, 255, 255)','Dark theme changed original PDF paper');
+  document.documentElement.dataset.theme='light';
+  return ['Original two-page PDF renders offline','Shot-linked coverage, shared camera movements and timing notes','Pen, highlighter, arrow, typed notes and movable coverage labels','Rotated/cropped page and zoom retain coordinates','Annotation Undo/Redo and disk save','Lined PDF export preserves originals and editable marks','Full backup contains the byte-identical original PDF','Maximum-length notes and wide characters fit the PDF page','PDF revisions retain independent marks during rapid switching','Shot-list movements update coverage; deletion and Undo preserve links','Light/dark appearance keeps original PDF pages legible'];
 };
