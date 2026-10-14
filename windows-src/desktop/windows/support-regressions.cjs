@@ -10,8 +10,7 @@ module.exports = async ({win, origin, dataFolder, waitFor, reload, readEmailDraf
   await waitFor('document.querySelector("#support-notice") && !document.querySelector("#support-notice").hidden');
   assert.equal((await (await fetch(origin+'/api/support')).json()).report.kind, 'session');
   checks.push('Interrupted desktop session offers a report after launch');
-  await js(`document.querySelector('#settings-open').click();
-    document.querySelector('[data-field="title"]').value='Unsaved report test';document.querySelector('#report-bug').click();`);
+  await js(`document.querySelector('#app-settings-open').click();document.querySelector('#report-bug').click();`);
   assert.equal(await js('document.querySelector("#support-email").hidden'), true);
   await js(`document.querySelector('#support-copy').click();document.querySelector('#support-save').click();`);
   assert.equal(await js('document.querySelector("#support-description").validity.valueMissing'), true);
@@ -36,8 +35,8 @@ module.exports = async ({win, origin, dataFolder, waitFor, reload, readEmailDraf
   assert.equal(fs.readFileSync(savedPath,'utf8'), address.searchParams.get('body'));
   checks.push('Bug report requires a description, encodes the correct recipient/body, copies and downloads exact reviewed text');
   await js('document.querySelector("#support-close").click()');
-  assert.equal(await js('document.querySelector("[data-field=title]").value'), 'Unsaved report test');
-  await js('document.querySelector("#modal-cancel").click()');
+  assert.equal(await js('Boolean(document.querySelector("#app-settings") && document.querySelector("#modal").open)'), true);
+  await js('document.querySelector("#modal-close").click()');
   await js(`window.dispatchEvent(new ErrorEvent('error',{message:'x'+'😀'.repeat(400),filename:location.origin+'/app.js?private=hidden',lineno:24}));`);
   await waitFor('!document.querySelector("#support-notice").hidden');
   const deadline = Date.now()+15000;
@@ -49,7 +48,7 @@ module.exports = async ({win, origin, dataFolder, waitFor, reload, readEmailDraf
     if (details.method === 'GET') setTimeout(()=>done({}),500); else done({});
   });
   await reload();
-  await js(`document.querySelector('#settings-open').click();document.querySelector('#report-crash').click();document.querySelector('#support-description').value='Draft during recovery load';document.querySelector('#support-description').dispatchEvent(new Event('input',{bubbles:true}));`);
+  await js(`document.querySelector('#app-settings-open').click();document.querySelector('#report-crash').click();document.querySelector('#support-description').value='Draft during recovery load';document.querySelector('#support-description').dispatchEvent(new Event('input',{bubbles:true}));`);
   await waitFor('document.querySelector("#support-report pre").textContent.includes("Problem: script")');
   win.webContents.session.webRequest.onBeforeRequest(null);
   assert.equal(await js('document.querySelector("#support-description").value'),'Draft during recovery load');

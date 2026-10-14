@@ -1,4 +1,5 @@
-// Original pages remain immutable. Editable marks use normalized page coordinates.
+import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
+// Original pages remain immutable. Editable marks use normalized page or document coordinates.
 const NS='http://www.w3.org/2000/svg';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const copy=value=>structuredClone(value);
@@ -20,7 +21,7 @@ export function clearCoverageScene(project,sceneId){
 export function coverageSummary(project,shotId){
   return (project._linedScript?.documents||[]).flatMap(document=>document.marks
     .filter(m=>m.type==='coverage'&&m.shotId===shotId)
-    .map(m=>`${document.filename} · p. ${m.page+1} · ${m.style==='wavy'?'Off camera':'On camera'}${m.note?' · '+m.note:''}`));
+    .map(m=>`${document.filename} · ${m.endPage>m.page?'pp. '+(m.page+1)+'–'+(m.endPage+1):'p. '+(m.page+1)} · ${m.style==='wavy'?'Off camera':'On camera'}${m.note?' · '+m.note:''}`));
 }
 const shotFields=['description','movement','camera','lens','size','equipment'];
 function wrap(text,columns){
@@ -68,6 +69,20 @@ export function markPrimitives(mark,width,height,shotLabel,movement){
   }else text(mark.text,pos(mark.start));
   return result;
 }
+// Continuous annotations use normalized coordinates across the stacked original pages.
+// Page annotations keep their original coordinates and are translated only for display.
+export async function documentLayout(file){
+  const pages=[];let width=0,height=0;
+  for(let i=0;i<file.numPages;i++){const source=await file.getPage(i+1),view=source.getViewport({scale:1});pages.push({source,view,top:height});width=Math.max(width,view.width);height+=view.height;}
+  for(const item of pages)item.left=(width-item.view.width)/2;
+  return {pages,width,height};
+}
+function translatePrimitives(items,dx,dy){return items.map(item=>item.kind==='path'?{...item,points:item.points.map(([x,y])=>[x+dx,y+dy])}:{...item,x:item.x+dx,y:item.y+dy});}
+export function documentPrimitives(mark,layout,label,movement){
+  if(mark.space==='document')return markPrimitives(mark,layout.width,layout.height,label,movement);
+  const item=layout.pages[mark.page];if(!item)return [];
+  return translatePrimitives(markPrimitives(mark,item.view.width,item.view.height,label,movement),item.left,item.top);
+}
 function paint(context,primitives){
   for(const item of primitives){
     context.save();
@@ -87,7 +102,9 @@ function paint(context,primitives){
 export function createLinedDesk(c){
   const {esc,id,stamp}=c,$=s=>document.querySelector(s);
   let production,sha,page=0,zoom=1,tool='coverage',color='#E60026',width=2,style='solid',shotId='',selectedId,gesture,viewport,epoch=0,busy=false;
-  let library;
+  let library,layout,continuous=false,pageObserver;
+  const deleteMenu=createDeleteMenu('coverage line');
+  try{continuous=localStorage.getItem('productionDeskContinuousScript')==='true';}catch{}
   const loaded=new Map();
   const p=()=>c.project(),lining=()=>p()._linedScript,doc=()=>lining()?.documents.find(d=>d.sha256===lining().activePdf),mark=()=>doc()?.marks.find(m=>m.id===selectedId);
   const shot=(sid=shotId)=>p()._shots.find(s=>s.id===sid);
@@ -99,7 +116,7 @@ export function createLinedDesk(c){
     if(!mark())selectedId=undefined;
   }
   const options=(value)=>p()._shots.map(s=>`<option value="${esc(s.id)}" ${s.id===value?'selected':''}>${esc(label(s)+' · '+s.description)}</option>`).join('');
-  function render(){sync();return `<section class="panel lined-desk"><div class="lined-top"><div><h2>Lined script</h2><p>Original PDF pages · shot-linked coverage · local annotations</p></div><div class="lined-file-actions"><button id="lined-attach">${doc()?'Add PDF revision':'Attach original PDF'}</button><input id="lined-file" type="file" accept="application/pdf,.pdf" hidden><button id="lined-export" class="primary" ${doc()?'':'disabled'}>Export lined PDF</button></div></div>${doc()?`<div class="lined-document"><label>PDF revision<select id="lined-document">${lining().documents.map(d=>`<option value="${d.sha256}" ${d.sha256===sha?'selected':''}>${esc(d.filename)}</option>`).join('')}</select></label><div class="lined-pagination"><button id="lined-prev" aria-label="Previous PDF page">‹</button><span id="lined-pages">Loading PDF…</span><button id="lined-next" aria-label="Next PDF page">›</button><label>Zoom<select id="lined-zoom">${[.5,.75,1,1.25,1.5,2].map(z=>`<option value="${z}" ${z===zoom?'selected':''}>${Math.round(z*100)}%</option>`).join('')}</select></label></div></div><div class="lined-toolbar" role="toolbar" aria-label="Script annotation tools">${[['select','↖ Select'],['coverage','│ Coverage'],['pen','✎ Pen'],['highlighter','▰ Highlight'],['arrow','↗ Arrow'],['text','T Note']].map(([key,name])=>`<button data-lined-tool="${key}" aria-pressed="${key===tool}">${name}</button>`).join('')}<label>Color<input id="lined-color" type="color" value="${color}"></label><label>Width<select id="lined-width">${[1,2,3,5,10,14,24].map(w=>`<option ${width===w?'selected':''}>${w}</option>`).join('')}</select></label></div><div class="lined-workspace"><div class="lined-scroll" id="lined-scroll"><div id="lined-stage" aria-label="Original script PDF"><p class="lined-loading">Opening original PDF…</p></div></div><aside id="lined-inspector" class="lined-inspector"></aside></div>`:`<div class="lined-empty"><div class="lined-empty-icon">▧</div><h3>Line the original pages.</h3><p>Attach your screenplay PDF to draw coverage lines, link shots, and write camera directions.</p><p>New PDF script imports keep their original pages automatically. For an older production, attach its original PDF here.</p><button id="lined-empty-attach" class="primary">Choose original PDF</button><p class="tiny">PDFs stay on this computer and travel with full Production Desk backups.</p></div>`}<p id="lined-status" class="lined-status" role="status"></p></section>`;}
+  function render(){sync();return `<section class="panel lined-desk"><div class="lined-top"><div><h2>Lined script</h2><p>Original PDF pages · shot-linked coverage · local annotations</p></div><div class="lined-file-actions"><button id="lined-attach">${doc()?'Add PDF revision':'Attach original PDF'}</button><input id="lined-file" type="file" accept="application/pdf,.pdf" hidden><button id="lined-export" class="primary" ${doc()?'':'disabled'}>Export lined PDF</button></div></div>${doc()?`<div class="lined-document"><label>PDF revision<select id="lined-document">${lining().documents.map(d=>`<option value="${d.sha256}" ${d.sha256===sha?'selected':''}>${esc(d.filename)}</option>`).join('')}</select></label><div class="lined-pagination"><label class="lined-continuous-choice"><input id="lined-continuous" type="checkbox" ${continuous?'checked':''}>Continuous scroll</label><button id="lined-prev" aria-label="Previous PDF page">‹</button><span id="lined-pages">Loading PDF…</span><button id="lined-next" aria-label="Next PDF page">›</button><label>Zoom<select id="lined-zoom">${[.5,.75,1,1.25,1.5,2].map(z=>`<option value="${z}" ${z===zoom?'selected':''}>${Math.round(z*100)}%</option>`).join('')}</select></label></div></div><div class="lined-toolbar" role="toolbar" aria-label="Script annotation tools">${[['select','↖ Select'],['coverage','│ Coverage'],['pen','✎ Pen'],['highlighter','▰ Highlight'],['arrow','↗ Arrow'],['text','T Note']].map(([key,name])=>`<button data-lined-tool="${key}" aria-pressed="${key===tool}">${name}</button>`).join('')}<label>Color<input id="lined-color" type="color" value="${color}"></label><label>Width<select id="lined-width">${[1,2,3,5,10,14,24].map(w=>`<option ${width===w?'selected':''}>${w}</option>`).join('')}</select></label></div><div class="lined-workspace"><div class="lined-scroll" id="lined-scroll"><div id="lined-stage" aria-label="Original script PDF"><p class="lined-loading">Opening original PDF…</p></div></div><aside id="lined-inspector" class="lined-inspector"></aside></div>`:`<div class="lined-empty"><div class="lined-empty-icon">▧</div><h3>Line the original pages.</h3><p>Attach your screenplay PDF to draw coverage lines, link shots, and write camera directions.</p><p>New PDF script imports keep their original pages automatically. For an older production, attach its original PDF here.</p><button id="lined-empty-attach" class="primary">Choose original PDF</button>${p().breakdowns.some(b=>b._scriptText)?'<p>Or use the imported script text to create a scrollable copy.</p><button id="lined-from-text">Create from script text</button>':''}<p class="tiny">PDFs stay on this computer and travel with full Production Desk backups.</p></div>`}<p id="lined-status" class="lined-status" role="status"></p></section>`;}
   async function libraries(){
     if(!library){library=await import('./vendor/pdfjs/legacy/build/pdf.min.mjs');library.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/legacy/build/pdf.worker.min.mjs';}
     return library;
@@ -118,21 +135,37 @@ export function createLinedDesk(c){
   }
   function setStatus(message,error=false){const node=$('#lined-status');if(node){node.textContent=message;node.classList.toggle('lined-error',error);}}
   async function renderPage(){
-    gesture=null;const generation=++epoch,current=doc(),stage=$('#lined-stage');if(!current||!stage)return;
+    gesture=null;pageObserver?.disconnect();const generation=++epoch,current=doc(),stage=$('#lined-stage');if(!current||!stage)return;
+    viewport=undefined;stage.innerHTML='<p class="lined-loading">Opening script pages…</p>';setStatus('Opening script pages…');
     try{
       const {pdf:file}=await load(current.sha256);if(generation!==epoch||!stage.isConnected)return;
-      page=clamp(page,0,file.numPages-1);const original=await file.getPage(page+1);
-      if(generation!==epoch||!stage.isConnected)return;
-      viewport=original.getViewport({scale:1});
-      stage.innerHTML='<div class="lined-page"><canvas id="lined-canvas"></canvas><svg id="lined-overlay" role="img" aria-label="Script annotations"></svg></div>';
-      const canvas=$('#lined-canvas'),overlay=$('#lined-overlay'),factor=Math.min(window.devicePixelRatio||1,2)*zoom,view=original.getViewport({scale:factor});
-      canvas.width=Math.ceil(view.width);canvas.height=Math.ceil(view.height);
-      const container=$('.lined-page');container.style.width=viewport.width*zoom+'px';container.style.height=viewport.height*zoom+'px';
+      layout=await documentLayout(file);if(generation!==epoch||!stage.isConnected)return;
+      page=clamp(page,0,file.numPages-1);const item=layout.pages[page];
+      viewport=continuous?{width:layout.width,height:layout.height}:item.view;
+      stage.innerHTML='<div class="lined-page'+(continuous?' lined-continuous':'')+'"><div id="lined-sheets"></div><svg id="lined-overlay" role="img" aria-label="Script annotations"></svg></div>';
+      const container=$('.lined-page'),sheets=$('#lined-sheets'),overlay=$('#lined-overlay');
+      container.style.width=viewport.width*zoom+'px';container.style.height=viewport.height*zoom+'px';
       overlay.setAttribute('viewBox',`0 0 ${viewport.width} ${viewport.height}`);
-      $('#lined-pages').textContent=`Page ${page+1} of ${file.numPages}`;$('#lined-prev').disabled=page===0;$('#lined-next').disabled=page===file.numPages-1;
+      const renderSheet=async(canvas,index)=>{
+        if(generation!==epoch||!canvas.isConnected||canvas.dataset.rendering==='true')return;
+        canvas.dataset.rendering='true';
+        const sheet=layout.pages[index],factor=(continuous?1:Math.min(window.devicePixelRatio||1,2))*zoom,view=sheet.source.getViewport({scale:factor});
+        canvas.width=Math.ceil(view.width);canvas.height=Math.ceil(view.height);
+        try{await sheet.source.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;}catch(error){if(generation===epoch)setStatus(error.message,true);}
+        finally{canvas.dataset.rendering='false';if(continuous&&canvas.dataset.visible!=='true')canvas.width=canvas.height=1;}
+      };
+      if(continuous){
+        // Render visible sheets only: a long screenplay does not allocate one enormous bitmap.
+        pageObserver=new IntersectionObserver(entries=>{for(const entry of entries){const canvas=entry.target;canvas.dataset.visible=String(entry.isIntersecting);if(entry.isIntersecting&&canvas.width===1)renderSheet(canvas,Number(canvas.dataset.pdfPage));else if(!entry.isIntersecting&&canvas.dataset.rendering!=='true')canvas.width=canvas.height=1;}},{root:$('#lined-scroll'),rootMargin:'800px'});
+        layout.pages.forEach((sheet,index)=>{const canvas=document.createElement('canvas');canvas.dataset.pdfPage=index;canvas.width=canvas.height=1;canvas.style.cssText=`position:absolute;left:${sheet.left*zoom}px;top:${sheet.top*zoom}px;width:${sheet.view.width*zoom}px;height:${sheet.view.height*zoom}px`;sheets.append(canvas);pageObserver.observe(canvas);});
+      }else{
+        const canvas=document.createElement('canvas');canvas.id='lined-canvas';sheets.append(canvas);await renderSheet(canvas,page);
+      }
+      if(generation!==epoch||!stage.isConnected)return;
+      $('#lined-pages').textContent=continuous?`${file.numPages} pages`:`Page ${page+1} of ${file.numPages}`;
+      $('#lined-prev').hidden=continuous;$('#lined-next').hidden=continuous;$('#lined-prev').disabled=page===0;$('#lined-next').disabled=page===file.numPages-1;
       drawOverlay();bindPointers(overlay);renderInspector();
-      await original.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;
-      if(generation===epoch)setStatus('Marks save automatically. Full backups include every attached PDF revision.');
+      setStatus(continuous?'Continuous scroll: draw lines and notes across pages. Marks save automatically.':'Marks save automatically. Full backups include every attached PDF revision.');
     }catch(error){if(generation===epoch){setStatus(error.name==='PasswordException'?'Use an unencrypted PDF for lining.':error.message,true);stage.innerHTML='<p class="lined-loading">The PDF could not be opened. Choose Attach original PDF to retry.</p>';}}
   }
   function coverageLabel(m,project=p()){
@@ -140,15 +173,29 @@ export function createLinedDesk(c){
     if(linked)return label(linked,project);
     return [m.draft?.number?'Unlinked '+m.draft.number:'Unlinked coverage',m.draft?.camera?'Camera '+m.draft.camera:''].filter(Boolean).join(' · ');
   }
-  function primitives(m){const s=shot(m.shotId||null);return markPrimitives(m,viewport.width,viewport.height,coverageLabel(m),m.type==='coverage'?(s?.movement||m.draft?.movement):'');}
-
+  function primitives(m){
+    const s=shot(m.shotId||null),movement=m.type==='coverage'?(s?.movement||m.draft?.movement):'';
+    if(continuous)return documentPrimitives(m,layout,coverageLabel(m),movement);
+    if(m.space==='document'){const item=layout.pages[page];return translatePrimitives(documentPrimitives(m,layout,coverageLabel(m),movement),-item.left,-item.top);}
+    return markPrimitives(m,viewport.width,viewport.height,coverageLabel(m),movement);
+  }
+  function displayPoint(m,value){
+    if(m.space==='document'){const xy=[value[0]*layout.width,value[1]*layout.height],item=layout.pages[page];return continuous?xy:[xy[0]-item.left,xy[1]-item.top];}
+    const item=layout.pages[m.page];return continuous?[value[0]*item.view.width+item.left,value[1]*item.view.height+item.top]:[value[0]*viewport.width,value[1]*viewport.height];
+  }
+  function toDocument(m){
+    if(m.space==='document')return copy(m);const value=copy(m),item=layout.pages[m.page];
+    const convert=xy=>[(xy[0]*item.view.width+item.left)/layout.width,(xy[1]*item.view.height+item.top)/layout.height];
+    value.start=convert(value.start);if(value.end)value.end=convert(value.end);if(value.labelAt)value.labelAt=convert(value.labelAt);if(value.points)value.points=value.points.map(convert);value.space='document';return value;
+  }
+  const pageAt=y=>{for(let i=layout.pages.length-1;i>=0;i--)if(layout.pages[i].top<=y*layout.height)return i;return 0;};
   function svgNode(tag,attrs={},text){const node=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,v);if(text!==undefined)node.textContent=text;return node;}
   function drawOverlay(preview){
     const overlay=$('#lined-overlay');if(!overlay||!viewport)return;overlay.replaceChildren();
-    let marks=doc()?.marks.filter(m=>m.page===page)||[];
+    let marks=doc()?.marks.filter(m=>continuous||m.space==='document'||m.page===page)||[];
     if(preview)marks=marks.some(m=>m.id===preview.id)?marks.map(m=>m.id===preview.id?preview:m):[...marks,preview];
     for(const m of marks){
-      const group=svgNode('g',{'data-lined-mark':m.id,class:m.id===selectedId?'lined-selected':''});
+      const group=svgNode('g',{'data-lined-mark':m.id,class:m.id===selectedId?'lined-selected':'',tabindex:0,'aria-label':m.type==='coverage'?'Coverage line':'Script annotation'});
       for(const item of primitives(m)){
         if(item.kind==='path'){
           const points=item.points.map(p=>p.join(',')).join(' ');
@@ -159,7 +206,7 @@ export function createLinedDesk(c){
           item.lines.forEach((line,i)=>group.append(svgNode('text',{x:item.x+item.padding,y:item.y+item.baseline+i*item.lineHeight,fill:item.color,'font-size':item.fontSize,'font-family':'Arial, sans-serif',...(item.handle?{'data-lined-handle':item.handle}:{})},line)));
         }
       }
-      if(m.id===selectedId&&['coverage','arrow'].includes(m.type))for(const key of ['start','end'])group.append(svgNode('circle',{cx:m[key][0]*viewport.width,cy:m[key][1]*viewport.height,r:5,fill:'white',stroke:m.color,'stroke-width':1.5,'data-lined-handle':key}));
+      if(m.id===selectedId&&['coverage','arrow'].includes(m.type))for(const key of ['start','end'])group.append(svgNode('circle',{cx:displayPoint(m,m[key])[0],cy:displayPoint(m,m[key])[1],r:5,fill:'white',stroke:m.color,'stroke-width':1.5,'data-lined-handle':key}));
       overlay.append(group);
     }
   }
@@ -187,10 +234,20 @@ export function createLinedDesk(c){
     }
     if($('#lined-draft-scene'))$('#lined-draft-scene').onchange=e=>c.mutate(()=>{selected.draft||={};if(e.target.value)selected.draft.sceneId=e.target.value;else delete selected.draft.sceneId;},false);
     if($('#lined-style'))$('#lined-style').onchange=e=>{style=e.target.value;if(coverage)c.mutate(()=>selected.style=style,false);drawOverlay();};
-    if(selected){bindEdit($('#lined-note'),value=>selected[selected.type==='text'?'text':'note']!==value,value=>selected[selected.type==='text'?'text':'note']=value);$('#lined-delete').onclick=deleteMark;}
+    if(selected){bindEdit($('#lined-note'),value=>selected[selected.type==='text'?'text':'note']!==value,value=>selected[selected.type==='text'?'text':'note']=value);$('#lined-delete').onclick=()=>deleteMark();}
   }
   function bindEdit(input,changed,write){let editing=false;input.oninput=()=>{if(changed(input.value)){c.edit(()=>write(input.value),!editing);editing=true;drawOverlay();}};input.onblur=()=>editing=false;}
-  function deleteMark(){if(!mark())return;c.mutate(()=>{doc().marks=doc().marks.filter(m=>m.id!==selectedId);selectedId=undefined;},false);drawOverlay();renderInspector();}
+  function deleteMark(mid=selectedId){
+    const project=p(),document=doc(),target=document?.marks.find(m=>m.id===mid);if(!target)return;
+    const linked=target.type==='coverage'&&shot(target.shotId||null);
+    const remove=()=>{
+      if(p()!==project||doc()!==document||!document.marks.includes(target))return;
+      c.mutate(()=>{if(linked){removeCoverage(project,[linked.id]);project._shots=project._shots.filter(s=>s.id!==linked.id);if(shotId===linked.id)shotId='';}else document.marks=document.marks.filter(m=>m.id!==target.id);selectedId=undefined;},false);
+      drawOverlay();renderInspector();
+    };
+    if(linked)confirmLinkedDelete(c,'lined','Delete linked coverage line?', 'This coverage line is linked to Shot list. Deleting it removes the shot and all of its linked coverage lines, including lines in other PDF revisions.',remove);
+    else remove();
+  }
   function newShot(){
     const scenes=p().breakdowns.filter(b=>b.type==='scene');if(!scenes.length){c.toast('Add or import a scene before creating a linked shot.');return;}
     const target=mark()?.type==='coverage'?mark():null,project=p(),document=doc();
@@ -212,33 +269,49 @@ export function createLinedDesk(c){
       $('#modal').close();renderInspector();drawOverlay();
     };
   }
-  function point(event,overlay){const rect=overlay.getBoundingClientRect();return [clamp((event.clientX-rect.left)/rect.width),clamp((event.clientY-rect.top)/rect.height)];}
+  function point(event,overlay,space){
+    const rect=overlay.getBoundingClientRect(),scroll=$('#lined-scroll').getBoundingClientRect();
+    const value=[clamp((event.clientX-rect.left)/rect.width),clamp(((continuous?clamp(event.clientY,scroll.top,scroll.bottom):event.clientY)-rect.top)/rect.height)];
+    if(!continuous&&space==='document'){const item=layout.pages[page];return [(value[0]*item.view.width+item.left)/layout.width,(value[1]*item.view.height+item.top)/layout.height];}
+    return value;
+  }
   function bindPointers(overlay){
     overlay.dataset.tool=tool;
+    overlay.oncontextmenu=event=>{const mid=event.target.closest('[data-lined-mark]')?.dataset.linedMark;if(!mid)return;deleteMenu.open(event,()=>deleteMark(mid));};
+    overlay.onkeydown=event=>{if(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10')){const hit=event.target.closest('[data-lined-mark]');if(hit){const rect=hit.getBoundingClientRect();deleteMenu.open({preventDefault:()=>event.preventDefault(),target:hit,clientX:rect.left+20,clientY:Math.max(rect.top,overlay.getBoundingClientRect().top)+20},()=>deleteMark(hit.dataset.linedMark));}}};
+    let lastPointer;
+    const autoScroll=()=>{
+      if(!gesture||!continuous||!overlay.isConnected)return;
+      const scroll=$('#lined-scroll'),rect=scroll.getBoundingClientRect(),y=lastPointer.clientY;
+      const speed=y>rect.bottom-40?Math.min(18,(y-rect.bottom+40)/2):y<rect.top+40?-Math.min(18,(rect.top+40-y)/2):0;
+      if(speed){const before=scroll.scrollTop;scroll.scrollTop+=speed;if(scroll.scrollTop!==before)overlay.onpointermove(lastPointer);}
+      requestAnimationFrame(autoScroll);
+    };
     overlay.onpointerdown=event=>{
-      if(event.button!==0||busy)return;event.preventDefault();const start=point(event,overlay),hit=event.target.closest('[data-lined-mark]');
+      if(event.button!==0||busy)return;event.preventDefault();let start=point(event,overlay);const hit=event.target.closest('[data-lined-mark]');
       if(tool==='select'){
         selectedId=hit?.dataset.linedMark;const selected=mark();if(!selected){drawOverlay();renderInspector();return;}
-        if(selected.type==='coverage')shotId=selected.shotId||'';gesture={kind:'move',original:copy(selected),start,handle:event.target.dataset.linedHandle};
+        if(selected.type==='coverage')shotId=selected.shotId||'';const original=continuous?toDocument(selected):copy(selected);start=point(event,overlay,original.space);gesture={kind:'move',original,start,moved:false,handle:event.target.dataset.linedHandle};
       }else if(tool==='text'){
         c.modal('Script note','<label class="field">Camera direction or note<textarea id="lined-text" rows="4" maxlength="2000" placeholder="e.g. Pan to Maya on the door slam"></textarea></label>','<button id="modal-cancel">Cancel</button><button id="lined-text-save" class="primary">Place note</button>');
-        $('#lined-text-save').onclick=()=>{const text=$('#lined-text').value.trim();if(!text)return;const value={id:id(),type:'text',page,start,color,width,text};c.mutate(()=>doc().marks.push(value),false);selectedId=value.id;$('#modal').close();drawOverlay();renderInspector();};return;
+        $('#lined-text-save').onclick=()=>{const text=$('#lined-text').value.trim();if(!text)return;const value={id:id(),type:'text',page:continuous?pageAt(start[1]):page,...(continuous?{space:'document'}:{}),start,color,width,text};c.mutate(()=>doc().marks.push(value),false);selectedId=value.id;$('#modal').close();drawOverlay();renderInspector();};return;
       }else{
-        const value={id:id(),type:tool,page,start,color,width};
+        const value={id:id(),type:tool,page:continuous?pageAt(start[1]):page,...(continuous?{space:'document'}:{}),start,color,width};
         if(tool==='coverage')Object.assign(value,{end:[...start],shotId:shotId||null,style,note:''});
         if(tool==='arrow')value.end=[...start];
         if(tool==='pen'||tool==='highlighter')value.points=[[...start]];
         gesture={kind:'create',original:value,start};selectedId=value.id;
       }
       gesture.project=p().id;gesture.pdf=doc().sha256;gesture.preview=copy(gesture.original);
-      overlay.setPointerCapture(event.pointerId);drawOverlay(gesture.preview);renderInspector();
+      overlay.setPointerCapture(event.pointerId);lastPointer={clientX:event.clientX,clientY:event.clientY};requestAnimationFrame(autoScroll);drawOverlay(gesture.preview);renderInspector();
     };
     overlay.onpointermove=event=>{
-      if(!gesture)return;const next=point(event,overlay),value=copy(gesture.original);
+      lastPointer={clientX:event.clientX,clientY:event.clientY};if(!gesture)return;const next=point(event,overlay,gesture.original.space),value=copy(gesture.original),dimensions=value.space==='document'?layout:viewport;
       if(gesture.kind==='move'){
+        if(Math.hypot((next[0]-gesture.start[0])*dimensions.width,(next[1]-gesture.start[1])*dimensions.height)>1)gesture.moved=true;
         if(gesture.handle==='label'){
-          const anchor=primitives(gesture.original).find(item=>item.kind==='text');
-          value.labelAt=[clamp(anchor.x/viewport.width+next[0]-gesture.start[0]),clamp(anchor.y/viewport.height+next[1]-gesture.start[1])];
+          const anchor=(value.space==='document'?documentPrimitives(gesture.original,layout,coverageLabel(value),shot(value.shotId)?.movement):primitives(gesture.original)).find(item=>item.kind==='text');
+          value.labelAt=[clamp(anchor.x/dimensions.width+next[0]-gesture.start[0]),clamp(anchor.y/dimensions.height+next[1]-gesture.start[1])];
         }else if(gesture.handle){value[gesture.handle]=next;if(value.type==='coverage'){value.start[0]=value.end[0]=next[0];}}
         else{
           const all=[value.start,...(value.end?[value.end]:[]),...(value.points||[]),...(value.labelAt?[value.labelAt]:[])];
@@ -254,11 +327,49 @@ export function createLinedDesk(c){
       if(!gesture)return;const current=gesture;gesture=null;
       if(current.project!==p().id||current.pdf!==doc()?.sha256)return;
       const value=current.preview;
-      if(current.kind==='create'&&((value.points&&value.points.length<2)||(value.end&&Math.hypot(value.end[0]-value.start[0],value.end[1]-value.start[1])<.003))){selectedId=undefined;drawOverlay();return;}
+      if(current.kind==='move'&&!current.moved){drawOverlay();renderInspector();return;}
+      const dimensions=value.space==='document'?layout:viewport;
+      if(value.space==='document'){const ys=[value.start[1],...(value.end?[value.end[1]]:[]),...(value.points||[]).map(xy=>xy[1])];value.page=pageAt(Math.min(...ys));value.endPage=pageAt(Math.max(...ys));}
+      if(current.kind==='create'&&((value.points&&value.points.length<2)||(value.end&&Math.hypot((value.end[0]-value.start[0])*dimensions.width,(value.end[1]-value.start[1])*dimensions.height)<2))){selectedId=undefined;drawOverlay();return;}
       if(JSON.stringify(value)!==JSON.stringify(current.original)||current.kind==='create')c.mutate(()=>{if(current.kind==='create')doc().marks.push(value);else doc().marks=doc().marks.map(m=>m.id===value.id?value:m);},false);
       selectedId=value.id;drawOverlay();renderInspector();
     };
       overlay.onpointercancel=()=>{gesture=null;drawOverlay();renderInspector();};
+  }
+  async function fromScriptText(){
+    if(busy)return;busy=true;const project=p();setStatus('Creating a scrollable copy of the imported script…');
+    try{
+      const {PDFDocument,StandardFonts}=window.PDFLib,pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Courier);
+      const text=project.breakdowns.filter(b=>b.type==='scene').map(b=>b._scriptText||'').filter(Boolean).join('\n\n');
+      if(!text.trim())throw Error('Import a script or enter scene text first.');
+      await document.fonts.load('12px "SP Script"');
+      const canvas=document.createElement('canvas');canvas.width=936;canvas.height=32;
+      const context=canvas.getContext('2d');context.scale(2,2);context.font='12px "SP Script", "Courier New", monospace';
+      const rows=[];
+      for(const paragraph of text.split('\n')){
+        let row='',length=0;
+        for(const ch of Array.from(paragraph.replace(/\t/g,'    '))){
+          let advance;try{advance=font.widthOfTextAtSize(ch,12);}catch{advance=context.measureText(ch).width;}
+          if(length+advance>468&&row){rows.push(row);row='';length=0;}row+=ch;length+=advance;
+        }
+        rows.push(row);
+      }
+      let sheet,y;
+      for(const row of rows){
+        if(!sheet||y<60){sheet=pdf.addPage([612,792]);y=732;}
+        try{font.encodeText(row);sheet.drawText(row,{x:72,y,font,size:12});}
+        catch{
+          // Preserve characters outside the built-in PDF font using the system's glyphs.
+          context.clearRect(0,0,468,16);context.fillText(row,0,12);
+          const image=await pdf.embedPng(canvas.toDataURL('image/png'));sheet.drawImage(image,{x:72,y:y-4,width:468,height:16});
+        }
+        y-=14;
+      }
+      const raw=await pdf.save(),filename=(project._scriptFilename||'script').replace(/\.[^.]+$/,'')+'-text.pdf';
+      if(p()!==project){c.toast('Return to the original production to create its script copy.');return;}
+      continuous=true;try{localStorage.setItem('productionDeskContinuousScript','true');}catch{}
+      busy=false;await attach(new File([raw],filename,{type:'application/pdf'}));
+    }catch(error){setStatus(error.message,true);}finally{busy=false;}
   }
   async function attach(file){
     if(!file)return;if(file.size>40*1024*1024){c.toast('Choose a PDF smaller than 40 MB.');return;}
@@ -276,17 +387,18 @@ export function createLinedDesk(c){
     try{
       const {pdf:file,bytes}=await load(current.sha256),{PDFDocument,degrees}=window.PDFLib;
       const output=await PDFDocument.load(bytes.slice(),{updateMetadata:false});
+      const exportLayout=await documentLayout(file);
       for(let index=0;index<file.numPages;index++){
-        const marks=current.marks.filter(m=>m.page===index);if(!marks.length)continue;
+        const marks=current.marks.filter(m=>m.space==='document'||m.page===index);if(!marks.length)continue;
         const source=await file.getPage(index+1),view=source.getViewport({scale:1});
         const canvas=document.createElement('canvas');canvas.width=Math.ceil(view.width*2);canvas.height=Math.ceil(view.height*2);
         const context=canvas.getContext('2d');context.scale(2,2);
-        for(const m of marks){const s=project._shots.find(s=>s.id===m.shotId);paint(context,markPrimitives(m,view.width,view.height,coverageLabel(m,project),m.type==='coverage'?(s?.movement||m.draft?.movement):''));}
+        for(const m of marks){const s=project._shots.find(s=>s.id===m.shotId);const item=exportLayout.pages[index];paint(context,translatePrimitives(documentPrimitives(m,exportLayout,coverageLabel(m,project),m.type==='coverage'?(s?.movement||m.draft?.movement):''),-item.left,-item.top));}
         const image=await output.embedPng(canvas.toDataURL('image/png'));
         const bottomLeft=view.convertToPdfPoint(0,view.height),bottomRight=view.convertToPdfPoint(view.width,view.height),topLeft=view.convertToPdfPoint(0,0);
         output.getPage(index).drawImage(image,{x:bottomLeft[0],y:bottomLeft[1],width:Math.hypot(bottomRight[0]-bottomLeft[0],bottomRight[1]-bottomLeft[1]),height:Math.hypot(topLeft[0]-bottomLeft[0],topLeft[1]-bottomLeft[1]),rotate:degrees(source.rotate)});
       }
-      if(current.marks.some(m=>m.page>=file.numPages))throw Error('An annotation refers to a page outside this PDF.');
+      if(current.marks.some(m=>m.page>=file.numPages||m.endPage>=file.numPages))throw Error('An annotation refers to a page outside this PDF.');
       const raw=await output.save();let binary='';for(let i=0;i<raw.length;i+=8192)binary+=String.fromCharCode(...raw.subarray(i,i+8192));
       const filename=((project.project||project.name).replace(/[^\w -]/g,'').trim()||'production').slice(0,120)+'-lined-script.pdf';
       if(await c.download(filename,btoa(binary),'application/pdf','base64')===false)throw Error('The export could not be written. Please retry.');
@@ -295,8 +407,9 @@ export function createLinedDesk(c){
   }
   function bind(){
     gesture=null;$('#lined-attach').onclick=()=>$('#lined-file').click();$('#lined-empty-attach')?.addEventListener('click',()=>$('#lined-file').click());$('#lined-file').onchange=e=>attach(e.target.files[0]);$('#lined-export').onclick=exportPDF;
-    if(!doc())return;
+    if(!doc()){$('#lined-from-text')?.addEventListener('click',fromScriptText);return;}
     $('#lined-document').onchange=e=>{c.mutate(()=>lining().activePdf=e.target.value);};
+    $('#lined-continuous').onchange=e=>{continuous=e.target.checked;try{localStorage.setItem('productionDeskContinuousScript',String(continuous));}catch{}selectedId=undefined;renderPage();};
     $('#lined-prev').onclick=()=>{page--;selectedId=undefined;renderPage();};$('#lined-next').onclick=()=>{page++;selectedId=undefined;renderPage();};$('#lined-zoom').onchange=e=>{zoom=Number(e.target.value);renderPage();};
     document.querySelectorAll('[data-lined-tool]').forEach(button=>button.onclick=()=>{tool=button.dataset.linedTool;document.querySelectorAll('[data-lined-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));if(tool==='highlighter'){color='#FFD54F';width=14;}else if(width===14)width=2;$('#lined-color').value=color;$('#lined-width').value=width;if($('#lined-overlay'))$('#lined-overlay').dataset.tool=tool;});
     $('#lined-color').onchange=e=>{color=e.target.value;if(mark())c.mutate(()=>mark().color=color,false);drawOverlay();};$('#lined-width').onchange=e=>{width=Number(e.target.value);if(mark())c.mutate(()=>mark().width=width,false);drawOverlay();};

@@ -26,8 +26,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         await waitFor(()=>document.querySelector('#save-status').textContent.includes('Saved'));
         """
         let checks = """
-        document.querySelector('#settings-open').click();
-        document.querySelector('[data-field="title"]').value='Unsaved support settings draft';
+        document.querySelector('#app-settings-open').click();
         document.querySelector('#report-bug').click();
         expect(document.querySelector('#support-report').open,'Bug report did not open');
         expect(document.querySelector('#support-email').hidden,'Blank report could open email');
@@ -37,7 +36,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         expect(address.protocol==='mailto:'&&address.pathname==='alexanderhosier@squidproductions.org','Wrong support recipient');
         expect(address.searchParams.get('body').includes('Synthetic report & café'),'Description was not encoded correctly');
         document.querySelector('#support-close').click();
-        expect(document.querySelector('[data-field="title"]').value==='Unsaved support settings draft','Reporting lost settings drafts');
+        expect(document.querySelector('#app-settings')&&document.querySelector('#modal').open,'Reporting closed Settings');
         window.dispatchEvent(new ErrorEvent('error',{message:'Synthetic native WebKit crash',filename:location.origin+'/app.js?private=value',lineno:24}));
         await waitFor(()=>!document.querySelector('#support-notice').hidden);
         document.querySelector('#report-crash').click();
@@ -48,7 +47,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         document.querySelector('#support-discard').click();
         await waitFor(()=>document.querySelector('#support-status').textContent==='Saved crash report dismissed.');
         expect((await(await fetch('/api/support')).json()).report===null,'Dismissed crash report remained pending');
-        document.querySelector('#support-close').click();document.querySelector('#modal-cancel').click();
+        document.querySelector('#support-close').click();document.querySelector('#modal-close').click();
         document.querySelector('[data-view="elements"]').click();
         let input=document.querySelector('[data-element-name]');input.focus();input.value='Native saved element';input.dispatchEvent(new Event('input',{bubbles:true}));
         expect(await window.slateDesktop.flush(),'Element flush failed');
@@ -91,7 +90,8 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         let root = URL(fileURLWithPath: CommandLine.arguments[2])
         let fixture = try! Data(contentsOf: root.appendingPathComponent("tests/lined-script.pdf")).base64EncodedString()
         let testSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/lined-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
-        let linedChecks = "const runLinedChecks = " + testSource + "; return {checks:await runLinedChecks(fixture),pdf:window.linedTestExport.content};"
+        let layoutSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/workspace-layout-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
+        let linedChecks = "const runLinedChecks = " + testSource + "; const runLayoutChecks = " + layoutSource + "; const prior = await runLinedChecks(fixture); const added = await runLayoutChecks(); return {checks:[...prior,...added],pdf:window.workspaceLayoutExport.content};"
         web.callAsyncJavaScript(setup + (phase == 0 ? checks : reloadChecks.replacingOccurrences(of: "return true;", with: "") + linedChecks), arguments: ["fixture":fixture,"testSource":testSource], in: nil, in: .page) { result in
             switch result {
             case .failure(let error): print("FAIL: \(error)"); exit(1)

@@ -46,6 +46,10 @@ def validate_lining(project):
                 raise ValueError('Unknown annotation tool.')
             if type(mark.get('page')) is not int or not 0 <= mark['page'] < 10000:
                 raise ValueError('Invalid annotation page.')
+            if mark.get('space', 'page') not in ('page', 'document'):
+                raise ValueError('Invalid annotation coordinate space.')
+            if 'endPage' in mark and (type(mark['endPage']) is not int or not mark['page'] <= mark['endPage'] < 10000):
+                raise ValueError('Invalid annotation ending page.')
             if not isinstance(mark.get('color'), str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', mark['color']):
                 raise ValueError('Invalid annotation color.')
             if not number(mark.get('width'), .5, 30) or not point(mark.get('start')):

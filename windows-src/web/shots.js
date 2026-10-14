@@ -1,3 +1,4 @@
+import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
 import {removeCoverage,coverageSummary} from './lined-script.js';
 // Local shot lists are a Production Desk extension. USS scene IDs remain the source of truth.
 export function formatShotDuration(minutes) {
@@ -10,6 +11,7 @@ export function createShotDesk(c) {
   const statuses=['Planned','Ready','Rolling','Done','Omitted'];
   const sizes=['Wide','Medium wide','Medium','Medium close-up','Close-up','Extreme close-up','Insert','Over the shoulder','POV'];
   const movements=['Static','Pan','Tilt','Dolly','Tracking','Handheld','Steadicam','Crane','Drone'];
+  const deleteMenu=createDeleteMenu('shot');
   const p=()=>c.project();
   const scenes=()=>p().breakdowns.filter(b=>b.type==='scene');
   const shot=()=>p()._shots.find(s=>s.id===selected);
@@ -74,6 +76,7 @@ export function createShotDesk(c) {
     document.querySelectorAll('[data-shot-select]').forEach(b=>b.onclick=()=>{selected=b.dataset.shotSelect;c.render();});
     document.querySelectorAll('[data-shot-done]').forEach(b=>b.onclick=()=>c.mutate(()=>{const s=p()._shots.find(s=>s.id===b.dataset.shotDone);s.status=done(s)?'Planned':'Done';}));
     document.querySelectorAll('[data-shot]').forEach(row=>{
+      row.oncontextmenu=e=>{const sid=row.dataset.shot;deleteMenu.open(e,()=>deleteShot(sid));};
       row.ondragstart=e=>{dragging=row.dataset.shot;e.dataTransfer.setData('text/plain',dragging);e.dataTransfer.effectAllowed='move';};
       row.ondragend=()=>{dragging=null;document.querySelectorAll('.shot-drop').forEach(r=>r.classList.remove('shot-drop'));};
       row.ondragover=e=>{if(!dragging)return;e.preventDefault();row.classList.add('shot-drop');};
@@ -136,12 +139,18 @@ export function createShotDesk(c) {
   }
   function csv(){sync();const rows=[['Day','Scene','Shot','Description','Size','Movement','Camera','Lens mm','Equipment','Setup minutes','Shoot minutes','Actual minutes','Status','Takes','Circle take','Priority','Notes','Script coverage'],...filtered().map(s=>[dayName(s),sceneOf(s)?.scene,label(s),s.description,s.size,s.movement,s.camera,s.lens,s.equipment,s.setupMinutes,s.shootMinutes,s.actualMinutes,s.status,s.takes,s.circleTake,s.priority,s.notes,coverageSummary(p(),s.id).join('\n')])];const safe=v=>{let value=String(v??'');if(/^[=+@\-\t\r]/.test(value))value="'"+value;return '"'+value.replace(/"/g,'""')+'"';};c.download('shot-list.csv',rows.map(row=>row.map(safe).join(',')).join('\r\n'),'text/csv;charset=utf-8');}
   function print(){const times=timings();document.querySelector('#print-area').innerHTML=`<h1>${esc(p().project||p().name)} · Shot list</h1><p>${esc(c.scenarioName())} · ${day==='all'?'All days':day==='unscheduled'?'Unscheduled':'Day '+(Number(day)+1)} · ${filtered().length} shots</p><table><thead><tr><th>Day / Time</th><th>Shot</th><th>Description</th><th>Camera setup</th><th>Est. / Actual</th><th>Status / Takes</th><th>Notes</th></tr></thead><tbody>${filtered().map(s=>`<tr><td>${esc(dayName(s))}<br>${esc(times.get(s.id))}</td><td>${esc(label(s))}</td><td>${esc(s.description)}</td><td>${esc([s.size,s.camera&&'Cam '+s.camera,s.lens&&s.lens+'mm',s.movement,s.equipment].filter(Boolean).join(' · '))}</td><td>${total(s)} / ${s.actualMinutes??'—'} min</td><td>${esc(s.status)} · ${s.takes}${s.circleTake?' · circle '+esc(s.circleTake):''}</td><td>${esc([s.notes,...coverageSummary(p(),s.id)].filter(Boolean).join(' · '))}</td></tr>`).join('')}</tbody></table>`;window.print();}
+  function deleteShot(sid){
+    const project=p(),s=project._shots.find(s=>s.id===sid);if(!s)return;
+    const remove=()=>{if(p()!==project||!project._shots.includes(s))return;c.mutate(()=>{removeCoverage(project,[s.id]);project._shots=project._shots.filter(x=>x.id!==s.id);if(selected===sid)selected=undefined;});};
+    if(coverageSummary(project,sid).length)confirmLinkedDelete(c,'shots','Delete shot '+esc(label(s))+'?', 'This shot is linked to Lined script. Deleting it removes the shot and all of its linked coverage lines, including lines in other PDF revisions.',remove);
+    else c.confirm('Delete shot '+esc(label(s))+'?','You can undo this change.',remove);
+  }
   function action(name){
     if(name==='new')return add();if(name==='csv')return csv();if(name==='print')return print();
     const s=shot();if(!s)return;
     if(name==='take')c.mutate(()=>s.takes=Math.min(10000,s.takes+1));
     if(name==='duplicate')insertShot({...structuredClone(s),id:id(),created:stamp(),number:nextNumber(s.sceneId),status:'Planned',actualMinutes:null,takes:0,circleTake:''},s);
-    if(name==='delete')c.confirm('Delete shot '+esc(label(s))+'?','You can undo this change.',()=>c.mutate(()=>{removeCoverage(p(),[s.id]);p()._shots=p()._shots.filter(x=>x.id!==s.id);selected=undefined;}));
+    if(name==='delete')deleteShot(s.id);
     if(name==='up'||name==='down'){const visible=filtered(),i=visible.indexOf(s),neighbor=visible[i+(name==='up'?-1:1)];if(neighbor)c.mutate(()=>{const list=p()._shots,a=list.indexOf(s),b=list.indexOf(neighbor);[list[a],list[b]]=[list[b],list[a]];});}
   }
   return {render,bind,add,csv,print};

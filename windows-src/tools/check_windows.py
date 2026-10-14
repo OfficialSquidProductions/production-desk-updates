@@ -39,6 +39,12 @@ def main():
             from pypdf import PdfReader
             original = PdfReader(ROOT / 'tests/lined-script.pdf')
             exported = PdfReader(output / 'lined-script-export.pdf')
+            continuous = PdfReader(output / 'continuous-script-export.pdf')
+            assert len(continuous.pages) == len(original.pages)
+            for before, after in zip(original.pages, continuous.pages):
+                assert before.extract_text() == after.extract_text()
+                assert before.mediabox == after.mediabox and before.cropbox == after.cropbox
+                assert before.rotation == after.rotation and len(after.images) == 1
             assert len(exported.pages) == len(original.pages) == 2
             for before, after in zip(original.pages, exported.pages):
                 assert before.extract_text() == after.extract_text()

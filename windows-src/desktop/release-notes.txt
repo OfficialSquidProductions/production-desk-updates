@@ -1,11 +1,10 @@
-Production Desk 1.5.1
+Production Desk 1.5.2
 
-- Report bugs and crashes from Production settings with a required description and a reviewable email draft to alexanderhosier@squidproductions.org.
-- Remember detected errors and interrupted desktop sessions locally for reporting after restart. Copy or save report text when an email app is unavailable.
-- Plan coverage on original PDF pages, add drawing tools and camera movement notes, keep PDF revisions independent, and export lined PDFs.
-- Draw coverage before choosing a shot, then create or link a shot with the line’s description, movement, camera, lens, size, and equipment.
-- Include script coverage pages and timing notes in the shot list, CSV, and printed reports.
-- Preserve line details and Undo/Redo when linking or unlinking shots.
+- Draw coverage, arrows, and notes across page boundaries with Continuous scroll in Lined script. Edge scrolling keeps long strokes moving; original PDFs and page exports retain their layout.
+- Create a scrollable copy from imported Final Draft, Fountain, or text script scenes when an original PDF is unavailable.
+- Right-click shots and coverage lines to delete them. Linked deletion removes both the shot and its linked coverage, with separate Don't show again choices and Undo. Restore warnings from Settings.
+- Find New production as a plus above the production picker and Production settings at the bottom of the sidebar.
+- Find bug and crash reporting in Settings. The local-save notice now appears beneath the software credit.
+- Keep short coverage strokes usable in long scripts and release offscreen page images while scrolling.
 
-Existing productions, original PDFs, and manual shot notes are preserved.
-Reports are reviewed and sent by the user; production files and logs are not attached automatically.
+Existing productions and original PDFs are preserved. Full backups retain editable annotations and attached PDFs.

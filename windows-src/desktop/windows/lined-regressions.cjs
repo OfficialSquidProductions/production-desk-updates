@@ -79,7 +79,7 @@ module.exports = async function runLinedChecks(fixture) {
   $('#lined-next').click();await wait(()=>$('#lined-pages').textContent==='Page 2 of 2');
   drag('coverage',[.15,.2],[.15,.75]);
   $('#lined-zoom').value='1.5';$('#lined-zoom').dispatchEvent(new Event('change',{bubbles:true}));
-  await wait(()=>Math.abs($('.lined-page').getBoundingClientRect().width-1098)<2);
+  await wait(()=>Math.abs($('.lined-page')?.getBoundingClientRect().width-1098)<2);
   drag('arrow',[.6,.3],[.8,.6]);
   current=await marks();expect(current.length===7&&current[6].page===1,'Rotated page or zoom annotation failed');
   expect(Math.abs(current[6].end[0]-.8)<.001,'Zoom changed stored coordinates');

@@ -99,7 +99,7 @@ class LinedScriptTests(unittest.TestCase):
         valid = {'id':'line','type':'coverage','page':0,'start':[.2,.2],'end':[.2,.6],
                  'shotId':self.project['_shots'][0]['id'],'style':'solid','width':2,'color':'#E60026'}
         for patch in [{'shotId':'missing'},{'page':-1},{'start':[2,.3]},{'end':[.3,.6]},
-                      {'color':'url(evil)'},{'width':float('inf')},{'type':'unknown'}, {'note':'x'*2001}]:
+                      {'space':'invalid'},{'endPage':-1},{'endPage':True},{'color':'url(evil)'},{'width':float('inf')},{'type':'unknown'}, {'note':'x'*2001}]:
             with self.subTest(patch=patch):
                 changed = copy.deepcopy(self.workspace)
                 changed['projects'][0]['_linedScript']['documents'][0]['marks'] = [dict(valid, **patch)]
@@ -107,6 +107,22 @@ class LinedScriptTests(unittest.TestCase):
                 self.assertEqual(self.server.datafile.read_bytes(), before)
         self.document['marks'] = [valid]
         self.assertEqual(self.request('/api/workspace', self.workspace)[0], 200)
+
+    def test_continuous_marks_survive_save_and_backup(self):
+        marks=[{'id':'continuous-line','type':'coverage','page':0,'endPage':1,'space':'document',
+                'start':[.2,.4],'end':[.2,.8],'shotId':None,'style':'solid','width':2,'color':'#E60026'},
+               {'id':'continuous-note','type':'text','page':0,'space':'document',
+                'start':[.3,.48],'text':'A note across pages','width':2,'color':'#E60026'}]
+        self.document['marks']=marks
+        self.assertEqual(self.request('/api/workspace',self.workspace)[0],200)
+        _,raw=self.request('/api/workspace',method='GET')
+        self.assertEqual(json.loads(raw)['projects'][0]['_linedScript']['documents'][0]['marks'],marks)
+        status,raw=self.request('/api/backup',{'workspace':self.workspace,'filename':'continuous.json'})
+        self.assertEqual(status,200)
+        _,raw=self.request(json.loads(raw)['url'],method='GET')
+        with tempfile.TemporaryDirectory() as directory:
+            restored=restore_backup_pdfs(Path(directory)/'workspace.json',json.loads(raw))
+            self.assertEqual(restored['projects'][0]['_linedScript']['documents'][0]['marks'],marks)
 
     def test_unlinked_coverage_and_details_survive_save_backup_and_linking(self):
         mark={'id':'draft-line','type':'coverage','page':0,'start':[.1,.2],'end':[.1,.8],

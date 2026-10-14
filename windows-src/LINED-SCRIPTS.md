@@ -1,6 +1,6 @@
 # Lined scripts
 
-Production Desk 1.5.1 includes lined scripts in the regular Mac and Windows app.
+Production Desk 1.5.2 includes lined scripts in the regular Mac and Windows app.
 
 ## Try it
 
@@ -11,7 +11,9 @@ Production Desk 1.5.1 includes lined scripts in the regular Mac and Windows app.
 5. Use straight or wavy coverage, pen, highlighter, arrows, and typed notes. Set color and width.
 6. Use **Select** to move a mark, drag line endpoints, or drag a coverage label into a margin.
 7. Enter description, movement, camera, lens, size, and equipment on the line. Creating or linking a shot carries those details into the shot list. Page references and timing notes appear in Script coverage and shot-list exports. Existing manual shot notes remain separate.
-8. Choose **Export lined PDF**. Export a **full backup** to retain editable marks and the original PDF.
+8. Enable **Continuous scroll**, to the left of the page count, to draw lines and notes across pages. The view scrolls at the edge while drawing. Text-only imports can use **Create from script text** to generate an annotation copy.
+9. Right-click a shot or coverage line to delete it. Linked deletion removes the shot and every linked coverage line across revisions; Cancel keeps both, and Undo restores both. Each tab has its own **Don’t show again** checkbox; reset them in **Settings → Deletion warnings**.
+10. Choose **Export lined PDF**. Export a **full backup** to retain editable marks and the original PDF.
 
 Shot numbers, scene numbers, cameras, and movement labels follow the linked shot.
 Multiple lines on different pages can link to the same shot. Deleting a shot or scene

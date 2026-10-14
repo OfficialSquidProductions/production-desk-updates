@@ -114,6 +114,8 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   const linedOriginal=await (await fetch(origin+'/api/workspace')).json();
   const fixture=fs.readFileSync(path.join(output,'lined-script.pdf')).toString('base64');
   checks.push(...await js('('+require('./lined-regressions.cjs').toString()+')('+JSON.stringify(fixture)+')'));
+  checks.push(...await js('('+require('./workspace-layout-regressions.cjs').toString()+')()'));
+  fs.writeFileSync(path.join(output,'continuous-script-export.pdf'),Buffer.from(await js('window.workspaceLayoutExport.content'),'base64'));
   const exported=await js('window.linedTestExport.content');
   fs.writeFileSync(path.join(output,'lined-script-export.pdf'),Buffer.from(exported,'base64'));
   fs.writeFileSync(path.join(output,'lined-script.png'),(await win.webContents.capturePage()).toPNG());

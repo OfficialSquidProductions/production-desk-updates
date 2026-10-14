@@ -1,3 +1,4 @@
+import {resetLinkedDeleteWarnings} from './linked-actions.js';
 export function createAppSettings({api,modal,toast,isIPad}) {
   let preferences={theme:'light'};
   const $=s=>document.querySelector(s);
@@ -18,6 +19,11 @@ export function createAppSettings({api,modal,toast,isIPad}) {
   }
   function open(){
     modal('Settings',`<div id="app-settings"><section class="settings-section"><h3>Appearance</h3><p>Choose how Production Desk looks on this device.</p><div class="theme-options" role="group" aria-label="Appearance"><button data-theme-choice="light" aria-pressed="${preferences.theme==='light'}"><span>☀</span>Light</button><button data-theme-choice="dark" aria-pressed="${preferences.theme==='dark'}"><span>☾</span>Dark</button></div></section><p id="settings-status" role="status"></p></div>`);
+    window.productionDeskSupport?.attachSettings($('#app-settings'));
+    const deletion=document.createElement('section');deletion.className='settings-section';
+    deletion.innerHTML='<h3>Deletion warnings</h3><p>Show confirmations again when deleting linked shots and coverage lines.</p><button id="reset-delete-warnings">Reset deletion warnings</button>';
+    $('#app-settings').append(deletion);
+    $('#reset-delete-warnings').onclick=()=>{resetLinkedDeleteWarnings();$('#settings-status').textContent='Linked deletion warnings are enabled for both tabs.';};
     const buttons=[...document.querySelectorAll('[data-theme-choice]')];
     const message=$('#settings-status');
     for(const button of buttons)button.onclick=async()=>{
