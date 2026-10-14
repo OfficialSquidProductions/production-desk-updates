@@ -1,8 +1,4 @@
-# Production Desk — lined-script beta
-
-**Branch: `beta/lined-script` · Version: `1.5.0-beta.1` · Experimental, separate from the stable release.**
-
-See the [beta guide](windows-src/BETA.md) for lined-script tools, testing, and data isolation.
+# Production Desk
 
 **Free, offline script breakdowns, film scheduling, and shot lists for macOS and Windows.**
 
@@ -34,6 +30,8 @@ has been withdrawn while it is being reworked.
 - **Build shooting schedules:** drag scene strips into shooting days, add banners, set days
   off, flag element availability conflicts, and compare alternative schedule scenarios.
 - **Plan shot lists:** record camera setups, lenses, setup/shoot estimates, takes, and completion.
+- **Line original script PDFs:** link straight/wavy coverage to shots, draw and highlight,
+  add camera movements and notes, and export lined PDFs.
 - **Create reports:** one-line schedules, scene breakdowns, cast workdays, and printable PDFs.
 - **Move your work:** export full JSON backups, USS schedules, and CSV reports.
 - **Work locally:** automatic disk saves, Undo/Redo, and light/dark appearance.
@@ -49,7 +47,7 @@ has been withdrawn while it is being reworked.
 5. Add camera coverage in **Shot list**, then export or print your reports.
 
 Use **Export → Full Production Desk backup** regularly. Full backups preserve all productions,
-script text, shots, and schedules and can be transferred between Mac and Windows.
+script text, shots, original PDFs, lined-script annotations, and schedules and can be transferred between Mac and Windows.
 USS interchange files omit script text and shot lists.
 
 ## Your files and privacy

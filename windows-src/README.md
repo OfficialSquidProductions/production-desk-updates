@@ -1,6 +1,6 @@
 # Production Desk — desktop source
 
-Local script breakdowns, film schedules, stripboards, and shot lists for Mac and Windows.
+Local script breakdowns, lined PDFs, film schedules, stripboards, and shot lists for Mac and Windows.
 The desktop source lives in `windows-src/` for compatibility with the existing Windows
 release workflow; it is shared by both desktop platforms. Production Desk is free and
 open source under the [MIT license](../LICENSE).
@@ -19,6 +19,8 @@ Open `http://127.0.0.1:8765` in a browser. Work is stored locally in `data/`.
 The browser app needs no npm build. Mac PDF imports use PDFKit through the included
 Swift source and require Xcode command-line tools. On Windows, install `pypdf`
 for PDF imports (`python -m pip install pypdf`). Scanned PDFs need a text layer.
+
+See the [lined-script guide](LINED-SCRIPTS.md) for PDF annotations and exports.
 
 ## Test
 

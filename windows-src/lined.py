@@ -1,4 +1,4 @@
-"""Original PDF storage and validation for the isolated lined-script beta."""
+"""Original PDF storage and validation for lined scripts."""
 import base64
 import hashlib
 import math

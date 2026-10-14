@@ -1,16 +1,10 @@
-Production Desk 1.4.5 for Windows
+Production Desk 1.5.0
 
-Fixes in this release:
-- Element names and board IDs save while typing, including before quitting or updating.
-- Backups and older workspaces with missing schedules are repaired when opened.
-- Blank and duplicate shot numbers no longer block workspace saves.
-- Malformed JSON imports and invalid calendar dates show clear errors.
-- New Windows installers require an increasing app version so updates are recognized.
+Lined scripts are now part of the regular Mac and Windows app:
+- Keep original PDF pages, link straight or wavy coverage lines to shots, and move labels into margins.
+- Draw, highlight, add arrows and notes, and share camera movements with the shot list.
+- Export lined PDFs with original text and page geometry preserved.
+- Preserve original PDFs and editable annotations in full JSON backups.
+- Keep independent annotations for different PDF revisions.
 
-Windows 10/11 x64. The single offline EXE includes the full app, Python runtime,
-PDF reader and desktop engine. Installation is per user without administrator access.
-Existing projects survive updates and reinstalls. This build is unsigned; Windows
-may display a SmartScreen prompt.
-
-Published after backend regression tests, packaged-app checks, silent installation,
-reinstall/data-preservation checks, and updater version-selection checks pass.
+Existing productions and schedules are preserved. PDF revisions require manual mark transfer.
