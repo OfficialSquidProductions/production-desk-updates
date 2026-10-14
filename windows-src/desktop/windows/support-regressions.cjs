@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {clipboard} = require('electron');
 
-module.exports = async ({win, origin, dataFolder, waitFor, reload}) => {
+module.exports = async ({win, origin, dataFolder, waitFor, reload, readEmailDraft}) => {
   const js = source => win.webContents.executeJavaScript(source, true);
   const checks = [];
   const before = fs.readFileSync(path.join(dataFolder, 'workspace.json'));
@@ -22,9 +22,13 @@ module.exports = async ({win, origin, dataFolder, waitFor, reload}) => {
   assert.ok(address.searchParams.get('subject').includes('bug report'));
   assert.ok(address.searchParams.get('body').includes(description));
   assert.equal(address.searchParams.get('body').includes('Unsaved report test'), false);
+  await js('document.querySelector("#support-email").click()');
+  await waitFor('document.querySelector("#support-status").textContent.startsWith("Email draft requested")');
+  assert.equal(readEmailDraft(), address.href);
+  assert.equal(await js(`window.productionDeskWindows.openReportEmail('mailto:other@example.org?body=test').then(()=>false,()=>true)`), true);
   await js('document.querySelector("#support-copy").click()');
   await waitFor('document.querySelector("#support-status").textContent.startsWith("Report copied")');
-  assert.equal(clipboard.readText(), address.searchParams.get('body'));
+  assert.equal(await clipboard.readText(), address.searchParams.get('body'));
   const download = new Promise((resolve,reject) => win.webContents.session.once('will-download', (_event,item) =>
     item.once('done', (_event,state) => state === 'completed' ? resolve(item.getSavePath()) : reject(Error('Support download '+state)))));
   await js('document.querySelector("#support-save").click()');

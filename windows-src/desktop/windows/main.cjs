@@ -15,7 +15,7 @@ const settingsFile = path.join(dataFolder, 'desktop-settings.json');
 let settings = {automaticChecks:true, automaticInstall:false};
 try { Object.assign(settings, JSON.parse(fs.readFileSync(settingsFile, 'utf8'))); } catch {}
 let win, backend, origin, temporary, quitting = false, closing = false, checking = false;
-let updateReady = false, manualCheck = false;
+let updateReady = false, manualCheck = false, lastSupportEmail = null;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const sessionFile = path.join(dataFolder, 'support-session.json');
@@ -238,10 +238,18 @@ async function start() {
   });
   win.on('close', event => {if(!quitting){event.preventDefault(); quitOrInstall();}});
   win.on('resize', () => {if(!win.isMaximized()){settings.bounds=win.getBounds(); persistSettings();}});
+  ipcMain.handle('desk:report-email', async (event, address) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !localAddress(event.senderFrame.url)) throw new Error('Local main window required.');
+    if (typeof address !== 'string' || address.length > 32768) throw new Error('Invalid support email.');
+    const url = new URL(address);
+    if (url.protocol !== 'mailto:' || url.pathname.toLowerCase() !== 'alexanderhosier@squidproductions.org' || [...url.searchParams.keys()].some(key=>!['subject','body'].includes(key))) throw new Error('Invalid support recipient.');
+    if (smokeResult) { lastSupportEmail = address; return true; }
+    await shell.openExternal(address); return true;
+  });
   ipcMain.handle('desk:copy-report', (event, text) => {
     if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !localAddress(event.senderFrame.url)) throw new Error('Local main window required.');
     if (typeof text !== 'string' || text.length > 10000) throw new Error('Invalid support report.');
-    clipboard.writeText(text);
+    return clipboard.writeText(text);
   });
   ipcMain.handle('desk:print', async event => {
     if(event.sender !== win.webContents || !localAddress(event.senderFrame.url)) throw new Error('Local window required.');
@@ -251,7 +259,7 @@ async function start() {
   await win.loadURL(origin);
   if (smokeResult) {
     try {
-      const result = await require('./smoke.cjs')({win, origin, dataFolder, output:path.dirname(smokeResult), flush});
+      const result = await require('./smoke.cjs')({win, origin, dataFolder, output:path.dirname(smokeResult), flush, readEmailDraft:()=>lastSupportEmail});
       fs.writeFileSync(smokeResult, JSON.stringify(result, null, 2));
       quitting = true; app.quit();
     } catch (error) {

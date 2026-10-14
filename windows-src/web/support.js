@@ -61,6 +61,21 @@
     document.body.append(dialog);
     dialog.querySelector('#support-close').onclick = () => dialog.close();
     dialog.querySelector('textarea').oninput = updateDraft;
+    dialog.querySelector('#support-email').onclick = async event => {
+      if (!dialog.querySelector('textarea').value.trim()) { event.preventDefault(); return; }
+      const address = event.currentTarget.href;
+      if (!window.productionDeskWindows?.openReportEmail && !window.webkit?.messageHandlers?.supportEmail) return;
+      event.preventDefault();
+      try {
+        const opened = window.productionDeskWindows?.openReportEmail
+          ? await window.productionDeskWindows.openReportEmail(address)
+          : await window.webkit.messageHandlers.supportEmail.postMessage(address);
+        if (opened === false) throw new Error('No email handler');
+        dialog.querySelector('#support-status').textContent = 'Email draft requested. If your email app did not open, use Copy report or Save report.';
+      } catch {
+        dialog.querySelector('#support-status').textContent = 'An email app could not be opened. Copy or save this report and email it to alexanderhosier@squidproductions.org.';
+      }
+    };
     const requireDescription = () => {
       const field = dialog.querySelector('textarea');
       if (field.value.trim()) return true;

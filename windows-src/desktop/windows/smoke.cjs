@@ -3,7 +3,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-module.exports = async ({win, origin, dataFolder, output, flush}) => {
+module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}) => {
   const js = source => win.webContents.executeJavaScript(source);
   const waitFor = async source => {
     const deadline = Date.now()+15000;
@@ -24,7 +24,7 @@ module.exports = async ({win, origin, dataFolder, output, flush}) => {
     assert.ok(await js('document.querySelector("#content").textContent.trim().length > 20'));
   }
   checks.push('All five shared application views render');
-  checks.push(...await require('./support-regressions.cjs')({win,origin,dataFolder,waitFor,reload:async()=>{await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});await waitFor('document.querySelector("#project-picker")?.options.length > 0');}}));
+  checks.push(...await require('./support-regressions.cjs')({win,origin,dataFolder,waitFor,readEmailDraft,reload:async()=>{await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});await waitFor('document.querySelector("#project-picker")?.options.length > 0');}}));
   const regressionChecks = await require('./regressions.cjs')({
     js, flush, waitFor,
     readWorkspace:async() => (await fetch(origin+'/api/workspace')).json(),

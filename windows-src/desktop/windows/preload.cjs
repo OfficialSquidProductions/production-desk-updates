@@ -1,5 +1,6 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('productionDeskWindows', {
   print: () => ipcRenderer.invoke('desk:print'),
-  copyReport: text => ipcRenderer.invoke('desk:copy-report', text)
+  copyReport: text => ipcRenderer.invoke('desk:copy-report', text),
+  openReportEmail: address => ipcRenderer.invoke('desk:report-email', address)
 });

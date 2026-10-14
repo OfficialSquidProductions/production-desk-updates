@@ -21,6 +21,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(self, name: "slatePrint")
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "supportCopy")
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "supportEmail")
         configuration.userContentController.addUserScript(WKUserScript(source: "window.print = function(){ window.webkit.messageHandlers.slatePrint.postMessage('print'); };", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = self
@@ -187,10 +188,15 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
 
     }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
-        guard message.name == "supportCopy", message.frameInfo.isMainFrame,
+        guard ["supportCopy", "supportEmail"].contains(message.name), message.frameInfo.isMainFrame,
               message.frameInfo.securityOrigin.protocol == "http", message.frameInfo.securityOrigin.host == "127.0.0.1",
               message.frameInfo.securityOrigin.port == localOrigin?.port,
-              let text = message.body as? String, text.count <= 10000 else { replyHandler(nil, "Local support report required."); return }
+              let text = message.body as? String, text.count <= (message.name == "supportEmail" ? 32768 : 10000) else { replyHandler(nil, "Local support report required."); return }
+        if message.name == "supportEmail" {
+            guard let url = URL(string: text), isSupportMailto(url) else { replyHandler(nil, "Invalid support email."); return }
+            replyHandler(NSWorkspace.shared.open(url), nil)
+            return
+        }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         replyHandler(true, nil)
