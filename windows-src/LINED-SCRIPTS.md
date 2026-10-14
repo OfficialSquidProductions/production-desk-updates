@@ -1,16 +1,16 @@
 # Lined scripts
 
-Production Desk 1.5.0 includes lined scripts in the regular Mac and Windows app.
+Production Desk 1.5.1 includes lined scripts in the regular Mac and Windows app.
 
 ## Try it
 
 1. Export a full backup before importing new work.
 2. Open Production Desk and choose your production.
 3. Open **Lined script → Attach original PDF**. New PDF screenplay imports retain their original automatically.
-4. Choose a shot or **New linked shot**, then drag a coverage line over the passage.
+4. Drag a coverage line over the passage first. Select it to add shot details, choose an existing shot, or **Create shot from this line**.
 5. Use straight or wavy coverage, pen, highlighter, arrows, and typed notes. Set color and width.
 6. Use **Select** to move a mark, drag line endpoints, or drag a coverage label into a margin.
-7. Edit **Camera movement** to update the linked shot-list field. Add timing notes to individual lines.
+7. Enter description, movement, camera, lens, size, and equipment on the line. Creating or linking a shot carries those details into the shot list. Page references and timing notes appear in Script coverage and shot-list exports. Existing manual shot notes remain separate.
 8. Choose **Export lined PDF**. Export a **full backup** to retain editable marks and the original PDF.
 
 Shot numbers, scene numbers, cameras, and movement labels follow the linked shot.

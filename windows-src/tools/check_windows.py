@@ -28,6 +28,9 @@ def main():
     def run_app(executable, label):
         if result.exists():
             result.unlink()
+        data = output / 'smoke-user-data'
+        data.mkdir(exist_ok=True)
+        (data / 'support-session.json').write_text('{"pid":999999999}')
         completed = subprocess.run([str(executable), '--smoke-test', str(result)], timeout=180)
         if not result.exists():
             raise RuntimeError('Packaged app check exited without a report: ' + str(completed.returncode))

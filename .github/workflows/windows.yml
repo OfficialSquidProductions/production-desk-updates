@@ -36,7 +36,10 @@ jobs:
       - name: Install pinned Python build dependencies
         run: python -m pip install -r desktop/windows/requirements-build.txt
       - name: Test shared backend
-        run: python -m unittest discover -s tests -v
+        run: |
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test tests/support-errors.cjs
       - name: Build complete offline EXE installer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

@@ -1,10 +1,11 @@
-Production Desk 1.5.0
+Production Desk 1.5.1
 
-Lined scripts are now part of the regular Mac and Windows app:
-- Keep original PDF pages, link straight or wavy coverage lines to shots, and move labels into margins.
-- Draw, highlight, add arrows and notes, and share camera movements with the shot list.
-- Export lined PDFs with original text and page geometry preserved.
-- Preserve original PDFs and editable annotations in full JSON backups.
-- Keep independent annotations for different PDF revisions.
+- Report bugs and crashes from Production settings with a required description and a reviewable email draft to alexanderhosier@squidproductions.org.
+- Remember detected errors and interrupted desktop sessions locally for reporting after restart. Copy or save report text when an email app is unavailable.
+- Plan coverage on original PDF pages, add drawing tools and camera movement notes, keep PDF revisions independent, and export lined PDFs.
+- Draw coverage before choosing a shot, then create or link a shot with the line’s description, movement, camera, lens, size, and equipment.
+- Include script coverage pages and timing notes in the shot list, CSV, and printed reports.
+- Preserve line details and Undo/Redo when linking or unlinking shots.
 
-Existing productions and schedules are preserved. PDF revisions require manual mark transfer.
+Existing productions, original PDFs, and manual shot notes are preserved.
+Reports are reviewed and sent by the user; production files and logs are not attached automatically.

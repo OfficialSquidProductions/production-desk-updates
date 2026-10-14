@@ -1,7 +1,7 @@
 import AppKit
 import WebKit
 
-final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
+final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
     var window: NSWindow!
     var web: WKWebView!
     var server: Process?
@@ -13,12 +13,14 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     var support: URL!
     var isQuitting = false
     let updates = ProductionDeskUpdates()
+    var sessionFile: URL?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         createMenu()
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(self, name: "slatePrint")
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "supportCopy")
         configuration.userContentController.addUserScript(WKUserScript(source: "window.print = function(){ window.webkit.messageHandlers.slatePrint.postMessage('print'); };", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = self
@@ -38,7 +40,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         web.loadHTMLString("<html><body style='background:#fff;color:#241d21;font:16px Futura;padding:80px'><h1 style='font:40px Futura;color:#E60026'>Production Desk</h1><p>Opening your local workspace…</p></body></html>", baseURL: nil)
-        do { try startServer() } catch { fail("Production Desk could not start", detail: error.localizedDescription) }
+        do { try startServer() } catch { fail("Production Desk could not start", detail: error.localizedDescription, crashKind: "startup") }
     }
 
     func createMenu() {
@@ -81,6 +83,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         let runtime = resources.appendingPathComponent("runtime")
         support = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool == true ? "ProductionDeskBeta" : "Slate", isDirectory: true)
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
+        prepareSupportSession()
         let workspace = support.appendingPathComponent("workspace.json")
         // Migrate the original local workspace once; it is never embedded in the DMG.
         if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true, !fm.fileExists(atPath: workspace.path), let source = try? String(contentsOf: resources.appendingPathComponent("migration-source.txt"), encoding: .utf8) {
@@ -108,7 +111,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         process.terminationHandler = { [weak self] proc in
             DispatchQueue.main.async {
                 guard let self = self, !self.isQuitting else { return }
-                self.fail("The local workspace stopped", detail: "Exit status \(proc.terminationStatus). Your saved work is in the app data folder. See desktop.log for details.")
+                self.fail("The local workspace stopped", detail: "Exit status \(proc.terminationStatus). Your saved work is in the app data folder. See desktop.log for details.", crashKind: "backend")
             }
         }
         server = process
@@ -124,7 +127,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
                 if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true { self.updates.start() }
             } else if Date() > self.startupDeadline {
                 timer.invalidate()
-                self.fail("Production Desk took too long to start", detail: "Check desktop.log in the app data folder.")
+                self.fail("Production Desk took too long to start", detail: "Check desktop.log in the app data folder.", crashKind: "startup")
             }
         }
     }
@@ -133,7 +136,8 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
         if url.scheme == "about" { decisionHandler(.allow); return }
         if navigationAction.navigationType == .linkActivated,
-           url.absoluteString == "mailto:alexanderhosier@squidproductions.org" {
+           navigationAction.sourceFrame.isMainFrame,
+           isSupportMailto(url) {
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
             return
@@ -182,6 +186,15 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         if message.name == "slatePrint" { printPage() }
 
     }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.name == "supportCopy", message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.protocol == "http", message.frameInfo.securityOrigin.host == "127.0.0.1",
+              message.frameInfo.securityOrigin.port == localOrigin?.port,
+              let text = message.body as? String, text.count <= 10000 else { replyHandler(nil, "Local support report required."); return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        replyHandler(true, nil)
+    }
     func printPage() {
         let info = NSPrintInfo.shared.copy() as! NSPrintInfo
         info.orientation = .landscape
@@ -194,10 +207,72 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     @objc func redoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('redo');}else{document.getElementById('redo').click();}", completionHandler: nil) }
     @objc func openData() { if let support = support { NSWorkspace.shared.open(support) } }
     @objc func showAbout() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Production Desk", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "A Squid Productions™ Software\nLocal film scheduling, breakdowns, and shot lists.")]) }
-    func fail(_ title: String, detail: String) {
+    func isSupportMailto(_ url: URL) -> Bool {
+        guard url.scheme == "mailto", url.path.lowercased() == "alexanderhosier@squidproductions.org", url.absoluteString.count <= 32768 else { return false }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.allSatisfy({ ["subject", "body"].contains($0.name) }) ?? true
+    }
+    func recordCrash(_ kind: String, _ message: String) {
+        guard let support = support else { return }
+        let report: [String: String] = ["kind": kind, "time": ISO8601DateFormatter().string(from: Date()),
+            "message": String(String.UnicodeScalarView(message.unicodeScalars.prefix(500))), "location": "", "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"]
+        let file = support.appendingPathComponent("support-crash.json")
+        if let data = try? JSONSerialization.data(withJSONObject: report) {
+            try? data.write(to: file, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        }
+    }
+    func prepareSupportSession() {
+        let file = support.appendingPathComponent("support-session.json")
+        if let raw = try? Data(contentsOf: file), let prior = try? JSONSerialization.jsonObject(with: raw) as? [String: Int],
+           let pid = prior["pid"], NSRunningApplication(processIdentifier: pid_t(pid)) == nil {
+            recordCrash("session", "The previous desktop session ended unexpectedly. This can follow a crash, force quit, or system shutdown.")
+        }
+        if let raw = try? JSONSerialization.data(withJSONObject: ["pid": Int(ProcessInfo.processInfo.processIdentifier)]) {
+            try? raw.write(to: file, options: .atomic)
+            sessionFile = file
+        }
+    }
+    func composeCrashReport() {
+        let alert = NSAlert(); alert.messageText = "Report a crash"
+        alert.informativeText = "Describe what you were doing and what happened. An email draft to alexanderhosier@squidproductions.org will open for you to review and send."
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 480, height: 140))
+        let text = NSTextView(frame: scroll.bounds); text.isRichText = false; text.font = .systemFont(ofSize: 13)
+        scroll.documentView = text; scroll.hasVerticalScroller = true; alert.accessoryView = scroll
+        alert.addButton(withTitle: "Open Email Draft"); alert.addButton(withTitle: "Cancel")
+        while alert.runModal() == .alertFirstButtonReturn {
+            let description = text.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !description.isEmpty else { alert.informativeText = "Please describe what happened before opening an email draft."; continue }
+            let file = support?.appendingPathComponent("support-crash.json")
+            let raw = file.flatMap { try? Data(contentsOf: $0) }
+            let report = raw.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: String] } ?? [:]
+            let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+            let body = "What happened:\n" + String(description.prefix(1800)) + "\n\nProduction Desk " + version + "\n" + ProcessInfo.processInfo.operatingSystemVersionString + "\nRecorded: " + (report["time"] ?? "unknown") + "\nProblem: " + (report["kind"] ?? "crash") + "\n" + (report["message"] ?? "Unexpected application failure")
+            var address = URLComponents(); address.scheme = "mailto"; address.path = "alexanderhosier@squidproductions.org"
+            address.queryItems = [URLQueryItem(name: "subject", value: "Production Desk " + version + " — crash report"), URLQueryItem(name: "body", value: body)]
+            if let url = address.url, NSWorkspace.shared.open(url) { return }
+            NSPasteboard.general.clearContents(); NSPasteboard.general.setString(body, forType: .string)
+            let help = NSAlert(); help.messageText = "Report copied"; help.informativeText = "An email app could not be opened. Paste the copied report into an email to alexanderhosier@squidproductions.org."; help.runModal()
+            return
+        }
+    }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        recordCrash("renderer", "The app's web content process stopped unexpectedly.")
+        let alert = NSAlert(); alert.messageText = "Production Desk’s view stopped"
+        alert.informativeText = "Reload to reopen your saved work. Crash details have been saved locally for reporting."
+        alert.addButton(withTitle: "Reload View"); alert.addButton(withTitle: "Report Crash…"); alert.addButton(withTitle: "Later")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertFirstButtonReturn { webView.reload() }
+            if response == .alertSecondButtonReturn { self?.composeCrashReport() }
+        }
+    }
+    func fail(_ title: String, detail: String, crashKind: String? = nil) {
+        if let kind = crashKind { recordCrash(kind, title + ": " + detail) }
         let alert = NSAlert(); alert.messageText = title; alert.informativeText = detail
         alert.addButton(withTitle: "OK")
-        alert.beginSheetModal(for: window, completionHandler: nil)
+        if crashKind != nil { alert.addButton(withTitle: "Report Crash…") }
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertSecondButtonReturn { self?.composeCrashReport() }
+        }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { window.makeKeyAndOrderFront(nil); return true }
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
@@ -227,12 +302,16 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
     func applicationWillTerminate(_ notification: Notification) {
         isQuitting = true; readyTimer?.invalidate()
+        if let file = sessionFile, let raw = try? Data(contentsOf: file),
+           let value = try? JSONSerialization.jsonObject(with: raw) as? [String: Int],
+           value["pid"] == Int(ProcessInfo.processInfo.processIdentifier) { try? FileManager.default.removeItem(at: file) }
         if server?.isRunning == true { server?.terminate(); server?.waitUntilExit() }
         if let file = readyFile { try? FileManager.default.removeItem(at: file) }
         try? logHandle?.close()
     }
 }
 
+#if !SUPPORT_TESTING
 @main
 struct ProductionDeskMain {
     static func main() {
@@ -243,3 +322,5 @@ struct ProductionDeskMain {
         withExtendedLifetime(delegate) { app.run() }
     }
 }
+
+#endif

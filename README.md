@@ -11,7 +11,7 @@ Built by Squid Productions for real productions and shared under the [MIT licens
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.4.5-15.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
+| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.1-19.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
 | Windows | [Download Windows installer](https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/Production-Desk-Windows-Setup.exe) | Windows 10/11, x64. Run the single `.exe` installer; installation is for the current user. |
 
 Visit the [Production Desk website](https://productiondesk.squidproductions.org/) for the
@@ -100,3 +100,13 @@ Include the app version, operating system, steps to reproduce, and expected vers
 behavior. Keep private scripts and production data out of public reports.
 
 Also from Squid Productions: [Scenic](https://scenic.squidproductions.org/), our scene planner.
+
+## Bug and crash reports
+
+Open **Production settings → Report a bug…** or **Report a crash…**. Describe
+what happened, review the technical summary, and choose **Open email draft** to
+prepare an email to alexanderhosier@squidproductions.org. You send the email yourself.
+Copy or save a text report if your email app is unavailable. Detected errors and
+interrupted desktop sessions are retained locally for reporting after restart;
+**Dismiss saved crash report** clears those details. Project files and logs are
+not attached automatically.

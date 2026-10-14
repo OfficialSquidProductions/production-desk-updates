@@ -21,6 +21,7 @@ def validate_lining(project):
     hashes = set()
     ids = set()
     shots = {s['id'] for s in project.get('_shots', [])}
+    scenes = {s['id'] for s in project.get('breakdowns', []) if s.get('type') == 'scene'}
     def number(value, low, high):
         return type(value) in (int, float) and math.isfinite(value) and low <= value <= high
     def point(value):
@@ -54,10 +55,19 @@ def validate_lining(project):
             if kind in ('coverage', 'arrow') and not point(mark.get('end')):
                 raise ValueError('Invalid annotation end position.')
             if kind == 'coverage':
-                if mark.get('shotId') not in shots or mark.get('style') not in ('solid', 'wavy'):
-                    raise ValueError('Coverage line requires an existing shot and line style.')
+                shot_id = mark.get('shotId')
+                if (shot_id not in (None, '') and (not isinstance(shot_id, str) or shot_id not in shots)) or mark.get('style') not in ('solid', 'wavy'):
+                    raise ValueError('Coverage line requires a valid shot link or an unlinked draft, and a line style.')
                 if mark['start'][0] != mark['end'][0]:
                     raise ValueError('Coverage lines must be vertical.')
+                draft = mark.get('draft', {})
+                if not isinstance(draft, dict):
+                    raise ValueError('Invalid coverage shot details.')
+                for key, maximum in [('number', 24), ('description', 2000), ('movement', 500), ('camera', 100), ('lens', 100), ('size', 100), ('equipment', 500)]:
+                    if key in draft and (not isinstance(draft[key], str) or len(draft[key]) > maximum):
+                        raise ValueError('Invalid coverage ' + key + '.')
+                if 'sceneId' in draft and (not isinstance(draft['sceneId'], str) or draft['sceneId'] not in scenes):
+                    raise ValueError('Coverage draft references an unknown scene.')
             if kind in ('pen', 'highlighter'):
                 points = mark.get('points')
                 if not isinstance(points, list) or not 2 <= len(points) <= 20000 or not all(point(p) for p in points):

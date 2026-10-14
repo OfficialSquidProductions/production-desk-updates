@@ -26,6 +26,29 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         await waitFor(()=>document.querySelector('#save-status').textContent.includes('Saved'));
         """
         let checks = """
+        document.querySelector('#settings-open').click();
+        document.querySelector('[data-field="title"]').value='Unsaved support settings draft';
+        document.querySelector('#report-bug').click();
+        expect(document.querySelector('#support-report').open,'Bug report did not open');
+        expect(document.querySelector('#support-email').hidden,'Blank report could open email');
+        const description=document.querySelector('#support-description');
+        description.value='Synthetic report & café';description.dispatchEvent(new Event('input',{bubbles:true}));
+        const address=new URL(document.querySelector('#support-email').href);
+        expect(address.protocol==='mailto:'&&address.pathname==='alexanderhosier@squidproductions.org','Wrong support recipient');
+        expect(address.searchParams.get('body').includes('Synthetic report & café'),'Description was not encoded correctly');
+        document.querySelector('#support-close').click();
+        expect(document.querySelector('[data-field="title"]').value==='Unsaved support settings draft','Reporting lost settings drafts');
+        window.dispatchEvent(new ErrorEvent('error',{message:'Synthetic native WebKit crash',filename:location.origin+'/app.js?private=value',lineno:24}));
+        await waitFor(()=>!document.querySelector('#support-notice').hidden);
+        document.querySelector('#report-crash').click();
+        expect(document.querySelector('#support-report pre').textContent.includes('Synthetic native WebKit crash'),'Crash details missing');
+        expect(!document.querySelector('#support-report pre').textContent.includes('private=value'),'URL query leaked into diagnostics');
+        await new Promise(resolve=>setTimeout(resolve,200));
+        expect((await(await fetch('/api/support')).json()).report.message==='Synthetic native WebKit crash','Crash was not stored on disk');
+        document.querySelector('#support-discard').click();
+        await waitFor(()=>document.querySelector('#support-status').textContent==='Saved crash report dismissed.');
+        expect((await(await fetch('/api/support')).json()).report===null,'Dismissed crash report remained pending');
+        document.querySelector('#support-close').click();document.querySelector('#modal-cancel').click();
         document.querySelector('[data-view="elements"]').click();
         let input=document.querySelector('[data-element-name]');input.focus();input.value='Native saved element';input.dispatchEvent(new Event('input',{bubbles:true}));
         expect(await window.slateDesktop.flush(),'Element flush failed');
@@ -47,7 +70,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         for(const body of [[],null,1]){const response=await post(body);expect(response.status===400,'Malformed import did not return 400');expect(typeof(await response.json()).error==='string','Missing import error');}
         const p=await load();p.id=crypto.randomUUID();p.project='Native restored backup';p.stripboards=[];
         const backup={version:1,projects:[p],activeProject:p.id};
-        document.querySelector('#import-open').click();
+        window.slateDesktop.importScript();
         const transfer=new DataTransfer();transfer.items.add(new File([JSON.stringify(backup)],'native-backup.json',{type:'application/json'}));
         document.querySelector('#import-file').files=transfer.files;document.querySelector('#import-submit').click();
         await waitFor(()=>!document.querySelector('#modal').open);

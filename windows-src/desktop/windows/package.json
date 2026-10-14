@@ -1,6 +1,6 @@
 {
   "name": "production-desk",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Offline film scheduling, script breakdowns and shot lists",
   "author": "Squid Productions",
   "private": true,
@@ -28,7 +28,8 @@
       "smoke.cjs",
       "package.json",
       "regressions.cjs",
-      "lined-regressions.cjs"
+      "lined-regressions.cjs",
+      "support-regressions.cjs"
     ],
     "extraResources": [
       {

@@ -108,6 +108,37 @@ class LinedScriptTests(unittest.TestCase):
         self.document['marks'] = [valid]
         self.assertEqual(self.request('/api/workspace', self.workspace)[0], 200)
 
+    def test_unlinked_coverage_and_details_survive_save_backup_and_linking(self):
+        mark={'id':'draft-line','type':'coverage','page':0,'start':[.1,.2],'end':[.1,.8],
+              'shotId':None,'style':'solid','width':2,'color':'#E60026','note':'Start on cue',
+              'draft':{'number':'B','description':'Wide master','movement':'Push in','camera':'B',
+                       'lens':'50','sceneId':self.project['breakdowns'][0]['id']}}
+        self.document['marks']=[mark]
+        self.assertEqual(self.request('/api/workspace',self.workspace)[0],200)
+        status,raw=self.request('/api/workspace',method='GET')
+        self.assertEqual(status,200)
+        self.assertEqual(json.loads(raw)['projects'][0]['_linedScript']['documents'][0]['marks'][0],mark)
+        status,raw=self.request('/api/backup',{'workspace':self.workspace,'filename':'draft.json'})
+        self.assertEqual(status,200)
+        _,raw=self.request(json.loads(raw)['url'],method='GET')
+        status,raw=self.request('/api/import',json.loads(raw))
+        self.assertEqual(status,200)
+        self.assertEqual(json.loads(raw)['workspace']['projects'][0]['_linedScript']['documents'][0]['marks'][0],mark)
+        mark['shotId']=self.project['_shots'][0]['id'];mark.pop('draft')
+        self.assertEqual(self.request('/api/workspace',self.workspace)[0],200)
+
+    def test_invalid_unlinked_details_are_rejected_without_overwriting_data(self):
+        self.assertEqual(self.request('/api/workspace',self.workspace)[0],200)
+        before=self.server.datafile.read_bytes()
+        valid={'id':'draft-line','type':'coverage','page':0,'start':[.1,.2],'end':[.1,.8],
+               'shotId':None,'style':'solid','width':2,'color':'#E60026'}
+        for draft in [[],{'sceneId':[]},{'sceneId':'missing'},{'number':'A'*25},
+                      {'movement':4},{'movement':'x'*501},{'camera':None},{'description':'x'*2001}]:
+            with self.subTest(draft=draft):
+                self.document['marks']=[dict(valid,draft=draft)]
+                self.assertEqual(self.request('/api/workspace',self.workspace)[0],400)
+                self.assertEqual(self.server.datafile.read_bytes(),before)
+
     def test_pdf_export_is_binary_and_rejects_wrong_encoding(self):
         body = {'filename':'lined.pdf','content':base64.b64encode(FIXTURE).decode(),'mime':'application/pdf','encoding':'base64'}
         status, raw = self.request('/api/export', body)

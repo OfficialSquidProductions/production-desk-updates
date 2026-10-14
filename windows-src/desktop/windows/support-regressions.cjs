@@ -1,0 +1,75 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {clipboard} = require('electron');
+
+module.exports = async ({win, origin, dataFolder, waitFor, reload}) => {
+  const js = source => win.webContents.executeJavaScript(source, true);
+  const checks = [];
+  const before = fs.readFileSync(path.join(dataFolder, 'workspace.json'));
+  await waitFor('document.querySelector("#support-notice") && !document.querySelector("#support-notice").hidden');
+  assert.equal((await (await fetch(origin+'/api/support')).json()).report.kind, 'session');
+  checks.push('Interrupted desktop session offers a report after launch');
+  await js(`document.querySelector('#settings-open').click();
+    document.querySelector('[data-field="title"]').value='Unsaved report test';document.querySelector('#report-bug').click();`);
+  assert.equal(await js('document.querySelector("#support-email").hidden'), true);
+  await js(`document.querySelector('#support-copy').click();document.querySelector('#support-save').click();`);
+  assert.equal(await js('document.querySelector("#support-description").validity.valueMissing'), true);
+  const description = 'Synthetic report: & + café 😀. Expected the editor to open.';
+  await js(`document.querySelector('#support-description').value=${JSON.stringify(description)};document.querySelector('#support-description').dispatchEvent(new Event('input',{bubbles:true}));`);
+  const address = new URL(await js('document.querySelector("#support-email").href'));
+  assert.equal(address.protocol, 'mailto:');assert.equal(address.pathname, 'alexanderhosier@squidproductions.org');
+  assert.ok(address.searchParams.get('subject').includes('bug report'));
+  assert.ok(address.searchParams.get('body').includes(description));
+  assert.equal(address.searchParams.get('body').includes('Unsaved report test'), false);
+  await js('document.querySelector("#support-copy").click()');
+  await waitFor('document.querySelector("#support-status").textContent.startsWith("Report copied")');
+  assert.equal(clipboard.readText(), address.searchParams.get('body'));
+  const download = new Promise((resolve,reject) => win.webContents.session.once('will-download', (_event,item) =>
+    item.once('done', (_event,state) => state === 'completed' ? resolve(item.getSavePath()) : reject(Error('Support download '+state)))));
+  await js('document.querySelector("#support-save").click()');
+  const savedPath = await Promise.race([download,new Promise((_,reject)=>setTimeout(()=>reject(Error('Support download timed out')),15000))]);
+  assert.equal(fs.readFileSync(savedPath,'utf8'), address.searchParams.get('body'));
+  checks.push('Bug report requires a description, encodes the correct recipient/body, copies and downloads exact reviewed text');
+  await js('document.querySelector("#support-close").click()');
+  assert.equal(await js('document.querySelector("[data-field=title]").value'), 'Unsaved report test');
+  await js('document.querySelector("#modal-cancel").click()');
+  await js(`window.dispatchEvent(new ErrorEvent('error',{message:'x'+'😀'.repeat(400),filename:location.origin+'/app.js?private=hidden',lineno:24}));`);
+  await waitFor('!document.querySelector("#support-notice").hidden');
+  const deadline = Date.now()+15000;
+  while ((await (await fetch(origin+'/api/support')).json()).report.kind !== 'script') {
+    if (Date.now()>deadline) throw Error('Crash was not persisted');
+    await new Promise(resolve=>setTimeout(resolve,50));
+  }
+  win.webContents.session.webRequest.onBeforeRequest({urls:[origin+'/api/support']}, (details,done) => {
+    if (details.method === 'GET') setTimeout(()=>done({}),500); else done({});
+  });
+  await reload();
+  await js(`document.querySelector('#settings-open').click();document.querySelector('#report-crash').click();document.querySelector('#support-description').value='Draft during recovery load';document.querySelector('#support-description').dispatchEvent(new Event('input',{bubbles:true}));`);
+  await waitFor('document.querySelector("#support-report pre").textContent.includes("Problem: script")');
+  win.webContents.session.webRequest.onBeforeRequest(null);
+  assert.equal(await js('document.querySelector("#support-description").value'),'Draft during recovery load');
+  const preview = await js('document.querySelector("#support-report pre").textContent');
+  assert.ok(preview.includes('Problem: script'));assert.ok(preview.includes('app.js:24'));assert.equal(preview.includes('private=hidden'),false);
+  await js(`document.querySelector('#support-description').value='The app stopped while opening a shot.';document.querySelector('#support-description').dispatchEvent(new Event('input',{bubbles:true}));`);
+  const crashAddress = new URL(await js('document.querySelector("#support-email").href'));
+  assert.ok(crashAddress.searchParams.get('subject').includes('crash report'));
+  assert.ok(crashAddress.searchParams.get('body').includes('The app stopped while opening a shot.'));
+  await js('document.querySelector("#support-discard").click()');
+  await waitFor('document.querySelector("#support-status").textContent === "Saved crash report dismissed."');
+  assert.equal((await (await fetch(origin+'/api/support')).json()).report,null);
+  await js('document.querySelector("#support-close").click()');
+  checks.push('Unicode crash diagnostics persist through reload, omit URL queries, and can be dismissed');
+  const recovered = new Promise(resolve=>win.webContents.once('did-finish-load',resolve));
+  win.webContents.forcefullyCrashRenderer();
+  await Promise.race([recovered,new Promise((_,reject)=>setTimeout(()=>reject(Error('Renderer recovery timed out')),15000))]);
+  await waitFor('document.querySelector("#project-picker")?.options.length > 0');
+  await waitFor('document.querySelector("#support-notice") && !document.querySelector("#support-notice").hidden');
+  assert.equal((await (await fetch(origin+'/api/support')).json()).report.kind,'renderer');
+  assert.deepEqual(fs.readFileSync(path.join(dataFolder,'workspace.json')),before);
+  await js('document.querySelector("#support-notice button").click();document.querySelector("#support-discard").click()');
+  await waitFor('document.querySelector("#support-status").textContent === "Saved crash report dismissed."');
+  await js('document.querySelector("#support-close").click()');
+  checks.push('Real renderer crash recovers with report details and byte-identical workspace');
+  return checks;
+};

@@ -67,7 +67,7 @@ module.exports = async ({js, flush, readWorkspace, post, reload, waitFor}) => {
     const parsed=await (await post('/api/import','INT. REVIEW ROOM - DAY\n\nA synthetic scene.',{'X-Filename':'review.txt'})).json();
     const project=parsed.project;project.project='Review restored backup';project.stripboards=[];
     const backup={version:1,projects:[project],activeProject:project.id};
-    await js(`document.querySelector('#import-open').click();
+    await js(`window.slateDesktop.importScript();
       const transfer=new DataTransfer();transfer.items.add(new File([${JSON.stringify(JSON.stringify(backup))}], 'review-backup.json',{type:'application/json'}));
       document.querySelector('#import-file').files=transfer.files;
       document.querySelector('#import-submit').click();`);

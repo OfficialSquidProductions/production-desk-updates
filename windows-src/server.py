@@ -256,6 +256,23 @@ class Handler(SimpleHTTPRequestHandler):
         theme = value.get('theme') if isinstance(value, dict) else None
         return {'theme': theme if theme in ('light', 'dark') else 'light'}
 
+    def support_report(self, value=None):
+        path = self.server.datafile.parent / 'support-crash.json'
+        if value is None:
+            try:
+                value = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                return None
+        if not isinstance(value, dict) or value.get('kind') not in ('script', 'promise', 'renderer', 'backend', 'session', 'startup'):
+            raise ValueError('Invalid crash report type.')
+        report = {}
+        for key, limit in [('kind', 20), ('time', 50), ('message', 500), ('location', 150), ('version', 50)]:
+            field = value.get(key, '')
+            if not isinstance(field, str) or len(field) > limit:
+                raise ValueError('Invalid crash report details.')
+            report[key] = field
+        return report
+
     def end_headers(self):
         self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; worker-src 'self'; font-src 'self' data: blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -345,6 +362,13 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
+        elif path == '/api/support':
+            try:
+                with LOCK:
+                    report = self.support_report()
+                self.reply({'report': report})
+            except ValueError:
+                self.reply({'report': None})
         elif path == '/api/settings':
             with LOCK:
                 self.reply({'preferences': self.preferences()})
@@ -374,11 +398,38 @@ class Handler(SimpleHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             backup_import = path == '/api/import' and self.headers.get('X-Filename', '').lower().endswith(('.json', '.uss'))
             limit = MAX_BACKUP if backup_import or path == '/api/export' else MAX_BODY
+            if path in ('/api/support', '/api/support/export'):
+                limit = 16384
             if length <= 0 or length > limit:
-                self.reply({"error": "Request exceeds the " + str(limit // 1024 // 1024) + " MB limit."}, 413)
+                self.reply({"error": "Support reports must be smaller than 16 KB." if limit == 16384 else "Request exceeds the " + str(limit // 1024 // 1024) + " MB limit."}, 413)
                 return
             raw = self.rfile.read(length)
-            if path == '/api/pdf':
+            if path == '/api/support':
+                value = json_object(raw)
+                if value.get('action') == 'clear':
+                    with LOCK:
+                        path = self.server.datafile.parent / 'support-crash.json'
+                        path.unlink(missing_ok=True)
+                        path.with_name('support-crash.previous.json').unlink(missing_ok=True)
+                    self.reply({'report': None})
+                    return
+                if value.get('action') != 'record':
+                    raise ValueError('Choose a report action.')
+                if not isinstance(value.get('report'), dict):
+                    raise ValueError('Crash details are required.')
+                report = self.support_report(value['report'])
+                if report is None:
+                    raise ValueError('Crash details are required.')
+                with LOCK:
+                    atomic_save(self.server.datafile.parent / 'support-crash.json', report)
+                self.reply({'report': report})
+            elif path == '/api/support/export':
+                value = json_object(raw)
+                content = value.get('content')
+                if not isinstance(content, str) or not content or len(content) > 10000:
+                    raise ValueError('Invalid support report.')
+                self.reply(self.export_file('Production-Desk-support-report.txt', 'text/plain;charset=utf-8', content.encode('utf-8')))
+            elif path == '/api/pdf':
                 from urllib.parse import unquote
                 document = store_pdf(self.server.datafile, raw, unquote(self.headers.get('X-Filename', 'script.pdf')))
                 self.reply({'document': document})

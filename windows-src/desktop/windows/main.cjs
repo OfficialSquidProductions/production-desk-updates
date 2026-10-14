@@ -1,4 +1,4 @@
-const {app, BrowserWindow, Menu, dialog, shell, ipcMain} = require('electron');
+const {app, BrowserWindow, Menu, dialog, shell, ipcMain, clipboard} = require('electron');
 const {spawn} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -17,6 +17,23 @@ try { Object.assign(settings, JSON.parse(fs.readFileSync(settingsFile, 'utf8')))
 let win, backend, origin, temporary, quitting = false, closing = false, checking = false;
 let updateReady = false, manualCheck = false;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const sessionFile = path.join(dataFolder, 'support-session.json');
+function recordCrash(kind, message) {
+  try {
+    fs.mkdirSync(dataFolder, {recursive:true});
+    const file = path.join(dataFolder, 'support-crash.json');
+    fs.writeFileSync(file + '.tmp', JSON.stringify({kind, message:Array.from(String(message)).slice(0,500).join(''), time:new Date().toISOString(), location:'', version:app.getVersion()}), {mode:0o600});
+    fs.renameSync(file + '.tmp', file);
+  } catch {}
+}
+process.on('uncaughtExceptionMonitor', error => recordCrash('session', 'The desktop process stopped unexpectedly: ' + error.message));
+function beginSupportSession() {
+  try {
+    if (fs.existsSync(sessionFile)) recordCrash('session', 'The previous desktop session ended unexpectedly. This can follow a crash, force quit, or system shutdown.');
+    fs.writeFileSync(sessionFile, JSON.stringify({pid:process.pid}), {mode:0o600});
+  } catch {}
+}
 
 function persistSettings() {
   fs.mkdirSync(dataFolder, {recursive:true});
@@ -113,7 +130,7 @@ function buildMenu() {
       {type:'separator'}, {label:'Quit Production Desk', accelerator:'Ctrl+Q', click:quitOrInstall}
     ]},
     {label:'File', submenu:[
-      {label:'Import Script / USS…', click:() => click('#import-open')},
+      {label:'Import Script / USS…', click:() => win.webContents.executeJavaScript('window.slateDesktop.importScript()')},
       {label:'Export…', click:() => click('#export-open')},
       {label:'Save', accelerator:'Ctrl+S', click:() => click('#save-status')},
       {label:'Print Schedule…', accelerator:'Ctrl+P', click:() => win.webContents.executeJavaScript('window.slateDesktop.print()')}
@@ -172,6 +189,7 @@ function configureUpdates() {
 }
 async function start() {
   fs.mkdirSync(dataFolder, {recursive:true});
+  beginSupportSession();
   temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'production-desk-'));
   const readyFile = path.join(temporary, 'ready.json');
   const executable = path.join(process.resourcesPath, 'backend', 'ProductionDeskServer.exe');
@@ -184,7 +202,8 @@ async function start() {
   backend.on('exit', code => {
     log.end();
     if (!quitting) startupError = new Error(`Local server stopped (${code}).`);
-    if (!quitting && win) dialog.showErrorBox('Production Desk server stopped', 'Your saved workspace is safe. Restart Production Desk to continue.');
+    if (!quitting) recordCrash('backend', `The local server stopped unexpectedly (exit ${code}).`);
+    if (!quitting && win) dialog.showErrorBox('Production Desk server stopped', 'Restart Production Desk to reopen your saved work and review a crash report.');
   });
   const deadline = Date.now() + 30000;
   while (!fs.existsSync(readyFile)) {
@@ -199,6 +218,13 @@ async function start() {
     minWidth:900, minHeight:650, title:isBeta?'Production Desk Beta':'Production Desk', backgroundColor:'#191419', show:!smokeResult,
     webPreferences:{preload:path.join(__dirname,'preload.cjs'), nodeIntegration:false,
       contextIsolation:true, sandbox:true, spellcheck:false}});
+  win.webContents.on('render-process-gone', async (_event, details) => {
+    if (quitting) return;
+    recordCrash('renderer', `The app view stopped unexpectedly (${details.reason}, exit ${details.exitCode}).`);
+    if (smokeResult) { win.reload(); return; }
+    const {response} = await dialog.showMessageBox(win, {type:'error', message:'Production Desk’s view stopped.', detail:'Reload to reopen your saved work and review a crash report.', buttons:['Reload View','Later'], cancelId:1});
+    if (response === 0 && !win.isDestroyed()) win.reload();
+  });
   win.webContents.setWindowOpenHandler(({url}) => {external(url); return {action:'deny'};});
   win.webContents.on('will-navigate', (event, address) => {if(!localAddress(address)){event.preventDefault(); external(address);}});
   win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -212,6 +238,11 @@ async function start() {
   });
   win.on('close', event => {if(!quitting){event.preventDefault(); quitOrInstall();}});
   win.on('resize', () => {if(!win.isMaximized()){settings.bounds=win.getBounds(); persistSettings();}});
+  ipcMain.handle('desk:copy-report', (event, text) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !localAddress(event.senderFrame.url)) throw new Error('Local main window required.');
+    if (typeof text !== 'string' || text.length > 10000) throw new Error('Invalid support report.');
+    clipboard.writeText(text);
+  });
   ipcMain.handle('desk:print', async event => {
     if(event.sender !== win.webContents || !localAddress(event.senderFrame.url)) throw new Error('Local window required.');
     try { await printReport(); } catch(error) { dialog.showErrorBox('PDF export failed',error.message); }
@@ -235,10 +266,12 @@ else {
   app.on('second-instance', () => {if(win){if(win.isMinimized())win.restore(); win.focus();}});
   app.on('before-quit', event => {if(!quitting){event.preventDefault(); quitOrInstall();}});
   app.on('will-quit', () => {
+    try { fs.unlinkSync(sessionFile); } catch {}
     if(backend) backend.kill();
     if(temporary) fs.rmSync(temporary, {recursive:true, force:true});
   });
   app.whenReady().then(start).catch(error => {
+    recordCrash('startup', 'Production Desk could not start: ' + error.message);
     if(smokeResult) fs.writeFileSync(smokeResult, JSON.stringify({passed:false, error:error.stack}));
     else dialog.showErrorBox('Production Desk could not start',error.message);
     quitting=true; app.quit();

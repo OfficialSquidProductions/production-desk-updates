@@ -12,6 +12,17 @@ export function removeCoverage(project,shotIds){
   const removed=new Set(shotIds);
   for(const doc of project._linedScript?.documents||[])doc.marks=doc.marks.filter(m=>m.type!=='coverage'||!removed.has(m.shotId));
 }
+export function clearCoverageScene(project,sceneId){
+  for(const document of project._linedScript?.documents||[])for(const mark of document.marks){
+    if(mark.type==='coverage'&&!mark.shotId&&mark.draft?.sceneId===sceneId)delete mark.draft.sceneId;
+  }
+}
+export function coverageSummary(project,shotId){
+  return (project._linedScript?.documents||[]).flatMap(document=>document.marks
+    .filter(m=>m.type==='coverage'&&m.shotId===shotId)
+    .map(m=>`${document.filename} · p. ${m.page+1} · ${m.style==='wavy'?'Off camera':'On camera'}${m.note?' · '+m.note:''}`));
+}
+const shotFields=['description','movement','camera','lens','size','equipment'];
 function wrap(text,columns){
   const output=[];
   for(const paragraph of String(text||'').split('\n')){
@@ -84,7 +95,7 @@ export function createLinedDesk(c){
   function sync(){
     if(production!==p().id){production=p().id;page=0;selectedId=undefined;shotId='';}
     if(sha!==doc()?.sha256){sha=doc()?.sha256;page=0;selectedId=undefined;gesture=null;}
-    if(!shot())shotId=p()._shots.find(s=>s.sceneId===c.selectedScene())?.id||p()._shots[0]?.id||'';
+    if(shotId&&!shot())shotId='';
     if(!mark())selectedId=undefined;
   }
   const options=(value)=>p()._shots.map(s=>`<option value="${esc(s.id)}" ${s.id===value?'selected':''}>${esc(label(s)+' · '+s.description)}</option>`).join('');
@@ -124,7 +135,13 @@ export function createLinedDesk(c){
       if(generation===epoch)setStatus('Marks save automatically. Full backups include every attached PDF revision.');
     }catch(error){if(generation===epoch){setStatus(error.name==='PasswordException'?'Use an unencrypted PDF for lining.':error.message,true);stage.innerHTML='<p class="lined-loading">The PDF could not be opened. Choose Attach original PDF to retry.</p>';}}
   }
-  function primitives(m){const s=shot(m.shotId);return markPrimitives(m,viewport.width,viewport.height,label(s),m.type==='coverage'?s?.movement:'');}
+  function coverageLabel(m,project=p()){
+    const linked=project._shots.find(s=>s.id===m.shotId);
+    if(linked)return label(linked,project);
+    return [m.draft?.number?'Unlinked '+m.draft.number:'Unlinked coverage',m.draft?.camera?'Camera '+m.draft.camera:''].filter(Boolean).join(' · ');
+  }
+  function primitives(m){const s=shot(m.shotId||null);return markPrimitives(m,viewport.width,viewport.height,coverageLabel(m),m.type==='coverage'?(s?.movement||m.draft?.movement):'');}
+
   function svgNode(tag,attrs={},text){const node=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,v);if(text!==undefined)node.textContent=text;return node;}
   function drawOverlay(preview){
     const overlay=$('#lined-overlay');if(!overlay||!viewport)return;overlay.replaceChildren();
@@ -148,27 +165,51 @@ export function createLinedDesk(c){
   }
   function renderInspector(){
     const target=$('#lined-inspector');if(!target)return;
-    const selected=mark(),linked=selected?.type==='coverage'?shot(selected.shotId):shot();
-    target.innerHTML=`<div class="eyebrow">${selected?'SELECTED ANNOTATION':'SHOT COVERAGE'}</div><h3>${selected?({coverage:'Coverage line',pen:'Pen drawing',highlighter:'Highlight',arrow:'Arrow',text:'Script note'})[selected.type]:'Link a camera setup'}</h3><label class="field">Linked shot<select id="lined-shot"><option value="">Choose a shot</option>${options(linked?.id)}</select></label><button id="lined-new-shot">＋ New linked shot</button><label class="field">Camera movement<input id="lined-movement" value="${esc(linked?.movement||'')}" maxlength="500" ${linked?'':'disabled'} placeholder="e.g. Push in on the last line"></label>${!selected||selected.type==='coverage'?`<label class="field">Coverage style<select id="lined-style"><option value="solid" ${(selected?.style||style)==='solid'?'selected':''}>Straight · on camera</option><option value="wavy" ${(selected?.style||style)==='wavy'?'selected':''}>Wavy · off camera</option></select></label>`:''}${selected?`<label class="field">${selected.type==='text'?'Note text':'Timing / margin note'}<textarea id="lined-note" rows="4" maxlength="2000">${esc(selected.type==='text'?selected.text:selected.note||'')}</textarea></label><button id="lined-delete" class="danger">Delete annotation</button>`:''}<div class="lined-help"><strong>How to mark the page</strong><p>Choose a shot, then drag a coverage line over the passage it covers. Add another line for the same shot on the next page.</p><p>Use Select to move marks or drag a line’s end handles. Drag its label into a margin to keep the script clear. Notes and camera movements print with the lines. Pen, highlight, arrow, and text tools work anywhere on the page.</p><p>Each attached PDF revision keeps its own annotations. Revision transfer is manual.</p></div>`;
-    $('#lined-shot').onchange=e=>{shotId=e.target.value;if(selected?.type==='coverage'&&shotId)c.mutate(()=>selected.shotId=shotId,false);drawOverlay();renderInspector();};
+    const selected=mark(),coverage=selected?.type==='coverage',linked=coverage?shot(selected.shotId||null):shot();
+    const details=coverage?(linked||selected.draft||{}):linked;
+    const field=(name,key,max,placeholder='')=>`<label class="field">${name}<input id="lined-${key}" value="${esc(details?.[key]||'')}" maxlength="${max}" ${details||coverage?'':'disabled'} placeholder="${esc(placeholder)}"></label>`;
+    target.innerHTML=`<div class="eyebrow">${selected?'SELECTED ANNOTATION':'SHOT COVERAGE'}</div><h3>${selected?({coverage:'Coverage line',pen:'Pen drawing',highlighter:'Highlight',arrow:'Arrow',text:'Script note'})[selected.type]:'Draw first. Link later.'}</h3><label class="field">Linked shot<select id="lined-shot"><option value="" ${linked?'':'selected'}>Unlinked · assign later</option>${options(linked?.id)}</select></label><button id="lined-new-shot">${coverage?'＋ Create shot from this line':'＋ New linked shot'}</button>${coverage&&!linked?`<p class="tiny">These details save with the line. Create a shot to add them to the shot list, or choose an existing shot above.</p><label class="field">Scene<select id="lined-draft-scene"><option value="">Choose when linking</option>${p().breakdowns.filter(b=>b.type==='scene').map(b=>`<option value="${esc(b.id)}" ${details.sceneId===b.id?'selected':''}>Scene ${esc(b.scene)}</option>`).join('')}</select></label>${field('Shot number / suffix','number',24,'e.g. A')}`:''}${coverage?field('Shot description','description',2000,'e.g. Wide master'):''}${field('Camera movement','movement',500,'e.g. Push in on the last line')}${coverage?field('Camera','camera',100,'e.g. A')+field('Lens (mm)','lens',100,'e.g. 35')+field('Shot size','size',100,'e.g. Wide')+field('Equipment','equipment',500,'e.g. Dolly'):''}${!selected||coverage?`<label class="field">Coverage style<select id="lined-style"><option value="solid" ${(selected?.style||style)==='solid'?'selected':''}>Straight · on camera</option><option value="wavy" ${(selected?.style||style)==='wavy'?'selected':''}>Wavy · off camera</option></select></label>`:''}${selected?`<label class="field">${selected.type==='text'?'Note text':'Timing / margin note'}<textarea id="lined-note" rows="4" maxlength="2000">${esc(selected.type==='text'?selected.text:selected.note||'')}</textarea></label><button id="lined-delete" class="danger">Delete annotation</button>`:''}<div class="lined-help"><strong>How to mark the page</strong><p>Drag coverage lines before choosing a shot. Select a line to enter details, create a shot from it, or link it to an existing shot. Linking copies any camera details entered on this line into the chosen shot; its scene and number stay unchanged.</p><p>Linked details update the shot list automatically. Page references and timing notes appear in the shot’s Script coverage section and exports.</p><p>Use Select to move marks or drag line endpoints and labels. Each PDF revision keeps its own annotations.</p></div>`;
+    $('#lined-shot').onchange=e=>{
+      shotId=e.target.value;
+      if(coverage)c.mutate(()=>{
+        if(!shotId&&linked)selected.draft=Object.fromEntries(['sceneId','number',...shotFields].map(key=>[key,linked[key]]));
+        const destination=shot(shotId);
+        if(destination&&selected.draft)for(const key of shotFields)if(selected.draft[key]?.trim())destination[key]=selected.draft[key];
+        selected.shotId=shotId||null;if(destination)delete selected.draft;
+      },false);
+      drawOverlay();renderInspector();
+    };
     $('#lined-new-shot').onclick=newShot;
-    bindEdit($('#lined-movement'),value=>linked&&linked.movement!==value, value=>{linked.movement=value;});
-    if($('#lined-style'))$('#lined-style').onchange=e=>{style=e.target.value;if(selected?.type==='coverage')c.mutate(()=>selected.style=style,false);drawOverlay();};
+    for(const key of coverage?[...shotFields,...(!linked?['number']:[])]:['movement']){
+      bindEdit($('#lined-'+key),value=>(linked||coverage)&&(linked||selected?.draft||{})[key]!==value,value=>{
+        if(linked)linked[key]=value;else{selected.draft||={};selected.draft[key]=value;}
+      });
+    }
+    if($('#lined-draft-scene'))$('#lined-draft-scene').onchange=e=>c.mutate(()=>{selected.draft||={};if(e.target.value)selected.draft.sceneId=e.target.value;else delete selected.draft.sceneId;},false);
+    if($('#lined-style'))$('#lined-style').onchange=e=>{style=e.target.value;if(coverage)c.mutate(()=>selected.style=style,false);drawOverlay();};
     if(selected){bindEdit($('#lined-note'),value=>selected[selected.type==='text'?'text':'note']!==value,value=>selected[selected.type==='text'?'text':'note']=value);$('#lined-delete').onclick=deleteMark;}
   }
   function bindEdit(input,changed,write){let editing=false;input.oninput=()=>{if(changed(input.value)){c.edit(()=>write(input.value),!editing);editing=true;drawOverlay();}};input.onblur=()=>editing=false;}
   function deleteMark(){if(!mark())return;c.mutate(()=>{doc().marks=doc().marks.filter(m=>m.id!==selectedId);selectedId=undefined;},false);drawOverlay();renderInspector();}
   function newShot(){
     const scenes=p().breakdowns.filter(b=>b.type==='scene');if(!scenes.length){c.toast('Add or import a scene before creating a linked shot.');return;}
-    const sceneId=shot()?.sceneId||scenes.find(b=>b.id===c.selectedScene())?.id||scenes[0].id;
-    c.modal('New linked shot',`<label class="field">Scene<select id="lined-new-scene">${scenes.map(b=>`<option value="${esc(b.id)}" ${b.id===sceneId?'selected':''}>Scene ${esc(b.scene)}</option>`).join('')}</select></label><label class="field">Shot number / suffix<input id="lined-new-number" maxlength="24" required placeholder="e.g. A"></label><label class="field">Description<input id="lined-new-description" required placeholder="e.g. Wide master"></label><label class="field">Camera movement<input id="lined-new-movement" maxlength="500" placeholder="e.g. Slow push in"></label>`,'<button id="modal-cancel">Cancel</button><button id="lined-create-shot" class="primary">Create linked shot</button>');
-    const next=()=>{const used=new Set(p()._shots.filter(s=>s.sceneId===$('#lined-new-scene').value).map(s=>s.number.trim().toUpperCase()));let i=1;while(used.has('L'+i))i++;$('#lined-new-number').value='L'+i;};next();$('#lined-new-scene').onchange=next;
+    const target=mark()?.type==='coverage'?mark():null,project=p(),document=doc();
+    const seed=target?(shot(target.shotId||null)||target.draft||{}):{};
+    const sceneId=seed.sceneId||shot()?.sceneId||scenes.find(b=>b.id===c.selectedScene())?.id||scenes[0].id;
+    const input=(name,key,max,placeholder='')=>`<label class="field">${name}<input id="lined-new-${key}" maxlength="${max}" value="${esc(seed[key]||'')}" placeholder="${esc(placeholder)}"></label>`;
+    c.modal(target?'Create shot from coverage':'New linked shot',`<label class="field">Scene<select id="lined-new-scene">${scenes.map(b=>`<option value="${esc(b.id)}" ${b.id===sceneId?'selected':''}>Scene ${esc(b.scene)}</option>`).join('')}</select></label>${input('Shot number / suffix','number',24,'e.g. A')}${input('Description','description',2000,'e.g. Wide master')}${input('Camera movement','movement',500,'e.g. Slow push in')}${input('Camera','camera',100,'A')}${input('Lens (mm)','lens',100,'35')}${input('Shot size','size',100,'Wide')}${input('Equipment','equipment',500,'Tripod')}`,'<button id="modal-cancel">Cancel</button><button id="lined-create-shot" class="primary">Create linked shot</button>');
+    const next=()=>{const used=new Set(p()._shots.filter(s=>s.sceneId===$('#lined-new-scene').value).map(s=>s.number.trim().toUpperCase()));let i=1;while(used.has('L'+i))i++;$('#lined-new-number').value='L'+i;};
+    if(!seed.number||project._shots.some(s=>s.sceneId===sceneId&&s.number.trim().toUpperCase()===seed.number.trim().toUpperCase()))next();
+    $('#lined-new-scene').onchange=next;
+    if(!$('#lined-new-description').value&&target)$('#lined-new-description').value=`Coverage · ${document.filename} · p. ${target.page+1}`;
     $('#lined-create-shot').onclick=()=>{
-      const sceneId=$('#lined-new-scene').value,number=$('#lined-new-number').value.trim(),description=$('#lined-new-description').value.trim(),movement=$('#lined-new-movement').value;
+      const sceneId=$('#lined-new-scene').value,number=$('#lined-new-number').value.trim(),description=$('#lined-new-description').value.trim();
       if(!number||!description){$('#modal-error').textContent='Enter a shot number and description.';return;}
-      if(p()._shots.some(s=>s.sceneId===sceneId&&s.number.trim().toUpperCase()===number.toUpperCase())){$('#modal-error').textContent='This scene already has that shot number.';return;}
-      const value={id:id(),created:stamp(),sceneId,number,description,movement,size:'Wide',camera:'A',lens:'',equipment:'',notes:'',circleTake:'',priority:'Essential',status:'Planned',setupMinutes:10,shootMinutes:15,actualMinutes:null,takes:0};
-      c.mutate(()=>{p()._shots.push(value);shotId=value.id;},false);$('#modal').close();renderInspector();drawOverlay();
+      if(project._shots.some(s=>s.sceneId===sceneId&&s.number.trim().toUpperCase()===number.toUpperCase())){$('#modal-error').textContent='This scene already has that shot number.';return;}
+      if(project!==p()||document!==doc()||(target&&!document.marks.includes(target))){$('#modal-error').textContent='The selected coverage changed. Close this dialog and try again.';return;}
+      const value={id:id(),created:stamp(),sceneId,number,description,movement:$('#lined-new-movement').value,size:$('#lined-new-size').value||'Wide',camera:$('#lined-new-camera').value||'A',lens:$('#lined-new-lens').value,equipment:$('#lined-new-equipment').value,notes:'',circleTake:'',priority:'Essential',status:'Planned',setupMinutes:10,shootMinutes:15,actualMinutes:null,takes:0};
+      c.mutate(()=>{project._shots.push(value);shotId=value.id;if(target){target.shotId=value.id;delete target.draft;}},false);
+      $('#modal').close();renderInspector();drawOverlay();
     };
   }
   function point(event,overlay){const rect=overlay.getBoundingClientRect();return [clamp((event.clientX-rect.left)/rect.width),clamp((event.clientY-rect.top)/rect.height)];}
@@ -178,14 +219,13 @@ export function createLinedDesk(c){
       if(event.button!==0||busy)return;event.preventDefault();const start=point(event,overlay),hit=event.target.closest('[data-lined-mark]');
       if(tool==='select'){
         selectedId=hit?.dataset.linedMark;const selected=mark();if(!selected){drawOverlay();renderInspector();return;}
-        shotId=selected.shotId||shotId;gesture={kind:'move',original:copy(selected),start,handle:event.target.dataset.linedHandle};
+        if(selected.type==='coverage')shotId=selected.shotId||'';gesture={kind:'move',original:copy(selected),start,handle:event.target.dataset.linedHandle};
       }else if(tool==='text'){
         c.modal('Script note','<label class="field">Camera direction or note<textarea id="lined-text" rows="4" maxlength="2000" placeholder="e.g. Pan to Maya on the door slam"></textarea></label>','<button id="modal-cancel">Cancel</button><button id="lined-text-save" class="primary">Place note</button>');
         $('#lined-text-save').onclick=()=>{const text=$('#lined-text').value.trim();if(!text)return;const value={id:id(),type:'text',page,start,color,width,text};c.mutate(()=>doc().marks.push(value),false);selectedId=value.id;$('#modal').close();drawOverlay();renderInspector();};return;
       }else{
-        if(tool==='coverage'&&!shot()){c.toast('Choose or create a linked shot first.');return;}
         const value={id:id(),type:tool,page,start,color,width};
-        if(tool==='coverage')Object.assign(value,{end:[...start],shotId,style,note:''});
+        if(tool==='coverage')Object.assign(value,{end:[...start],shotId:shotId||null,style,note:''});
         if(tool==='arrow')value.end=[...start];
         if(tool==='pen'||tool==='highlighter')value.points=[[...start]];
         gesture={kind:'create',original:value,start};selectedId=value.id;
@@ -241,7 +281,7 @@ export function createLinedDesk(c){
         const source=await file.getPage(index+1),view=source.getViewport({scale:1});
         const canvas=document.createElement('canvas');canvas.width=Math.ceil(view.width*2);canvas.height=Math.ceil(view.height*2);
         const context=canvas.getContext('2d');context.scale(2,2);
-        for(const m of marks){const s=project._shots.find(s=>s.id===m.shotId);paint(context,markPrimitives(m,view.width,view.height,label(s,project),m.type==='coverage'?s?.movement:''));}
+        for(const m of marks){const s=project._shots.find(s=>s.id===m.shotId);paint(context,markPrimitives(m,view.width,view.height,coverageLabel(m,project),m.type==='coverage'?(s?.movement||m.draft?.movement):''));}
         const image=await output.embedPng(canvas.toDataURL('image/png'));
         const bottomLeft=view.convertToPdfPoint(0,view.height),bottomRight=view.convertToPdfPoint(view.width,view.height),topLeft=view.convertToPdfPoint(0,0);
         output.getPage(index).drawImage(image,{x:bottomLeft[0],y:bottomLeft[1],width:Math.hypot(bottomRight[0]-bottomLeft[0],bottomRight[1]-bottomLeft[1]),height:Math.hypot(topLeft[0]-bottomLeft[0],topLeft[1]-bottomLeft[1]),rotate:degrees(source.rotate)});
