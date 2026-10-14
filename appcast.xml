@@ -3,22 +3,23 @@
     <channel>
         <title>Production Desk</title>
         <item>
-            <title>1.4.5</title>
-            <pubDate>Tue, 13 Oct 2026 13:54:25 -0400</pubDate>
-            <sparkle:version>15</sparkle:version>
-            <sparkle:shortVersionString>1.4.5</sparkle:shortVersionString>
+            <title>1.5.1</title>
+            <pubDate>Wed, 14 Oct 2026 10:24:12 -0400</pubDate>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Production Desk 1.4.5</h2>
+            <description><![CDATA[<h2>Production Desk 1.5.1</h2>
 <ul>
-  <li>Save element names and board IDs as you type, including before quitting or updating.</li>
-  <li>Repair missing shooting schedules when importing backups or opening older workspaces.</li>
-  <li>Reject blank or duplicate shot numbers without blocking workspace saves.</li>
-  <li>Show clear errors for malformed JSON imports and invalid calendar dates.</li>
-  <li>Publish Windows updates only when the application version increases.</li>
+  <li>Report bugs and crashes from Production settings with a description, technical summary, and reviewable email draft.</li>
+  <li>Remember detected errors and interrupted desktop sessions locally for reporting after restart. Copy or save reports when an email app is unavailable.</li>
+  <li>Plan coverage on the original PDF with drawing tools, camera movements, revision-specific marks, and lined PDF export.</li>
+  <li>Draw coverage before choosing a shot, then create or link a shot with the line’s camera details.</li>
+  <li>Include coverage page references and timing notes in shot lists, CSV exports, and printed reports.</li>
+  <li>Preserve productions, original PDFs, manual shot notes, and Undo/Redo while linking or unlinking coverage.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.4.5-15.zip" length="17881496" type="application/octet-stream" sparkle:edSignature="cVqNzgm8op1sgbM9OnnO8G5S1GKBGad7t09gwPxxsGZS+MOs753AOlK5XQFzaS5ISVg+tk258rFcMIWRBu3zBA=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.1-19.zip" length="20907178" type="application/octet-stream" sparkle:edSignature="2EYtV9LsgWfzQ4aMDe88gbkEqvnpZe6Lwz/KP0LycXBKDW9bTylNQVh3+GhyyazP/PdbmSx9nQO56fGYoqCTDw=="/>
         </item>
     </channel>
 </rss>
