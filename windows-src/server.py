@@ -235,6 +235,11 @@ def extract_pdf(raw):
     return result.stdout.decode("utf-8")
 
 class Handler(SimpleHTTPRequestHandler):
+    # Windows registry MIME overrides can label ES modules as plain text.
+    # Chromium rejects those responses with nosniff enabled.
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
+                      '.js': 'text/javascript', '.mjs': 'text/javascript',
+                      '.wasm': 'application/wasm'}
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT / "web"), **kwargs)
 

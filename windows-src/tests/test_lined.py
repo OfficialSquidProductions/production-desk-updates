@@ -49,6 +49,22 @@ class LinedScriptTests(unittest.TestCase):
         self.assertEqual(self.request('/api/pdf', b'not a PDF')[0], 400)
         self.assertEqual(pdf_path(self.server.datafile, digest).read_bytes(), FIXTURE)
 
+    def test_offline_pdf_modules_have_browser_compatible_mime_types(self):
+        import mimetypes
+        from unittest.mock import patch
+        # Simulate Windows registry configuration without changing the host.
+        with patch.dict(mimetypes.types_map, {'.mjs':'text/plain', '.js':'text/plain'}):
+            for path in ['/vendor/pdfjs/legacy/build/pdf.min.mjs',
+                         '/vendor/pdfjs/legacy/build/pdf.worker.min.mjs',
+                         '/vendor/pdf-lib/dist/pdf-lib.min.js']:
+                connection = http.client.HTTPConnection('127.0.0.1', self.server.server_port)
+                connection.request('GET', path)
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.getheader('Content-Type'), 'text/javascript')
+                self.assertGreater(len(response.read()), 1000)
+                connection.close()
+
     def test_full_backup_restores_originals_on_a_fresh_computer(self):
         status, raw = self.request('/api/backup', {'workspace':self.workspace,'filename':'full.json'})
         self.assertEqual(status, 200, raw)
