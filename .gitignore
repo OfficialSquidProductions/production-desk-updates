@@ -19,3 +19,10 @@ node_modules/
 *.mobileprovision
 .env
 .env.*
+
+# Native iOS build products
+ios/build/
+ios/archive-build/
+ios/build-*/
+ios/*.xcresult/
+ios/*.xcarchive/

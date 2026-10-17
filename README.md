@@ -112,3 +112,7 @@ Copy or save a text report if your email app is unavailable. Detected errors and
 interrupted desktop sessions are retained locally for reporting after restart;
 **Dismiss saved crash report** clears those details. Project files and logs are
 not attached automatically.
+
+## Production Desk 1.5.4 portable files
+
+Save and share complete editable productions, including embedded assets. Imports create distinct productions while preserving current work. See [portable format](windows-src/PORTABLE-PROJECTS.md) and [iPhone/iPad sources](ios/README.md).

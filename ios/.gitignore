@@ -1,0 +1,9 @@
+build/
+archive-build/
+upstream/.cache/
+upstream/**/__pycache__/
+upstream/tools/extract_pdf
+artifacts/
+*.log
+*.xcresult/
+bundle-id-build/

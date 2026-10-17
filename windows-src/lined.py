@@ -95,6 +95,8 @@ def store_pdf(datafile, raw, filename):
     digest = hashlib.sha256(raw).hexdigest()
     destination = pdf_path(datafile, digest)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists() and hashlib.sha256(destination.read_bytes()).hexdigest() != digest:
+        raise ValueError('An existing original PDF is damaged. Your files were preserved.')
     if not destination.exists():
         fd, temporary = tempfile.mkstemp(dir=destination.parent, prefix='.pdf-')
         try:
@@ -121,6 +123,8 @@ def add_backup_pdfs(datafile, workspace):
         if not path.is_file():
             raise ValueError('An original PDF is missing. Reattach it before exporting a full backup.')
         raw = path.read_bytes()
+        if len(raw) > MAX_PDF or hashlib.sha256(raw).hexdigest() != digest:
+            raise ValueError('An original PDF is damaged. Reattach it before saving a project file.')
         total += len(raw)
         if total * 4 / 3 > MAX_BACKUP - MAX_PDF:
             raise ValueError('This backup exceeds 200 MB. Split the productions into separate backups.')
@@ -146,8 +150,15 @@ def restore_backup_pdfs(datafile, workspace):
             if hashlib.sha256(raw).hexdigest() != digest or b'%PDF-' not in raw[:1024]:
                 raise ValueError('PDF attachment checksum does not match.')
             decoded.append(raw)
-        elif not pdf_path(datafile, digest).is_file():
-            raise ValueError('Backup is missing an original PDF attachment.')
+        else:
+            existing = pdf_path(datafile, digest)
+            if not existing.is_file():
+                raise ValueError('Backup is missing an original PDF attachment.')
+            if hashlib.sha256(existing.read_bytes()).hexdigest() != digest:
+                raise ValueError('An existing original PDF is damaged. Your files were preserved.')
+        existing = pdf_path(datafile, digest)
+        if existing.exists() and hashlib.sha256(existing.read_bytes()).hexdigest() != digest:
+            raise ValueError('An existing original PDF is damaged. Your files were preserved.')
     for raw in decoded:
         store_pdf(datafile, raw, 'script.pdf')
     return workspace

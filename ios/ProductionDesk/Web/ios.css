@@ -1,0 +1,57 @@
+/* iPad-only adaptation; desktop sources remain in upstream/. */
+.ipad-app .sidebar { overflow-y:auto; }
+.ipad-app button { min-height:44px; min-width:44px; touch-action:manipulation; }
+.ipad-app .panel,.ipad-app .workspace > *,.ipad-app .schedule-layout > *,.ipad-app .shot-layout > * { min-width:0; }
+.ipad-app .sheet-actions,.ipad-app .script-toolbar,.ipad-app .lined-toolbar { flex-wrap:wrap; }
+.ipad-app dialog { max-height:85dvh; overflow:auto; width:min(680px,calc(100% - 24px)); }
+.ipad-app .modal-footer { position:sticky; bottom:0; flex-wrap:wrap; z-index:2; }
+.ipad-app .lined-scroll { -webkit-overflow-scrolling:touch; min-height:380px; }
+.ipad-app .lined-top,.ipad-app .lined-document { flex-wrap:wrap; }
+.ipad-app #lined-overlay { touch-action:none; }
+@media (max-width:1100px) {
+ .ipad-app .sidebar {position:relative;display:block;width:100%;padding:12px 16px;}
+ .ipad-app .brand {margin:0 0 8px;}
+ .ipad-app .sidebar-caption:not(.software-credit) {display:none;}
+ .ipad-app .sidebar nav {display:flex;overflow-x:auto;gap:6px;}
+ .ipad-app .sidebar nav button {white-space:nowrap;flex-shrink:0;}
+ .ipad-app .sidebar .sidebar-bottom {display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+ .ipad-app .sidebar-bottom small,.ipad-app .sidebar-rule {display:none;}
+ .ipad-app .sidebar .sidebar-bottom button {display:inline-flex;width:auto;}
+ .ipad-app main {margin-left:0;}
+ .ipad-app .workspace,.ipad-app .schedule-layout,.ipad-app .shot-layout,.ipad-app .lined-workspace {grid-template-columns:minmax(0,1fr);}
+ .ipad-app .workspace .script-scroll {height:340px;}
+ .ipad-app .breakdown-scroll {height:auto;max-height:600px;}
+ .ipad-app .lined-inspector {max-height:none;}
+ .ipad-app .page-heading {padding:20px;flex-wrap:wrap;}
+ .ipad-app .page-heading h1 {font-size:36px;overflow-wrap:anywhere;}
+ .ipad-app .summary-bar {flex-wrap:wrap;}
+ .ipad-app #content {padding:0 16px 24px;}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;}}
+
+/* Keep every tool visible on a tablet, including the narrow iPad mini. */
+@media(max-width:1100px){
+ .ipad-app .sidebar nav {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));overflow:visible;gap:4px;}
+ .ipad-app .sidebar nav button {width:100%;min-width:0;justify-content:center;white-space:normal;font-size:12px;text-align:center;padding:8px 4px;gap:4px;}
+ .ipad-app .sidebar nav button span {display:none;}
+ .ipad-app .sidebar .sidebar-bottom {padding:0;margin-top:4px;align-items:center;}
+ .ipad-app .sidebar-bottom #settings-open {margin:0;}
+ .ipad-app .topbar {height:48px;}
+ .ipad-app .heading-actions {flex-direction:row;flex-wrap:wrap;}
+ .ipad-app .page-heading {gap:12px;}
+}
+@media(min-width:600px) and (max-width:1100px){
+ .ipad-app .sidebar {display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,280px);gap:8px 16px;}
+ .ipad-app .sidebar .brand {grid-column:1;grid-row:1/3;margin:0;}
+ .ipad-app .sidebar .software-credit {grid-column:1;grid-row:3;margin:0;align-self:center;}
+ .ipad-app .sidebar-save {grid-column:2;grid-row:1;margin:0;}
+ .ipad-app .production-picker-heading {grid-column:2;grid-row:2;margin:0;}
+ .ipad-app .production-picker-heading .project-label {display:block;}
+ .ipad-app .sidebar #project-picker {grid-column:2;grid-row:3;margin:0;}
+ .ipad-app .sidebar nav,.ipad-app .sidebar .sidebar-bottom {grid-column:1/-1;}
+}
+@media(max-width:599px){
+ .ipad-app .sidebar nav {grid-template-columns:repeat(3,minmax(0,1fr));}
+ .ipad-app .sidebar .brand {margin:0;}
+ .ipad-app .sidebar-save {margin:4px 0;}
+}

@@ -153,6 +153,9 @@ def validate_uss(project):
             raise ValueError("Missing USS string: " + key)
     if project["ussVersion"] != "1.0.0":
         raise ValueError("This app supports USS 1.0.0. This file uses " + project["ussVersion"])
+    source_script = project.get('_sourceScript')
+    if source_script is not None and (not isinstance(source_script, dict) or not isinstance(source_script.get('filename'), str) or not isinstance(source_script.get('text'), str) or len(source_script['text'].encode('utf-8')) > 40 * 1024 * 1024):
+        raise ValueError('Invalid embedded source script.')
     collections = ["breakdowns", "categories", "elements", "stripboards", "calendars"]
     for key in collections:
         if key not in project and key in ("stripboards", "calendars"):

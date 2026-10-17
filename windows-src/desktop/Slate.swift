@@ -73,6 +73,9 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         main.addItem(fileItem)
         let file = NSMenu(title: "File")
         file.addItem(withTitle: "Save", action: #selector(saveWorkspace), keyEquivalent: "s")
+        let saveAs = file.addItem(withTitle: "Save As…", action: #selector(saveProjectAs), keyEquivalent: "s")
+        saveAs.keyEquivalentModifierMask = [.command, .shift]
+        file.addItem(withTitle: "Import…", action: #selector(importProject), keyEquivalent: "o")
         file.addItem(withTitle: "Print Schedule…", action: #selector(printSchedule), keyEquivalent: "p")
         fileItem.submenu = file
         NSApp.mainMenu = main
@@ -208,6 +211,8 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         web.printOperation(with: info).runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
     }
     @objc func printSchedule() { web.evaluateJavaScript("document.getElementById('export-open').click(); document.getElementById('export-print').click();", completionHandler: nil) }
+    @objc func saveProjectAs() { web.evaluateJavaScript("window.slateDesktop?.saveAs()", completionHandler: nil) }
+    @objc func importProject() { web.evaluateJavaScript("window.slateDesktop?.importScript()", completionHandler: nil) }
     @objc func saveWorkspace() { web.evaluateJavaScript("window.slateDesktop?.flush().then(function(ok){if(!ok)alert('Your latest changes could not be saved. Please export a backup.');});", completionHandler: nil) }
     @objc func undoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('undo');}else{document.getElementById('undo').click();}", completionHandler: nil) }
     @objc func redoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('redo');}else{document.getElementById('redo').click();}", completionHandler: nil) }

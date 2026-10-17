@@ -21,6 +21,8 @@ from urllib.parse import urlsplit
 from film import empty_project, import_script, prepare_project, element
 from lined import MAX_BACKUP, store_pdf, pdf_path, add_backup_pdfs, restore_backup_pdfs
 
+from project_file import export_project, import_project, validate_workspace
+
 ROOT = Path(__file__).resolve().parent
 LOCK = threading.Lock()
 EXPORTS = {}
@@ -28,7 +30,10 @@ MAX_BODY = 40 * 1024 * 1024
 
 
 def json_object(raw):
-    value = json.loads(raw)
+    try:
+        value = json.loads(raw, parse_constant=lambda value: (_ for _ in ()).throw(ValueError('Invalid JSON number.')))
+    except (json.JSONDecodeError, RecursionError):
+        raise ValueError('This file is corrupt or is not valid supported JSON.') from None
     if not isinstance(value, dict):
         raise ValueError('Expected a JSON object.')
     return value
@@ -396,7 +401,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             length = int(self.headers.get("Content-Length", "0"))
-            backup_import = path == '/api/import' and self.headers.get('X-Filename', '').lower().endswith(('.json', '.uss'))
+            backup_import = path == '/api/import' and self.headers.get('X-Filename', '').lower().endswith(('.json', '.uss', '.productiondesk'))
             limit = MAX_BACKUP if backup_import or path == '/api/export' else MAX_BODY
             if path in ('/api/support', '/api/support/export'):
                 limit = 16384
@@ -433,6 +438,10 @@ class Handler(SimpleHTTPRequestHandler):
                 from urllib.parse import unquote
                 document = store_pdf(self.server.datafile, raw, unquote(self.headers.get('X-Filename', 'script.pdf')))
                 self.reply({'document': document})
+            elif path == '/api/project-file':
+                value = json_object(raw)
+                contents = export_project(self.server.datafile, value.get('workspace'))
+                self.reply(self.export_file(value.get('filename'), 'application/vnd.productiondesk.project+json', contents))
             elif path == '/api/backup':
                 value = json_object(raw)
                 workspace = value.get('workspace')
@@ -491,14 +500,15 @@ class Handler(SimpleHTTPRequestHandler):
                 filename = self.headers.get("X-Filename", "script.txt")
                 from urllib.parse import unquote
                 filename = Path(unquote(filename)).name
-                if filename.lower().endswith((".uss", ".json")):
+                if filename.lower().endswith((".uss", ".json", ".productiondesk")):
                     value = json_object(raw)
-                    if "universalScheduleStandard" in value:
+                    if filename.lower().endswith('.productiondesk') or 'format' in value:
+                        self.reply({'workspace': import_project(self.server.datafile, value)})
+                    elif "universalScheduleStandard" in value:
                         p = prepare_project(value["universalScheduleStandard"])
                         self.reply({"project": p})
                     elif value.get("version") == 1 and isinstance(value.get("projects"), list):
-                        for p in value["projects"]:
-                            prepare_project(p)
+                        validate_workspace(value)
                         restore_backup_pdfs(self.server.datafile, value)
                         self.reply({"workspace": value})
                     else:
@@ -506,13 +516,15 @@ class Handler(SimpleHTTPRequestHandler):
                 else:
                     text = extract_pdf(raw) if filename.lower().endswith(".pdf") else raw.decode("utf-8-sig")
                     project = import_script(text, filename)
+                    if not filename.lower().endswith('.pdf'):
+                        project['_sourceScript'] = {'filename': filename, 'text': text}
                     if filename.lower().endswith('.pdf'):
                         document = store_pdf(self.server.datafile, raw, filename)
                         project['_linedScript'] = {'activePdf': document['sha256'], 'documents': [document]}
                     self.reply({"project": project})
             else:
                 self.reply({"error": "Not found"}, 404)
-        except (ValueError, KeyError, TypeError, UnicodeError, subprocess.TimeoutExpired) as e:
+        except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, subprocess.TimeoutExpired) as e:
             self.reply({"error": str(e) or "Could not read that file."}, 400)
         except OSError as e:
             self.reply({"error": "Local file operation failed: " + str(e)}, 500)

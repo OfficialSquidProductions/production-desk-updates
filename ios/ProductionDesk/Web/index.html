@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Production Desk · Local Film Scheduler</title>
+  <link rel="icon" href="/assets/sp-logo.png" type="image/png">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/shots.css"><link rel="stylesheet" href="/ipad.css">
+  <link rel="stylesheet" href="/themes.css"><link rel="stylesheet" href="/lined-script.css">
+  <script src="/ios-platform.js"></script>
+  <script defer src="/vendor/pdf-lib/dist/pdf-lib.min.js"></script>
+  <link rel="stylesheet" href="/support.css">
+  <script src="/support.js"></script>
+  <script type="module" src="/app.js"></script>
+<link rel="stylesheet" href="/ios.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="SP production desk home"><span class="sp-logo-frame"><img src="/assets/sp-logo.png" alt="SP logo"></span><span class="brand-title">PRODUCTION<br>DESK<span class="brand-edition">DESKTOP</span></span></a>
+    <div class="sidebar-caption software-credit">A Squid Productions™ Software</div>
+    <div class="offline-pill sidebar-save"><span class="status-dot"></span>Saved on your computer</div>
+    <div class="production-picker-heading"><label class="project-label" for="project-picker">Production</label><button id="new-open" aria-label="New production" title="New production">+</button></div>
+    <select id="project-picker"></select>
+    <div class="sidebar-caption">PRODUCTION TOOLS</div>
+    <nav id="navigation" aria-label="Main navigation">
+      <button data-view="workspace" class="active"><span>▤</span>Main breakdown</button>
+      <button data-view="schedule"><span>▦</span>Shooting schedule</button>
+      <button data-view="lined"><span>▧</span>Lined script</button>
+      <button data-view="shots"><span>⊡</span>Shot list</button>
+      <button data-view="elements"><span>◇</span>Elements</button>
+      <button data-view="reports"><span>▥</span>Reports</button>
+    </nav>
+    <div class="sidebar-rule"></div>
+    <div class="sidebar-bottom"><button class="sidebar-button" id="settings-open"><span>⚙</span>Production settings</button><button id="app-settings-open" aria-label="Settings" title="Settings"><span class="settings-gear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 3 2 3-1 1-3 3-1 1-3-2-2 1-3-3-2-3 1-2-2Z"/><circle cx="12" cy="12" r="3"/></svg></span>Settings</button><button id="help-open">Quick guide <span>↗</span></button><small>PRODUCTION DESK / 1.5.3</small></div>
+  </aside>
+  <main>
+    <header class="topbar"><div>Productions <span class="slash">/</span> <span id="breadcrumb"></span></div><div class="topbar-right"><span id="save-status" role="status">Loading local files…</span><button id="undo" title="Undo (⌘Z)" aria-label="Undo">↶</button><button id="redo" title="Redo (⌘⇧Z)" aria-label="Redo">↷</button></div></header>
+    <section class="page-heading"><div><div class="eyebrow" id="project-eyebrow">PRODUCTION WORKSPACE</div><h1 id="project-title">Opening your workspace</h1><p id="page-subtitle">Read the story. Plan the shoot.</p></div><div class="heading-actions"><button id="save-as-open">Save As…</button><button id="export-open">↧ <span>Export</span></button><button class="primary" id="add-scene">＋ New scene</button></div></section>
+    <div class="summary-bar" id="summary"></div>
+    <section id="content" aria-live="polite"></section>
+  </main>
+  <dialog id="modal"><div id="modal-content"></div></dialog>
+  <div id="toast" role="status"></div>
+  <section id="print-area"></section>
+</body>
+</html>

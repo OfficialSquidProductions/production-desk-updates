@@ -78,6 +78,21 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         document.querySelector('#add-scene').click();document.querySelector('[data-field="modal-value"]').value='NATIVE';document.querySelector('#modal-ok').click();
         expect(await window.slateDesktop.flush(),'Restored schedule could not save');
         expect((await load()).breakdowns.some(b=>b.scene==='NATIVE'),'New scene was not saved');
+        const priorCount=document.querySelector('#project-picker').options.length;
+        let projectDownload;
+        const anchorClick=HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click=function(){if(this.href.includes('/api/download/')){projectDownload=this.href;return;}return anchorClick.call(this);};
+        document.querySelector('#save-as-open').click();
+        await waitFor(()=>!!projectDownload);
+        const portable=await(await fetch(projectDownload)).json();
+        expect(portable.format==='org.squidproductions.productiondesk.project'&&portable.formatVersion===1,'Save As did not produce a versioned Production Desk file');
+        expect(portable.workspace.projects.length===1&&portable.workspace.projects[0].breakdowns.some(b=>b.scene==='NATIVE'),'Save As lost production fields');
+        await window.slateDesktop.importProjectFile(new File([JSON.stringify(portable)],'Native.productiondesk'));
+        expect(document.querySelector('#project-picker').options.length===priorCount+1,'Portable import replaced an existing production');
+        expect(document.querySelector('#project-title').textContent.includes('imported copy'),'Duplicate portable import was not labeled');
+        document.querySelector('#undo').click();expect(await window.slateDesktop.flush(),'Portable import undo did not save');
+        expect(document.querySelector('#project-picker').options.length===priorCount,'Undo did not preserve the original workspace');
+        HTMLAnchorElement.prototype.click=anchorClick;
         return true;
         """
         let reloadChecks = """
@@ -98,7 +113,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
             case .success(let value):
                 if self.phase == 0 { self.phase = 1; self.web.reload() }
                 else {
-                    print("Native macOS WebKit verified: focused element edits, valid shot-number persistence, malformed imports, repaired schedules, save and reload.")
+                    print("Native macOS WebKit verified: focused element edits, valid shot-number persistence, malformed imports, repaired schedules, portable Save As/import/collision/Undo, save and reload.")
                     if let report = value as? [String:Any], let encoded = report["pdf"] as? String, let pdf = Data(base64Encoded:encoded) {
                         let output = root.appendingPathComponent("build/lined-check")
                         try! FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)

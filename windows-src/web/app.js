@@ -1,3 +1,4 @@
+import {mergeProductions} from './project-file.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
 import {createShotDesk} from './shots.js';
 import {createLinedDesk,removeCoverage,clearCoverageScene} from './lined-script.js';
@@ -21,7 +22,7 @@ let workspace, project, selected, view = 'workspace', report = 'oneline', scenar
 let history = [], future = [], revision = 0, savedRevision = 0, saving = false, saveTimer;
 let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', toastTimer;
 // The desktop window asks for a disk flush before quitting.
-window.slateDesktop = {importScript:()=>importModal(), print:()=>action('print'), flush:async()=>{
+window.slateDesktop = {importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), flush:async()=>{
   clearTimeout(saveTimer);
   const deadline=Date.now()+15000;
   while(saving && Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,50));
@@ -368,28 +369,33 @@ function textModal(title,label,initial,callback) {
 }
 function confirmModal(title,message,callback) { modal(title,`<p>${esc(message)}</p>`,'<button id="modal-cancel">Cancel</button><button id="modal-ok" class="danger">Delete</button>');$('#modal-ok').onclick=()=>{callback();$('#modal').close();}; }
 function importModal() {
-  modal('Bring your story in',`<p>Import creates a separate production, keeping your existing work. All parsing happens on this computer.</p><label class="file-drop"><strong>Choose a script or schedule</strong><span>PDF · Final Draft (.fdx) · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles.&#10;&#10;MAYA&#10;We're going to be late."></textarea><p class="tiny">Scene lengths and cast detection should be reviewed after import. Workspace JSON backups restore as separate productions.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  modal('Bring your story in',`<p>Import creates a separate production, keeping your existing work. All parsing happens on this computer.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles.&#10;&#10;MAYA&#10;We're going to be late."></textarea><p class="tiny">Scene lengths and cast detection should be reviewed after import. Production Desk files and older JSON backups open as separate productions. Duplicate names are labeled as imported copies.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
   $('#import-submit').onclick=async()=>{
     const button=$('#import-submit'), file=$('#import-file').files[0], text=$('#paste-script').value;
     if(!file&&!text.trim()){ $('#modal-error').textContent='Choose a file or paste script text.';return; }
     button.disabled=true;button.textContent=file?.name.toLowerCase().endsWith('.pdf')?'Reading PDF locally…':'Importing…';
     try {
       const result=await api('/api/import',file || text,{'X-Filename':encodeURIComponent(file?.name || 'Pasted script.txt')});
-      const incoming=result.workspace?result.workspace.projects:[result.project];
-      if(!incoming?.length)throw new Error('This backup has no productions.');
-      // Retain IDs when possible; duplicate imports get remapped in one pass.
-      const known=new Set(workspace.projects.map(p=>p.id));
-      const imported=incoming.map(p=>{normalize(p);if(known.has(p.id))p=remapIds(p);known.add(p.id);return p;});
-      mutate(()=>{workspace.projects.push(...imported);workspace.activeProject=imported[0].id;scenarioIndex=0;selected=undefined;view='workspace';});
-      $('#modal').close();toast(`Imported ${imported[0].breakdowns.filter(b=>b.type==='scene').length} scenes. Your existing productions are preserved.`);
+      receiveImport(result);
+      $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');
     }catch(e){$('#modal-error').textContent=e.message;button.disabled=false;button.textContent='Import locally';}
   };
 }
-function remapIds(p) {
-  const map=new Map();
-  function gather(value){if(Array.isArray(value))value.forEach(gather);else if(value&&typeof value==='object'){if(typeof value.id==='string')map.set(value.id,id());Object.values(value).forEach(gather);}}
-  function replace(value){if(typeof value==='string')return map.get(value)||value;if(Array.isArray(value))return value.map(replace);if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,replace(v)]));return value;}
-  gather(p);const copy=replace(p);copy.project=(copy.project || copy.name)+' · imported copy';return copy;
+function receiveImport(result) {
+  const incoming=result.workspace?.projects||[result.project];
+  if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
+  const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
+  mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
+}
+async function saveProjectFile(destination='files') {
+  document.activeElement?.blur?.();
+  const snapshot=clone(project),name=(snapshot.project||snapshot.name||'Production').replace(/[^a-zA-Z0-9 ._-]/g,'-').slice(0,140);
+  try {
+    const result=await api('/api/project-file',{workspace:{version:1,activeProject:snapshot.id,projects:[snapshot]},filename:name+'.productiondesk',destination});
+    if(result.cancelled)return;
+    if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=name+'.productiondesk';document.body.append(a);a.click();a.remove();toast('Choose where to save your Production Desk file.');}
+    else toast(destination==='share'?'Project shared.':'Project saved to Files.');
+  }catch(e){toast('Could not save project: '+e.message);}
 }
 function stripColorModal(bid){
   const b=breakdown(bid);if(!b)return;
@@ -473,15 +479,16 @@ async function download(filename,data,type='application/json',encoding) {
   catch(e){toast('Export failed: '+e.message);return false;}
 }
 function exportModal() {
-  modal('Take your work with you',`<p>Exports are files on your computer. Use a full backup to keep script text, every production, shot lists, and all schedule scenarios.</p><div class="export-options"><button id="export-uss"><strong>Universal Schedule Standard (.uss)</strong><span>Breakdowns, elements, scenarios, and calendars. Script text and shot lists are excluded; use a full backup to keep them.</span></button><button id="export-backup"><strong>Full Production Desk backup (.json)</strong><span>All productions, shot lists, original PDFs, lined-script marks, scene text, notes, and schedules. Import to restore.</span></button><button id="export-csv"><strong>One-line schedule (.csv)</strong><span>The current shooting schedule for spreadsheets.</span></button><button id="export-shots"><strong>Shot list (.csv)</strong><span>Shots in the current shot-list view, including camera details and takes.</span></button><button id="export-print"><strong>Print / Save as PDF</strong><span>A clean one-line schedule, using your browser’s print dialog.</span></button></div>`);
+  modal('Take your work with you',`<p>Exports are files on your computer. Save As makes one shareable Production Desk file for the current production. Full backup keeps every production.</p><div class="export-options"><button id="save-project-file"><strong>Save As… (.productiondesk)</strong><span>One complete production, with scripts, original PDFs, annotations, shots, notes, and every schedule. Send this file to another Production Desk user.</span></button><button id="export-uss"><strong>Universal Schedule Standard (.uss)</strong><span>Breakdowns, elements, scenarios, and calendars. Script text and shot lists are excluded; use a full backup to keep them.</span></button><button id="export-backup"><strong>Full Production Desk backup (.json)</strong><span>All productions, shot lists, original PDFs, lined-script marks, scene text, notes, and schedules. Import to restore.</span></button><button id="export-csv"><strong>One-line schedule (.csv)</strong><span>The current shooting schedule for spreadsheets.</span></button><button id="export-shots"><strong>Shot list (.csv)</strong><span>Shots in the current shot-list view, including camera details and takes.</span></button><button id="export-print"><strong>Print / Save as PDF</strong><span>A clean one-line schedule, using your browser’s print dialog.</span></button></div>`);
   const filename=((project.project||project.name).replace(/[^\w -]/g,'').trim()||'production').slice(0,150);
+  $('#save-project-file').onclick=()=>saveProjectFile('files');
   $('#export-uss').onclick=()=>{const clean=value=>Array.isArray(value)?value.map(clean):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[k,clean(v)])):value;const output=clean(project);output.source='Production Desk — Local Film Scheduler';download(filename+'.uss',JSON.stringify({universalScheduleStandard:output},null,2));toast('USS file exported.');};
   $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
   $('#export-csv').onclick=()=>{const rows=[['Day','Date','Scene','INT/EXT','Set','Day/Night','Synopsis','Pages','Minutes','Cast','Location']];let day=0;const ds=dates(scheduleGroups().filter(Array.isArray).length);for(const g of scheduleGroups()){if(Array.isArray(g))day++;for(const bid of Array.isArray(g)?g:[g]){const b=breakdown(bid);if(!b)continue;rows.push([day||'',day?ds[day-1]:'',b.scene,prop(b,1),b.type==='banner'?b.bannerText:prop(b,0),prop(b,2),b.description,b.pages,(b.duration||0)/60000,prop(b,100),prop(b,6)]);}}const safe=v=>{const s=String(v??'');return /^[=+@\-\t\r]/.test(s)?"'"+s:s;};download(filename+'-schedule.csv',rows.map(row=>row.map(v=>'"'+safe(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');};
   $('#export-shots').onclick=()=>shotDesk.csv();
   $('#export-print').onclick=()=>{report='oneline';$('#modal').close();action('print');};
 }
-function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Export USS for interchange and a full Production Desk backup to preserve scripts and shots.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
+function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
 
 const linedDesk=createLinedDesk({esc,id,stamp,api,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
 const shotDesk=createShotDesk({
@@ -496,9 +503,10 @@ $('#app-settings-open').onclick=()=>appSettings.open();
 $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[data-view]');if(button){view=button.dataset.view;render();}});
 $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.value;scenarioIndex=0;selected=undefined;search='';});};
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#save-status').onclick=()=>save();
+$('#save-as-open').onclick=()=>saveProjectFile('files');
 $('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():newScene();
 $('#new-open').onclick=()=>textModal('New production','Production title','Untitled production',async title=>{try{const p=await api('/api/new',{title});mutate(()=>{workspace.projects.push(p);workspace.activeProject=p.id;scenarioIndex=0;selected=undefined;view='workspace';});}catch(e){toast(e.message);}});
-document.addEventListener('keydown',e=>{const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!$('#modal').open){e.preventDefault();undo(e.shiftKey);}});
+document.addEventListener('keydown',e=>{const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!$('#modal').open){e.preventDefault();undo(e.shiftKey);}});
 window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preventDefault();e.returnValue='Your latest change is still saving.';}});
 if(isIPadApp){
   document.body.classList.add('ipad-app');

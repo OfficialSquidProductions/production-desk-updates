@@ -1,0 +1,794 @@
+{
+  "version": 1,
+  "activeProject": "f0c79a34-3171-4eeb-975d-c799123e61f8",
+  "projects": [
+    {
+      "id": "f0c79a34-3171-4eeb-975d-c799123e61f8",
+      "author": null,
+      "company": null,
+      "created": "2026-10-09T12:56:34.360Z",
+      "description": null,
+      "episode": null,
+      "episodeName": null,
+      "name": "Shooting schedule",
+      "project": "The Last Light",
+      "schedColor": null,
+      "schedDate": "2026-10-09T12:56:34.360Z",
+      "scriptColor": null,
+      "scriptDate": "2026-10-09T12:56:34.360Z",
+      "season": null,
+      "source": "Production Desk — Local Film Scheduler",
+      "ussVersion": "1.0.0",
+      "breakdowns": [
+        {
+          "id": "db8b89ec-6dfe-4ee4-ba67-76e29f1c55cd",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Maya and Eli drive toward the lighthouse.",
+          "elements": [
+            "fa85ce27-aa47-45c0-b377-37dd4db86149",
+            "fc3f85d2-d707-497a-8d23-bff8568cf349",
+            "8d3b3ef3-36be-40e6-9d3f-0b7bcd2af08a",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "f6afbd47-3457-4ac6-93b0-aabe4a79c5cd",
+            "30e6e771-5ef4-4956-bb27-b6c63d1bd283",
+            "87a40574-db53-4f87-9c26-059de34c119a"
+          ],
+          "pages": 0.375,
+          "scene": "1",
+          "scriptPage": "1",
+          "duration": 3600000,
+          "type": "scene",
+          "_scriptText": "1 EXT. COASTAL ROAD - DAWN\n\nA battered station wagon follows the coast. The lighthouse is a pin of light in the mist.\n\nMAYA\nWe should have left yesterday.\n\nELI\nAnd missed all this?",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "5ffe0da9-364a-4fa4-86d4-b0f11e0c6153",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "An old map points to their destination.",
+          "elements": [
+            "77576c5a-88c3-4298-81bf-b5434babf6e3",
+            "423812b0-d6cd-4c24-8cbc-0f55c7edc32c",
+            "01c10ec9-0725-4ec8-af3a-33c4f3a06b6d",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "f6afbd47-3457-4ac6-93b0-aabe4a79c5cd",
+            "30e6e771-5ef4-4956-bb27-b6c63d1bd283",
+            "d2661c86-6372-4fe3-a3b4-3bb3532cef57",
+            "87a40574-db53-4f87-9c26-059de34c119a"
+          ],
+          "pages": 0.75,
+          "scene": "2",
+          "scriptPage": "1",
+          "duration": 4500000,
+          "type": "scene",
+          "_scriptText": "2 INT. STATION WAGON - DAY\n\nMaya unfolds an old map. A red circle marks the lighthouse.\n\nMAYA\nThat's where he said he'd be.\n\nELI\nThen that's where we go.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "40eb7634-9402-489c-8567-92e8fc169af4",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Jonah greets Maya with her father's key.",
+          "elements": [
+            "c56646d4-1534-4cc2-b96c-157b7911bbea",
+            "fc3f85d2-d707-497a-8d23-bff8568cf349",
+            "01c10ec9-0725-4ec8-af3a-33c4f3a06b6d",
+            "5a0d9ece-6e51-49ad-b08a-7770aeed404b",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "efdb30ab-5ee2-42b0-976a-e6edb748755e",
+            "4788bc24-62e0-4521-abea-03684e22a09e"
+          ],
+          "pages": 1.125,
+          "scene": "3",
+          "scriptPage": "1",
+          "duration": 5400000,
+          "type": "scene",
+          "_scriptText": "3 EXT. LIGHTHOUSE - DAY\n\nThe car rolls to a stop. JONAH waits at the foot of the lighthouse, holding a brass key.\n\nJONAH\nI wasn't sure you'd come.\n\nMAYA\nNeither was I.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "eb1259f1-9004-4007-a3e9-6d80aed0b9dd",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Maya retraces her father's morning ritual.",
+          "elements": [
+            "e11c88a9-77f4-4b9a-be86-90377e621379",
+            "423812b0-d6cd-4c24-8cbc-0f55c7edc32c",
+            "01c10ec9-0725-4ec8-af3a-33c4f3a06b6d",
+            "5a0d9ece-6e51-49ad-b08a-7770aeed404b",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "efdb30ab-5ee2-42b0-976a-e6edb748755e"
+          ],
+          "pages": 0.5,
+          "scene": "4",
+          "scriptPage": "1",
+          "duration": 2700000,
+          "type": "scene",
+          "_scriptText": "4 INT. LIGHTHOUSE STAIRWELL - DAY\n\nJonah leads Maya up a winding staircase. She runs a hand along the worn stone.\n\nJONAH\nOne hundred and twelve steps. Your father counted every morning.\n\nMAYA\nOf course he did.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "28695bb4-d44f-4f98-b320-09f6bc881f75",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Eli discovers a letter addressed to Maya.",
+          "elements": [
+            "372be587-50b2-40e3-bb57-e77cfa6e4924",
+            "423812b0-d6cd-4c24-8cbc-0f55c7edc32c",
+            "01c10ec9-0725-4ec8-af3a-33c4f3a06b6d",
+            "f6afbd47-3457-4ac6-93b0-aabe4a79c5cd",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "efdb30ab-5ee2-42b0-976a-e6edb748755e",
+            "6e3ae60b-97ce-42ce-a86c-5de62238032f",
+            "b9bd1fe4-e8ef-4d60-a320-b8f7428596a5"
+          ],
+          "pages": 1.25,
+          "scene": "5",
+          "scriptPage": "1",
+          "duration": 5400000,
+          "type": "scene",
+          "_scriptText": "5 INT. LANTERN ROOM - DAY\n\nEli opens a wooden box. Inside: a letter, a photograph, and a compass.\n\nELI\nThis has your name on it.\n\nMAYA\nLet me see.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "83e24016-54cc-4b76-95e5-4d2b2cd26738",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Maya and Jonah talk as the tide comes in.",
+          "elements": [
+            "c56646d4-1534-4cc2-b96c-157b7911bbea",
+            "fc3f85d2-d707-497a-8d23-bff8568cf349",
+            "8cd623d3-e2b5-4f98-87d9-1add3b3113d2",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "5a0d9ece-6e51-49ad-b08a-7770aeed404b",
+            "efdb30ab-5ee2-42b0-976a-e6edb748755e"
+          ],
+          "pages": 0.875,
+          "scene": "6",
+          "scriptPage": "1",
+          "duration": 3600000,
+          "type": "scene",
+          "_scriptText": "6 EXT. LIGHTHOUSE - DUSK\n\nMaya and Jonah sit on the seawall. The tide comes in below them.\n\nMAYA\nHow long do you think he waited?\n\nJONAH\nAs long as he needed to.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "ea5cb3d8-2837-4f42-bfed-eaee63d1f568",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Maya brings the lighthouse back to life.",
+          "elements": [
+            "372be587-50b2-40e3-bb57-e77cfa6e4924",
+            "423812b0-d6cd-4c24-8cbc-0f55c7edc32c",
+            "3b064ff5-8250-48e0-8577-2a8162727b00",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "efdb30ab-5ee2-42b0-976a-e6edb748755e",
+            "4788bc24-62e0-4521-abea-03684e22a09e"
+          ],
+          "pages": 0.625,
+          "scene": "7",
+          "scriptPage": "1",
+          "duration": 4500000,
+          "type": "scene",
+          "_scriptText": "7 INT. LANTERN ROOM - NIGHT\n\nMaya turns the brass key. The old mechanism wakes with a low, steady hum.\n\nMAYA\nThere you are.",
+          "_needsReview": false,
+          "_completed": false
+        },
+        {
+          "id": "28dc6355-aed7-46cd-a3a9-1fa758bcd72a",
+          "bannerText": null,
+          "comments": null,
+          "created": "2026-10-09T12:56:34.360Z",
+          "description": "Maya and Eli leave the coast behind.",
+          "elements": [
+            "fa85ce27-aa47-45c0-b377-37dd4db86149",
+            "fc3f85d2-d707-497a-8d23-bff8568cf349",
+            "3b064ff5-8250-48e0-8577-2a8162727b00",
+            "f6afbd47-3457-4ac6-93b0-aabe4a79c5cd",
+            "78e1b988-1f31-4e36-933e-04f35dc34012",
+            "30e6e771-5ef4-4956-bb27-b6c63d1bd283",
+            "87a40574-db53-4f87-9c26-059de34c119a"
+          ],
+          "pages": 0.375,
+          "scene": "8",
+          "scriptPage": "1",
+          "duration": 2700000,
+          "type": "scene",
+          "_scriptText": "8 EXT. COASTAL ROAD - NIGHT\n\nEli closes the car door. They look back. The lighthouse sweeps across the water.\n\nELI\nReady?\n\nMAYA\nNow I am.",
+          "_needsReview": false,
+          "_completed": false
+        }
+      ],
+      "elements": [
+        {
+          "id": "fa85ce27-aa47-45c0-b377-37dd4db86149",
+          "category": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "COASTAL ROAD",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "fc3f85d2-d707-497a-8d23-bff8568cf349",
+          "category": "c61fd4b3-28ac-460b-a5da-374721fbd0aa",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "EXT",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "8d3b3ef3-36be-40e6-9d3f-0b7bcd2af08a",
+          "category": "42855caf-17a5-43d0-a7a0-ba3dac00b70c",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Dawn",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "78e1b988-1f31-4e36-933e-04f35dc34012",
+          "category": "73fc461c-872c-4fea-91b4-126765cc8312",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "MAYA",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": "1",
+          "events": [],
+          "isDood": true,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "f6afbd47-3457-4ac6-93b0-aabe4a79c5cd",
+          "category": "73fc461c-872c-4fea-91b4-126765cc8312",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "ELI",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": "2",
+          "events": [],
+          "isDood": true,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "77576c5a-88c3-4298-81bf-b5434babf6e3",
+          "category": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "STATION WAGON",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "423812b0-d6cd-4c24-8cbc-0f55c7edc32c",
+          "category": "c61fd4b3-28ac-460b-a5da-374721fbd0aa",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "INT",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "01c10ec9-0725-4ec8-af3a-33c4f3a06b6d",
+          "category": "42855caf-17a5-43d0-a7a0-ba3dac00b70c",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Day",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "c56646d4-1534-4cc2-b96c-157b7911bbea",
+          "category": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "LIGHTHOUSE",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "5a0d9ece-6e51-49ad-b08a-7770aeed404b",
+          "category": "73fc461c-872c-4fea-91b4-126765cc8312",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "JONAH",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": "3",
+          "events": [],
+          "isDood": true,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "e11c88a9-77f4-4b9a-be86-90377e621379",
+          "category": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "LIGHTHOUSE STAIRWELL",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "372be587-50b2-40e3-bb57-e77cfa6e4924",
+          "category": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "LANTERN ROOM",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "8cd623d3-e2b5-4f98-87d9-1add3b3113d2",
+          "category": "42855caf-17a5-43d0-a7a0-ba3dac00b70c",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Dusk",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "3b064ff5-8250-48e0-8577-2a8162727b00",
+          "category": "42855caf-17a5-43d0-a7a0-ba3dac00b70c",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Night",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "30e6e771-5ef4-4956-bb27-b6c63d1bd283",
+          "category": "7d32c866-ff97-4aaa-a18e-15228d857211",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "North coast",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "efdb30ab-5ee2-42b0-976a-e6edb748755e",
+          "category": "7d32c866-ff97-4aaa-a18e-15228d857211",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Point Harbor lighthouse",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "d2661c86-6372-4fe3-a3b4-3bb3532cef57",
+          "category": "c1fd1357-459f-4e30-943a-827130dcd3c0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Folded road map",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "4788bc24-62e0-4521-abea-03684e22a09e",
+          "category": "c1fd1357-459f-4e30-943a-827130dcd3c0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Brass key",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "6e3ae60b-97ce-42ce-a86c-5de62238032f",
+          "category": "c1fd1357-459f-4e30-943a-827130dcd3c0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Letter",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "b9bd1fe4-e8ef-4d60-a320-b8f7428596a5",
+          "category": "c1fd1357-459f-4e30-943a-827130dcd3c0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Compass",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        },
+        {
+          "id": "87a40574-db53-4f87-9c26-059de34c119a",
+          "category": "42e07b6a-a4b4-4faf-92d4-5d33ac8f3490",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Station wagon",
+          "daysOff": [],
+          "dropDayCount": 0,
+          "elementId": null,
+          "events": [],
+          "isDood": false,
+          "isDrop": true,
+          "isHold": true,
+          "isIdLock": false,
+          "linkedElements": []
+        }
+      ],
+      "categories": [
+        {
+          "id": "418a0af6-cc52-4b58-a48c-fcbe624eddcb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Set",
+          "ucid": 0
+        },
+        {
+          "id": "c61fd4b3-28ac-460b-a5da-374721fbd0aa",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "INT/EXT",
+          "ucid": 1
+        },
+        {
+          "id": "42855caf-17a5-43d0-a7a0-ba3dac00b70c",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Day/Night",
+          "ucid": 2
+        },
+        {
+          "id": "329cfcb2-08b1-4fed-8931-cc27daf73738",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Script Day",
+          "ucid": 3
+        },
+        {
+          "id": "c0af6bb3-0590-4033-985a-f6e58ee3f207",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Unit",
+          "ucid": 4
+        },
+        {
+          "id": "7d93041d-1cf8-447e-b206-28ffacef6b7e",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Sequence",
+          "ucid": 5
+        },
+        {
+          "id": "7d32c866-ff97-4aaa-a18e-15228d857211",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Location",
+          "ucid": 6
+        },
+        {
+          "id": "73fc461c-872c-4fea-91b4-126765cc8312",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Cast Members",
+          "ucid": 100
+        },
+        {
+          "id": "2274f9c1-9b7c-4613-b324-a0fa9b288461",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Background Actors",
+          "ucid": 101
+        },
+        {
+          "id": "a7382307-2b49-4082-a97c-24c7510c5fd1",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Stunts",
+          "ucid": 102
+        },
+        {
+          "id": "42e07b6a-a4b4-4faf-92d4-5d33ac8f3490",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Vehicles",
+          "ucid": 103
+        },
+        {
+          "id": "c1fd1357-459f-4e30-943a-827130dcd3c0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Props",
+          "ucid": 104
+        },
+        {
+          "id": "7fc5fceb-58cb-4c80-bc58-1fa1443423d4",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Special Effects",
+          "ucid": 105
+        },
+        {
+          "id": "3791684f-7cd9-45f4-955c-7aef6bf3444a",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Wardrobe",
+          "ucid": 106
+        },
+        {
+          "id": "0f374f4e-f1f9-4ff1-b8ed-bc8f930d2c57",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Makeup/Hair",
+          "ucid": 107
+        },
+        {
+          "id": "efa69b7a-29a7-47e4-a347-dfb7a5fd83fb",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Animals",
+          "ucid": 108
+        },
+        {
+          "id": "00f3a420-70fc-4e0c-a6f5-0d1103b81d74",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Animal Wranglers",
+          "ucid": 109
+        },
+        {
+          "id": "2b06122b-031b-4219-8c12-24462c307695",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Camera",
+          "ucid": 110
+        },
+        {
+          "id": "947a119d-aae1-47a4-b51e-84f37558158f",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Grip",
+          "ucid": 111
+        },
+        {
+          "id": "85d2aa62-27cb-4a26-923c-10e43abeca10",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Electric",
+          "ucid": 112
+        },
+        {
+          "id": "6e07aa7d-5cee-46b3-96f5-a0392546ea36",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Sound",
+          "ucid": 113
+        },
+        {
+          "id": "0b1dde32-0b71-43a3-b906-144cdbd579b0",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Music",
+          "ucid": 114
+        },
+        {
+          "id": "490874c1-99e4-43cd-899c-317315950667",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Art Department",
+          "ucid": 115
+        },
+        {
+          "id": "bdae9c46-34e7-4084-abfb-0341fbbb8c70",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Set Dressing",
+          "ucid": 116
+        },
+        {
+          "id": "ad6ed97a-c4a8-4444-bce3-14a36285e645",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Greenery",
+          "ucid": 117
+        },
+        {
+          "id": "7c875012-eb1f-4daf-a263-87f7f9f6b992",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Security",
+          "ucid": 118
+        },
+        {
+          "id": "a6663c91-0f2d-417d-a4f4-b95284ab23d2",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Special Equipment",
+          "ucid": 119
+        },
+        {
+          "id": "6562ee6c-1ba4-4c58-91da-ec7f182c1fbe",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Additional Labor",
+          "ucid": 120
+        },
+        {
+          "id": "75441b45-a40b-4224-9a9c-63a9fcb786db",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Visual Effects",
+          "ucid": 121
+        },
+        {
+          "id": "7b48a2f2-8000-48e4-94b3-23f0605af11e",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Mechanical Effects",
+          "ucid": 122
+        },
+        {
+          "id": "2a9b4a6a-6f2a-4814-b834-46ebb7a2bf89",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Notes",
+          "ucid": 123
+        },
+        {
+          "id": "e15ba918-86a3-48c4-94d0-a7bd163d8c19",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Comments",
+          "ucid": 124
+        },
+        {
+          "id": "c3014b8c-3240-48f1-bb69-cb86a26601bf",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Miscellaneous",
+          "ucid": 125
+        },
+        {
+          "id": "404df8d8-c354-4b0a-a6da-6954f708d678",
+          "created": "2026-10-09T12:56:34.360Z",
+          "name": "Other",
+          "ucid": 126
+        }
+      ],
+      "stripboards": [
+        {
+          "id": "d55a0b53-5a00-4fdb-9338-d42aa14fe673",
+          "name": "Main schedule",
+          "calendar": "664435c2-ed3f-403c-b672-a7b05391c24a",
+          "boards": [
+            {
+              "id": "26d48a13-0c6d-4121-880a-7accfdae8962",
+              "name": "stripboard",
+              "breakdownIds": [
+                [
+                  "40eb7634-9402-489c-8567-92e8fc169af4",
+                  "eb1259f1-9004-4007-a3e9-6d80aed0b9dd",
+                  "28695bb4-d44f-4f98-b320-09f6bc881f75"
+                ],
+                [
+                  "83e24016-54cc-4b76-95e5-4d2b2cd26738",
+                  "ea5cb3d8-2837-4f42-bfed-eaee63d1f568"
+                ]
+              ]
+            },
+            {
+              "id": "2d0853e6-17e9-423d-8bdd-a540ebc77428",
+              "name": "boneyard",
+              "breakdownIds": [
+                "db8b89ec-6dfe-4ee4-ba67-76e29f1c55cd",
+                "5ffe0da9-364a-4fa4-86d4-b0f11e0c6153",
+                "28dc6355-aed7-46cd-a3a9-1fa758bcd72a"
+              ]
+            }
+          ]
+        }
+      ],
+      "calendars": [
+        {
+          "id": "664435c2-ed3f-403c-b672-a7b05391c24a",
+          "daysOff": [
+            0,
+            6
+          ],
+          "events": [
+            {
+              "id": "82173fa3-c24a-4683-9206-906e7ef71267",
+              "type": "start",
+              "date": "2026-10-09T12:00:00.000Z",
+              "name": null
+            }
+          ],
+          "name": "Production calendar"
+        }
+      ],
+      "_scriptFilename": "The Last Light.fountain",
+      "_importNotes": null,
+      "_demo": true
+    }
+  ]
+}

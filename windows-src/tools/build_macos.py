@@ -40,7 +40,7 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
     shutil.copytree(framework, frameworks / "Python3.framework", symlinks=True)
     shutil.copytree(sparkle / "Sparkle.framework", frameworks / "Sparkle.framework", symlinks=True)
     shutil.copy2(sparkle / "LICENSE", resources / "Sparkle-LICENSE.txt")
-    for name in ["server.py", "film.py", "lined.py"]: shutil.copy2(ROOT / name, runtime / name)
+    for name in ["server.py", "film.py", "lined.py", "project_file.py"]: shutil.copy2(ROOT / name, runtime / name)
     shutil.copytree(ROOT / "web", runtime / "web")
     (runtime / "tools").mkdir()
     run("swiftc", "-O", "-module-cache-path", ROOT / ".cache" / "swift", "-target", "arm64-apple-macos12.0", ROOT / "tools" / "extract_pdf.swift", "-o", runtime / "tools" / "extract_pdf")

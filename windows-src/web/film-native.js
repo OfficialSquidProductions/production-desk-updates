@@ -69,6 +69,7 @@ export function validateUSS(p) {
   if(!object(p))fail('USS must contain a universalScheduleStandard object.');
   for(const key of ['id','created','name','source','ussVersion'])if(typeof p[key]!=='string'||!p[key])fail('Missing USS string: '+key);
   if(p.ussVersion!=='1.0.0')fail('This app supports USS 1.0.0. This file uses '+p.ussVersion);
+  if(p._sourceScript!=null&&(!object(p._sourceScript)||typeof p._sourceScript.filename!=='string'||typeof p._sourceScript.text!=='string'||new TextEncoder().encode(p._sourceScript.text).length>40*1024*1024))fail('Invalid embedded source script.');
   const collections=['breakdowns','categories','elements','stripboards','calendars'];
   for(const key of collections){if(!(key in p)&&['stripboards','calendars'].includes(key))p[key]=[];if(!Array.isArray(p[key]))fail('USS '+key+' must be an array.');}
   const all=new Set();
@@ -119,6 +120,6 @@ export function validateWorkspace(value){
 export function importBackup(text){
   const value=JSON.parse(text);
   if(value.universalScheduleStandard){const p=validateUSS(value.universalScheduleStandard);if(!p.stripboards.length){const defaults=emptyProject();p.stripboards=defaults.stripboards;p.calendars.push(...defaults.calendars);p.stripboards[0].boards[1].breakdownIds=p.breakdowns.map(b=>b.id);}return {project:p};}
-  if(value.version===1&&Array.isArray(value.projects)){validateWorkspace(value);return {workspace:value};}
+  if(value.version===1&&Array.isArray(value.projects)){for(const p of value.projects){validateUSS(p);if(!p.stripboards.length){const defaults=emptyProject();p.stripboards=defaults.stripboards;p.calendars.push(...defaults.calendars);p.stripboards[0].boards[1].breakdownIds=p.breakdowns.map(b=>b.id);}for(const item of [...p.calendars,...p.elements])item.events??=[];}validateWorkspace(value);return {workspace:value};}
   throw Error('Select a USS file or a Production Desk workspace backup.');
 }

@@ -130,7 +130,8 @@ function buildMenu() {
       {type:'separator'}, {label:'Quit Production Desk', accelerator:'Ctrl+Q', click:quitOrInstall}
     ]},
     {label:'File', submenu:[
-      {label:'Import Script / USS…', click:() => win.webContents.executeJavaScript('window.slateDesktop.importScript()')},
+      {label:'Import…', click:() => win.webContents.executeJavaScript('window.slateDesktop.importScript()')},
+      {label:'Save As…', accelerator:'Ctrl+Shift+S', click:() => win.webContents.executeJavaScript('window.slateDesktop.saveAs()')},
       {label:'Export…', click:() => click('#export-open')},
       {label:'Save', accelerator:'Ctrl+S', click:() => click('#save-status')},
       {label:'Print Schedule…', accelerator:'Ctrl+P', click:() => win.webContents.executeJavaScript('window.slateDesktop.print()')}
