@@ -5,15 +5,14 @@
     <link>https://productiondesk.squidproductions.org/</link>
     <language>en</language>
     <item>
-      <title>Production Desk 1.5.3</title>
-      <pubDate>Wed, 14 Oct 2026 22:12:14 +0000</pubDate>
-      <description>&lt;h2&gt;Production Desk 1.5.3&lt;/h2&gt;
-&lt;ul&gt;&lt;li&gt;Mac app and one-click installer are signed with Developer ID and notarized by Apple.&lt;/li&gt;&lt;li&gt;Stapled notarization tickets allow verification without an internet connection.&lt;/li&gt;&lt;li&gt;Existing productions, schedules, shot lists, and settings are preserved when updating.&lt;/li&gt;&lt;/ul&gt;
+      <title>Production Desk 1.5.4</title>
+      <pubDate>Sat, 17 Oct 2026 20:35:08 +0000</pubDate>
+      <description>&lt;h2&gt;Production Desk 1.5.4&lt;/h2&gt;&lt;p&gt;Save and share a complete selected production as one .productiondesk file, including scripts, original PDFs, annotations, schedules, shots and custom data. Import files as separate productions with duplicate-safe links and names. Existing JSON and USS files remain supported. Exchange projects with the iPhone and iPad apps.&lt;/p&gt;
 </description>
-      <sparkle:version>21</sparkle:version>
-      <sparkle:shortVersionString>1.5.3</sparkle:shortVersionString>
+      <sparkle:version>23</sparkle:version>
+      <sparkle:shortVersionString>1.5.4</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.3-21.zip" length="21244416" type="application/octet-stream" sparkle:edSignature="Qwf8E0uvFnK/lW58o9TOjTWKeimc8He/y+a7CuCLckAll0CwOwjTtZMd3ma19C9i/e+GNWbBUHN+rMYqGuAtAg==" />
+      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.4-23.zip" length="21249811" type="application/octet-stream" sparkle:edSignature="ScwO7vvHnb9O6+SZu6ASn48UtOdbmDXz5oV3LdOI/p2j3ZudVETvKI0yndEM0HItRByoNsFwUuaUUhTexp7LCg==" />
     </item>
   </channel>
 </rss>

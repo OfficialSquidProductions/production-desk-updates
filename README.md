@@ -11,18 +11,17 @@ Built by Squid Productions for real productions and shared under the [MIT licens
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.3-21.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
+| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.4-23.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
 | Windows | [Download Windows installer](https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/Production-Desk-Windows-Setup.exe) | Windows 10/11, x64. Run the single `.exe` installer; installation is for the current user. |
 
 Visit the [Production Desk website](https://productiondesk.squidproductions.org/) for the
 download page. Packaged desktop apps include their runtimes; you do not need to install
-Python or a separate browser. Production Desk 1.5.3 for Mac is signed with Developer ID
+Python or a separate browser. Production Desk 1.5.4 for Mac is signed with Developer ID
 and notarized by Apple, with a stapled ticket. Windows is unsigned and may show a SmartScreen prompt.
 
-Alternatively, download the [one-click Mac installer](https://updates.squidproductions.org/Production-Desk-Installer-1.5.3-21.zip).
+Alternatively, download the [one-click Mac installer](https://updates.squidproductions.org/Production-Desk-Installer-1.5.4-23.zip).
 
-macOS and Windows are the currently supported editions. The previous iPhone/iPad edition
-has been withdrawn while it is being reworked.
+macOS and Windows are the public desktop editions. iPhone and iPad builds are available through the existing owner-only internal TestFlight groups; iOS source is in `ios/`.
 
 ## What you can do
 
