@@ -21,8 +21,13 @@ const clone = value => structuredClone(value);
 let workspace, project, selected, view = 'workspace', report = 'oneline', scenarioIndex = 0;
 let history = [], future = [], revision = 0, savedRevision = 0, saving = false, saveTimer;
 let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', toastTimer;
+let editorReady;
 // The desktop window asks for a disk flush before quitting.
-window.slateDesktop = {importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), flush:async()=>{
+window.slateDesktop = {ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), prepareForUpdate:async()=>{
+  // Dialog drafts are committed only by their Save/Add action. Leave them intact.
+  if(document.querySelector('dialog[open]'))return false;
+  return await window.slateDesktop.flush();
+}, flush:async()=>{
   clearTimeout(saveTimer);
   const deadline=Date.now()+15000;
   while(saving && Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,50));
@@ -521,5 +526,5 @@ if(isIPadApp){
   window.print=()=>nativePrint().catch(e=>toast('PDF export failed: '+e.message));
   document.addEventListener('selectionchange',()=>{const selection=window.getSelection(),script=$('#script-text');if(script&&selection&&!selection.isCollapsed&&script.contains(selection.anchorNode)&&script.contains(selection.focusNode))selectedText=selection.toString().trim();});
 }
-try {workspace=await api('/api/workspace');useProject();render();$('#save-status').textContent=savedLabel;await appSettings.init();}
-catch(e){$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;$('#save-status').textContent=isIPadApp?'Local files unavailable':'Local server unavailable';$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Scheduler, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
+try {workspace=await api('/api/workspace');useProject();render();$('#save-status').textContent=savedLabel;await appSettings.init();editorReady(true);}
+catch(e){editorReady(false);$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;$('#save-status').textContent=isIPadApp?'Local files unavailable':'Local server unavailable';$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Scheduler, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}

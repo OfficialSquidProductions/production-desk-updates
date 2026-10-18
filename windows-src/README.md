@@ -49,6 +49,15 @@ to create the DMG and omit `--no-share` to create the share installer as well.
 Signing official updater archives requires the maintainer's private signing key,
 which is not included. Local app builds do not require that key.
 
+Packaged Mac and Windows apps check for newer compatible releases after the editor
+opens, unless automatic checks are disabled. The launch notice shows the changelog
+and offers Install Update or Later. Installation requires the user's choice and a
+successful workspace save. Open editor dialogs must first be saved or closed, so
+unfinished drafts remain intact. Later postpones the notice until the next launch;
+Check for Updates can reopen it. Ordinary exit never installs an update, and
+offline or invalid feeds stay quiet during automatic checks. Existing Mac Sparkle
+signatures and Windows HTTPS/checksum validation remain in use.
+
 ## Build on Windows
 
 Use Windows x64, Python 3.12, and Node 22:

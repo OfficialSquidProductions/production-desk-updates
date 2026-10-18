@@ -1,6 +1,6 @@
 {
   "name": "production-desk",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Offline film scheduling, script breakdowns and shot lists",
   "author": "Squid Productions",
   "private": true,
@@ -24,6 +24,7 @@
     },
     "files": [
       "main.cjs",
+      "updates.cjs",
       "preload.cjs",
       "smoke.cjs",
       "package.json",
@@ -38,6 +39,9 @@
         "to": "backend"
       }
     ],
+    "releaseInfo": {
+      "releaseNotesFile": "../release-notes.txt"
+    },
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",

@@ -14,6 +14,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   };
   const checks = [];
   await waitFor('document.querySelector("#project-picker")?.options.length > 0');
+  assert.equal(await js('window.slateDesktop.ready'), true);
   assert.equal(await js('typeof window.productionDeskWindows?.print'), 'function');
   assert.equal(await js('typeof window.require'), 'undefined');
   checks.push('Isolated native window and print bridge');
@@ -45,9 +46,12 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push('The real Windows updater recognizes newer versions and rejects equal-version rebuilds');
 
   await js(`document.querySelector('[data-view="shots"]').click(); document.querySelector('#add-scene').click();
-    document.querySelector('#new-shot-description').value='Windows packaged application test';
-    document.querySelector('#new-shot-save').click();`);
-  assert.equal(await flush(), true);
+    document.querySelector('#new-shot-description').value='Windows packaged application test';`);
+  assert.equal(await flush(true), false);
+  assert.equal(await js(`document.querySelector('#modal').open && document.querySelector('#new-shot-description').value==='Windows packaged application test'`), true);
+  await js(`document.querySelector('#new-shot-save').click();`);
+  assert.equal(await flush(true), true);
+  checks.push('Editor-ready handshake and update save gate preserve unfinished dialog drafts; submitted drafts save before installation');
   let saved = JSON.parse(fs.readFileSync(path.join(dataFolder,'workspace.json'),'utf8'));
   const project = saved.projects.find(p => p.id === saved.activeProject);
   assert.ok(project._shots.some(s=>s.description==='Windows packaged application test'));

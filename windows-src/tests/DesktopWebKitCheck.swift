@@ -50,7 +50,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         document.querySelector('#support-close').click();document.querySelector('#modal-close').click();
         document.querySelector('[data-view="elements"]').click();
         let input=document.querySelector('[data-element-name]');input.focus();input.value='Native saved element';input.dispatchEvent(new Event('input',{bubbles:true}));
-        expect(await window.slateDesktop.flush(),'Element flush failed');
+        expect(await window.slateDesktop.prepareForUpdate(),'Focused element update preparation failed');
         expect((await load()).elements[0].name==='Native saved element','Focused element name was lost');
         input=document.querySelector('[data-element-id]');input.focus();input.value='NATIVE42';input.dispatchEvent(new Event('input',{bubbles:true}));
         expect(await window.slateDesktop.flush(),'Board ID flush failed');
@@ -58,7 +58,13 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         document.querySelector('[data-view="shots"]').click();
         for(const number of ['NATIVE1','NATIVE2']){
           document.querySelector('#add-scene').click();document.querySelector('#new-shot-number').value=number;
-          document.querySelector('#new-shot-description').value='Native regression shot';document.querySelector('#new-shot-save').click();
+          const draft=document.querySelector('#new-shot-description');draft.value='Native regression shot';draft.focus();
+          expect(!await window.slateDesktop.prepareForUpdate(),'Update discarded an open editor draft');
+          expect(document.querySelector('#modal').open&&draft.value==='Native regression shot','Blocked update altered the draft');
+          expect(!(await load())._shots.some(s=>s.number===number),'Unsubmitted draft unexpectedly committed');
+          document.querySelector('#new-shot-save').click();
+          expect(await window.slateDesktop.prepareForUpdate(),'Submitted editor draft could not be saved before updating');
+          expect((await load())._shots.some(s=>s.number===number),'Submitted editor draft was not persisted');
         }
         for(const value of [' ',' native1 ']){
           input=document.querySelector('[data-shot-field="number"]');input.focus();input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));
@@ -113,7 +119,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
             case .success(let value):
                 if self.phase == 0 { self.phase = 1; self.web.reload() }
                 else {
-                    print("Native macOS WebKit verified: focused element edits, valid shot-number persistence, malformed imports, repaired schedules, portable Save As/import/collision/Undo, save and reload.")
+                    print("Native macOS WebKit verified: focused edits saved before updates, open dialog drafts block updates intact, submitted drafts persisted, valid shot-number persistence, malformed imports, repaired schedules, portable Save As/import/collision/Undo, save and reload.")
                     if let report = value as? [String:Any], let encoded = report["pdf"] as? String, let pdf = Data(base64Encoded:encoded) {
                         let output = root.appendingPathComponent("build/lined-check")
                         try! FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)

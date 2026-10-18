@@ -35,7 +35,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         updates.window = window
         updates.saveWorkspace = { [weak self] completion in
             guard let self = self else { completion(false); return }
-            self.flushWorkspace(completion)
+            self.flushWorkspace(completion, forUpdate: true)
         }
         window.center()
         window.makeKeyAndOrderFront(nil)
@@ -128,10 +128,18 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
                 try? fm.removeItem(at: self.readyFile)
                 self.localOrigin = url
                 self.web.load(URLRequest(url: url))
-                if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true { self.updates.start() }
             } else if Date() > self.startupDeadline {
                 timer.invalidate()
                 self.fail("Production Desk took too long to start", detail: "Check desktop.log in the app data folder.", crashKind: "startup")
+            }
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView.url?.scheme == "http", webView.url?.host == "127.0.0.1", webView.url?.port == localOrigin?.port,
+           Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true {
+            webView.callAsyncJavaScript("return await (window.slateDesktop?.ready ?? false);", arguments: [:], in: nil, in: .page) { [weak self] result in
+                if case .success(let ready) = result, ready as? Bool == true { self?.updates.start() }
             }
         }
     }
@@ -287,11 +295,19 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { window.makeKeyAndOrderFront(nil); return true }
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
-    func flushWorkspace(_ completion: @escaping (Bool) -> Void) {
+    func flushWorkspace(_ completion: @escaping (Bool) -> Void, forUpdate: Bool = false) {
         guard localOrigin != nil else { completion(false); return }
-        web.callAsyncJavaScript("return await (window.slateDesktop?.flush() ?? false);", arguments: [:], in: nil, in: .page) { result in
-            if case .success(let saved) = result { completion(saved as? Bool == true) }
-            else { completion(false) }
+        var finished = false
+        let finish: (Bool) -> Void = { saved in
+            guard !finished else { return }
+            finished = true
+            completion(saved)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { finish(false) }
+        let method = forUpdate ? "prepareForUpdate" : "flush"
+        web.callAsyncJavaScript("return await (window.slateDesktop?.\(method)() ?? false);", arguments: [:], in: nil, in: .page) { result in
+            if case .success(let saved) = result { finish(saved as? Bool == true) }
+            else { finish(false) }
         }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

@@ -15,6 +15,12 @@ def main():
     if sys.platform != 'win32':
         raise SystemExit('Run this check on Windows.')
     product = json.loads((ROOT / 'desktop/windows/package.json').read_text())['build']['productName']
+    subprocess.run(['node', '--test', 'tests/desktop-updates.cjs'], cwd=ROOT, check=True)
+    subprocess.run(['node', '-e', "const fs=require('node:fs'),assert=require('node:assert/strict'),yaml=require('js-yaml');"
+                    "assert.equal(yaml.load(fs.readFileSync(process.argv[1],'utf8')).releaseNotes.trim(),fs.readFileSync(process.argv[2],'utf8').trim());"
+                    "console.log('Windows update metadata includes the existing release changelog.');",
+                    str(ROOT / 'dist/windows/latest.yml'), str(ROOT / 'desktop/release-notes.txt')],
+                   cwd=ROOT / 'desktop/windows', check=True)
     output = ROOT / 'build/windows-check'
     output.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(ROOT))

@@ -11,6 +11,7 @@ subprocess.run(["swiftc", "-module-cache-path", str(ROOT / ".cache/swift"), "-F"
                 str(ROOT / "desktop/Updates.swift"), str(ROOT / "tests/UpdaterSaveCheck.swift"),
                 "-o", str(binary)], check=True)
 subprocess.run([str(binary)], check=True)
+subprocess.run(["python3", str(ROOT / "tools/check_updater_launch.py")], check=True)
 feed = ROOT / "dist/updates/appcast.xml"
 if feed.exists():
     config = release_config()

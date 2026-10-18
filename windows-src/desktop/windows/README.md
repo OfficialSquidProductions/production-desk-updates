@@ -23,9 +23,16 @@ Transfer a Mac workspace using **Export → Full Production Desk backup**, then
 **Import script / USS** on Windows. This retains scripts, shots and all productions.
 
 **Production Desk → Check for Updates…** checks the Windows release channel.
-Daily automatic checks default on. Automatic downloading/installation defaults
-off and can be enabled in **Updates**. An installation waits for pending edits to
-save; **Continue Installing Update…** retries after a save failure. The Mac
+Automatic checks default on and run after the editor opens at each launch, then
+daily. A newer compatible update shows its changelog with **Install Update** and
+**Later**. Later keeps the current app open and suppresses repeat notices for that
+version until the next launch; an explicit menu check can reopen it. **View Update
+Details…** retains the changelog. Installation requires that explicit choice and a
+successful save; **Continue Installing Update…** retries after a save failure.
+Finish or cancel any open editor dialog before installing; its draft stays intact.
+Updates never install on an ordinary exit, including with older saved automatic
+installation preferences. Automatic checks can still be turned off in **Updates**.
+Offline or malformed-feed checks stay quiet at launch. The Mac
 Sparkle feed and update signature remain separate. Windows downloads use HTTPS
 and the release SHA-512 checksum; the public SHA-256 file supports manual checks.
 This build has no Authenticode publisher certificate.
@@ -45,6 +52,12 @@ The output is `dist/windows/Production-Desk-Windows-Setup.exe`. NSIS embeds the
 complete payload in this single installer rather than downloading it at install
 time. Unpacked application files are internal build output; only the setup EXE
 is needed by recipients. `latest.yml` and `.blockmap` are updater metadata.
+The existing `desktop/release-notes.txt` is included in future generated update
+metadata, so the generic Windows feed can display the same published changelog.
+`node --test tests/desktop-updates.cjs` exercises the pinned real NSIS feed parser
+and version selector with isolated fixtures and simulated dialogs/install routing.
+It never downloads or starts an installer. `tools/check_windows.py` also runs these
+checks and asserts that generated update metadata contains the release notes.
 
 The GitHub Actions workflow builds on a real Windows runner, tests the packaged
 app, installs the EXE silently, runs the installed copy, reinstalls, checks data

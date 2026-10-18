@@ -33,6 +33,11 @@ struct UpdaterSaveCheck {
         precondition(installed == 1, "A successful save must resume installation once")
         _ = updates.validateMenuItem(check)
         precondition(check.title == "Check for Updates…", "Retry state must be cleared")
+        // Duplicate completion/delegate callbacks must never re-enter the installer.
+        finishSave?(true)
+        _ = updates.updater(fixture.updater, shouldPostponeRelaunchForUpdate: SUAppcastItem.empty(), untilInvokingBlock: { installed += 10 })
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        precondition(installed == 1, "A duplicate callback must not replace or restart installation")
         print("Updater verified: asynchronous save, failed-save protection, retry, concurrent-click protection, one-time install continuation.")
     }
 }

@@ -44,6 +44,8 @@ def updater_plist(config):
     return {
         "SUFeedURL": config["feed_url"], "SUPublicEDKey": config["public_key"],
         "SUEnableAutomaticChecks": config.get("channel") != "beta", "SUAutomaticallyUpdate": False,
+        # Even a legacy saved automatic-install preference must not bypass consent.
+        "SUAllowsAutomaticUpdates": False,
         "SUEnableSystemProfiling": False, "SUScheduledCheckInterval": 86400,
         "SUVerifyUpdateBeforeExtraction": True,
     }

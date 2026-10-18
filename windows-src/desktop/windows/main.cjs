@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const {autoUpdater} = require('electron-updater');
+const {ProductionDeskUpdates} = require('./updates.cjs');
 const isBeta = require('./package.json').name === 'production-desk-beta';
 
 const smokeIndex = process.argv.indexOf('--smoke-test');
@@ -12,10 +13,10 @@ if (isBeta && !smokeResult) app.setPath('userData', path.join(app.getPath('appDa
 if (smokeResult) app.setPath('userData', path.join(path.dirname(smokeResult), 'smoke-user-data'));
 const dataFolder = app.getPath('userData');
 const settingsFile = path.join(dataFolder, 'desktop-settings.json');
-let settings = {automaticChecks:true, automaticInstall:false};
+let settings = {automaticChecks:true};
 try { Object.assign(settings, JSON.parse(fs.readFileSync(settingsFile, 'utf8'))); } catch {}
-let win, backend, origin, temporary, quitting = false, closing = false, checking = false;
-let updateReady = false, manualCheck = false, lastSupportEmail = null;
+let win, backend, origin, temporary, quitting = false, closing = false, installing = false;
+let updates, lastSupportEmail = null;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const sessionFile = path.join(dataFolder, 'support-session.json');
@@ -49,11 +50,11 @@ async function external(address) {
     if (['https:', 'mailto:'].includes(new URL(address).protocol)) await shell.openExternal(address);
   } catch {}
 }
-async function flush() {
+async function flush(forUpdate = false) {
   if (!win || win.isDestroyed() || !origin) return true;
   try {
     return await Promise.race([
-      win.webContents.executeJavaScript('window.slateDesktop?.flush() ?? false'),
+      win.webContents.executeJavaScript(`window.slateDesktop?.${forUpdate ? 'prepareForUpdate' : 'flush'}() ?? false`),
       delay(20000).then(() => false)
     ]) === true;
   } catch { return false; }
@@ -75,23 +76,29 @@ async function quitOrInstall() {
   const allowed = saved || await canClose();
   if (allowed) {
     quitting = true;
-    // Updates always require a successful save, even if the user chooses to quit unsaved.
-    if (saved && updateReady && settings.automaticInstall) autoUpdater.quitAndInstall(false, true);
-    else app.quit();
+    app.quit();
   }
   closing = false;
 }
 async function installUpdate() {
-  if (!updateReady || closing) return;
+  if (!updates?.ready || closing || quitting) return;
   closing = true;
-  if (await flush()) {
+  if (await flush(true)) {
+    installing = true;
     quitting = true;
-    autoUpdater.quitAndInstall(false, true);
+    try { autoUpdater.quitAndInstall(false, true); }
+    catch (error) { await installationFailed(error); }
   } else {
     await dialog.showMessageBox(win, {type:'warning', message:'Save your changes before installing the update.',
-      detail:'Retry saving or export a backup, then choose Continue Installing Update.'});
+      detail:'Finish or cancel any open editor dialog. Retry saving or export a backup, then choose Continue Installing Update.'});
   }
   closing = false;
+}
+async function installationFailed(error) {
+  if (!installing) return;
+  installing = false; quitting = false; closing = false;
+  await dialog.showMessageBox(win, {type:'warning', message:'The update could not be installed.',
+    detail:'Your work was saved. Keep using Production Desk and choose Continue Installing Update to retry.\n\n' + String(error.message || error), buttons:['Keep Working']});
 }
 async function printReport() {
   const {response} = await dialog.showMessageBox(win, {message:'Print or save this report',
@@ -118,13 +125,11 @@ function buildMenu() {
       {label:'About Production Desk', click:() => dialog.showMessageBox(win, {
         message:`Production Desk ${app.getVersion()}`, detail:'Offline film scheduling by Squid Productions.\nWindows x64'})},
       {label:'Check for Updates…', enabled:!isBeta, click:() => checkUpdates(true)},
-      {label:'Continue Installing Update…', enabled:updateReady, click:installUpdate},
+      {label:'View Update Details…', enabled:!!updates?.available, click:() => updates?.details()},
+      {label:'Continue Installing Update…', enabled:!!updates?.ready, click:installUpdate},
       {label:'Updates', enabled:!isBeta, submenu:[
         {label:'Automatically Check for Updates', type:'checkbox', checked:settings.automaticChecks,
-          click:item => {settings.automaticChecks=item.checked; persistSettings();}},
-        {label:'Automatically Download and Install Updates on Exit', type:'checkbox', checked:settings.automaticInstall,
-          click:item => {settings.automaticInstall=item.checked; autoUpdater.autoDownload=item.checked;
-            persistSettings(); if(item.checked) checkUpdates(false);}}
+          click:item => {settings.automaticChecks=item.checked; persistSettings();}}
       ]},
       {label:'Open Data Folder', click:() => shell.openPath(dataFolder)},
       {type:'separator'}, {label:'Quit Production Desk', accelerator:'Ctrl+Q', click:quitOrInstall}
@@ -152,41 +157,15 @@ async function editUndo(redo) {
   else await click(redo ? '#redo' : '#undo');
 }
 async function checkUpdates(manual) {
-  if (isBeta || checking || !app.isPackaged || smokeResult) return;
-  checking = true; manualCheck = manual;
-  try { await autoUpdater.checkForUpdates(); }
-  catch (error) {
-    if (manual) await dialog.showMessageBox(win, {type:'warning', message:'Could not check for updates.', detail:error.message});
-  } finally { checking = false; manualCheck = false; }
+  await updates?.check(manual);
 }
 function configureUpdates() {
-  if (isBeta) return;
-  autoUpdater.autoDownload = settings.automaticInstall;
-  autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.on('error', () => {});
-  autoUpdater.on('update-not-available', () => {
-    if (manualCheck) dialog.showMessageBox(win, {message:'You have the latest version of Production Desk.'});
-  });
-  autoUpdater.on('update-available', async info => {
-    if (autoUpdater.autoDownload) return;
-    const {response} = await dialog.showMessageBox(win, {message:`Production Desk ${info.version} is available.`,
-      buttons:['Download Update', 'Later'], cancelId:1});
-    if (response === 0) {
-      try { await autoUpdater.downloadUpdate(); }
-      catch (error) { dialog.showErrorBox('Update download failed', error.message); }
-    }
-  });
-  autoUpdater.on('update-downloaded', async () => {
-    updateReady = true; buildMenu();
-    if (settings.automaticInstall) return;
-    const {response} = await dialog.showMessageBox(win, {message:'The update is ready to install.',
-      detail:'Production Desk will save your work and restart.', buttons:['Install and Restart', 'Later'], cancelId:1});
-    if (response === 0) await installUpdate();
-  });
-  if (!smokeResult) {
-    setTimeout(() => {if(settings.automaticChecks) checkUpdates(false);}, 15000).unref();
-    setInterval(() => {if(settings.automaticChecks) checkUpdates(false);}, 86400000).unref();
-  }
+  if (updates) return;
+  updates = new ProductionDeskUpdates({updater:autoUpdater, dialog, getWindow:() => win,
+    enabled:() => !isBeta && app.isPackaged && !smokeResult && !closing && !quitting,
+    automaticChecks:() => settings.automaticChecks, refreshMenu:buildMenu, install:installUpdate});
+  autoUpdater.on('error', error => { if (installing) void installationFailed(error); });
+  updates.start();
 }
 async function start() {
   fs.mkdirSync(dataFolder, {recursive:true});
@@ -256,8 +235,9 @@ async function start() {
     if(event.sender !== win.webContents || !localAddress(event.senderFrame.url)) throw new Error('Local window required.');
     try { await printReport(); } catch(error) { dialog.showErrorBox('PDF export failed',error.message); }
   });
-  buildMenu(); configureUpdates();
+  buildMenu();
   await win.loadURL(origin);
+  if (await win.webContents.executeJavaScript('window.slateDesktop?.ready ?? false')) configureUpdates();
   if (smokeResult) {
     try {
       const result = await require('./smoke.cjs')({win, origin, dataFolder, output:path.dirname(smokeResult), flush, readEmailDraft:()=>lastSupportEmail});

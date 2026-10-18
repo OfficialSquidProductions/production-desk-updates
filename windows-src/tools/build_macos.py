@@ -154,9 +154,11 @@ Use Export > Full Production Desk backup to transfer a project separately.
 Updating or reinstalling replaces the app, not your project data.
 
 APP UPDATES
-Use Production Desk > Check for Updates… to check manually. The Updates menu
-controls automatic checks and automatic download/installation. Downloaded
-updates are verified before installation, and pending changes are saved before
+Production Desk checks for updates after the editor opens at launch when automatic
+checks are enabled. New compatible updates show release notes with Install Update
+and Remind Me Later. Use Production Desk > Check for Updates… to check manually.
+The Updates menu controls automatic checks. Installation always requires your
+choice; downloaded updates are verified and pending changes must save before
 restarting. The first update requires manually installing this version.
 Automatic delivery is available at updates.squidproductions.org. Update checks
 require internet; local scheduling still works offline. Users on 1.3.x need one
