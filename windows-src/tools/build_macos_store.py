@@ -115,6 +115,12 @@ def build(args):
     dwarf = dsym / 'Contents/Resources/DWARF'
     (dwarf / (executable + '-arm64')).unlink()
     run('lipo','-create',cache / (executable + '-arm64.dSYM/Contents/Resources/DWARF/' + executable + '-arm64'),cache / (executable + '-x86_64.dSYM/Contents/Resources/DWARF/' + executable + '-x86_64'),'-output',dwarf / executable)
+    if pd:
+        helper_dsym = archive / 'dSYMs/extract_pdf.dSYM'
+        shutil.copytree(cache / 'extract_pdf-arm64.dSYM', helper_dsym)
+        helper_dwarf = helper_dsym / 'Contents/Resources/DWARF'
+        (helper_dwarf / 'extract_pdf-arm64').unlink()
+        run('lipo','-create',cache / 'extract_pdf-arm64.dSYM/Contents/Resources/DWARF/extract_pdf-arm64',cache / 'extract_pdf-x86_64.dSYM/Contents/Resources/DWARF/extract_pdf-x86_64','-output',helper_dwarf / 'extract_pdf')
     run('swiftc','-module-cache-path',cache / 'swift',source_dir / 'Icon.swift','-o',cache / 'render-icon')
     icon_source = root / ('web/assets/sp-logo.png' if pd else 'dist/assets/sp-blue.png')
     run(cache / 'render-icon',cache / 'App.iconset',icon_source)
