@@ -172,8 +172,10 @@ test('native Windows installation errors keep the saved workspace open for retry
   m.f.updater.quitAndInstall = install; await m.run('installUpdate()'); assert.equal(m.installed, 1);
 });
 
-test('actual editor update preparation preserves open dialog drafts and flushes only after closing', async () => {
-  const source = fs.readFileSync(path.resolve(__dirname, '../web/app.js'), 'utf8');
+test('actual editor update preparation preserves drafts with LF and CRLF source checkouts', async () => {
+  const original = fs.readFileSync(path.resolve(__dirname, '../web/app.js'), 'utf8').replace(/\r\n/g, '\n');
+  for (const checkout of [original, original.replace(/\n/g, '\r\n')]) {
+  const source = checkout.replace(/\r\n/g, '\n');
   const start = source.indexOf('window.slateDesktop = {');
   const end = source.indexOf('\n\nasync function api', start);
   assert.ok(start > 0 && end > start);
@@ -194,6 +196,7 @@ test('actual editor update preparation preserves open dialog drafts and flushes 
   assert.equal(await context.window.slateDesktop.prepareForUpdate(), true); assert.equal(flushes, 1);
   saved = false;
   assert.equal(await context.window.slateDesktop.prepareForUpdate(), false); assert.equal(flushes, 2);
+  }
 });
 
 test('Windows package includes the updater and existing release notes in future feed artifacts', () => {
