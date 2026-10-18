@@ -19,8 +19,9 @@ python3 tools/build_macos_store.py --output /absolute/new/output \
 For distribution, omit `--local-development` and supply the existing Apple
 Distribution SHA-1, an existing Mac App Store provisioning profile using that
 certificate, and `--installer-identity EXISTING_MAC_INSTALLER_SHA1`.
-The tool validates the profile's Mac platform, team, bundle ID, beta entitlement,
-and signing certificate. It emits manual export/upload options with
+The tool validates the profile's Mac platform, team, bundle ID, distribution
+restrictions, expiry, and signing certificate. Mac profiles need not contain the
+`beta-reports-active` entitlement; only entitlements present in the profile are copied. It emits manual export/upload options with
 `testFlightInternalTestingOnly=true` and automatic version changes disabled.
 It does not create credentials or profiles, upload, or change account settings.
 Never use `-allowProvisioningUpdates` to work around missing signing assets.

@@ -45,7 +45,10 @@ def build(args):
         if 'OSX' not in profile.get('Platform', []): raise ValueError('This is not a Mac provisioning profile.')
         if profile['TeamIdentifier'] != [TEAM]: raise ValueError('Wrong provisioning team.')
         if ent.get('com.apple.application-identifier') != TEAM + '.' + args.bundle_id: raise ValueError('Wrong profile bundle ID.')
-        if not ent.get('beta-reports-active') or ent.get('get-task-allow'): raise ValueError('A Mac TestFlight distribution profile is required.')
+        if profile.get('ProvisionedDevices') or profile.get('ProvisionsAllDevices') or ent.get('get-task-allow') or ent.get('com.apple.security.get-task-allow'):
+            raise ValueError('A Mac App Store distribution profile is required.')
+        if profile['ExpirationDate'] <= datetime.now(timezone.utc).replace(tzinfo=None):
+            raise ValueError('The Mac App Store profile has expired.')
         if args.identity.upper() not in {hashlib.sha1(cert).hexdigest().upper() for cert in profile['DeveloperCertificates']}:
             raise ValueError('The existing signing identity does not match the provisioning profile.')
     if args.installer_identity:
@@ -135,7 +138,7 @@ def build(args):
     entitlements = plistlib.loads((source_dir / 'Store.entitlements').read_bytes())
     if profile:
         for key in ['com.apple.application-identifier','com.apple.developer.team-identifier','beta-reports-active']:
-            entitlements[key] = profile['Entitlements'][key]
+            if key in profile['Entitlements']: entitlements[key] = profile['Entitlements'][key]
     signing_entitlements = cache / 'Store.entitlements'; plist(signing_entitlements, entitlements)
     identity = args.identity
     def sign(path, entitlements_file=None):
