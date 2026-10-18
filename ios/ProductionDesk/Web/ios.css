@@ -1,4 +1,24 @@
 /* iPad-only adaptation; desktop sources remain in upstream/. */
+html { background:var(--bg); }
+.workspace-toolbar { display:none; }
+.ipad-app .sidebar .sidebar-bottom #settings-open,
+.ipad-app .sidebar .sidebar-bottom #app-settings-open,
+.ipad-app .sidebar .sidebar-bottom #help-open {
+ display:flex;align-items:center;justify-content:flex-start;gap:9px;
+ min-height:44px;padding:6px 0;margin:0;font-size:12px;line-height:1.4;
+}
+.ipad-app .sidebar .sidebar-bottom #settings-open span {margin:0;}
+.ipad-app .sidebar .sidebar-bottom #help-open span {order:-1;display:inline-flex;align-items:center;justify-content:center;width:19px;}
+.ipad-app .sidebar .sidebar-bottom .settings-gear {width:19px;}
+.ipad-app .workspace > [hidden] {display:none!important;}
+.ipad-app .single-pane .workspace-toolbar {display:flex;justify-content:flex-start;flex-wrap:wrap;height:auto;min-height:58px;padding:6px 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px 8px 0 0;}
+.ipad-app .workspace-tabs {display:flex;gap:2px;margin-right:10px;}
+.ipad-app .workspace-toolbar [data-action="edit-script"] {margin-left:auto;}
+.ipad-app .workspace-tabs button {padding:8px 12px;border-color:transparent;background:transparent;color:var(--muted);}
+.ipad-app .workspace-tabs button[aria-selected=true] {background:var(--paper);border-color:var(--line);color:var(--accent-ink);box-shadow:0 1px 3px #0001;}
+.ipad-app .single-pane .workspace {grid-template-columns:minmax(0,1fr);}
+.ipad-app .single-pane #workspace-script > .panel > .panel-header {display:none;}
+.ipad-app .single-pane .workspace > div > .panel {border-top:0;border-radius:0 0 8px 8px;}
 .ipad-app .sidebar { overflow-y:auto; }
 .ipad-app button { min-height:44px; min-width:44px; touch-action:manipulation; }
 .ipad-app .panel,.ipad-app .workspace > *,.ipad-app .schedule-layout > *,.ipad-app .shot-layout > * { min-width:0; }

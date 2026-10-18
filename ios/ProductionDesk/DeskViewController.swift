@@ -15,14 +15,87 @@ final class DeskViewController: UIViewController, WKNavigationDelegate, WKUIDele
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private let errorLabel = UILabel()
     private let retryButton = UIButton(type: .system)
+    private let topFill = CAGradientLayer()
+    private let bottomFill = CAGradientLayer()
+    private var sidebarFraction: CGFloat = 1
+    private var fixedSidebar = false
+    private var darkAppearance = UserDefaults.standard.string(forKey: "productionDeskNativeTheme") == "dark"
+    private var canvasColor = UIColor.white
+    private var sidebarColor = UIColor.white
+    private var paperColor = UIColor.white
+    private var lastWebPortrait: Bool?
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { darkAppearance ? .lightContent : .darkContent }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        layoutAppearanceFills()
+        syncWindowLayout()
+    }
+
+    private func syncWindowLayout() {
+        guard let webView, webView.url != nil, view.bounds.width > 0 else { return }
+        // The native window keeps its size when a keyboard occludes WebKit.
+        // CSS viewport orientation can change during keyboard presentation.
+        let portrait = view.bounds.height >= view.bounds.width
+        guard lastWebPortrait != portrait else { return }
+        lastWebPortrait = portrait
+        webView.callAsyncJavaScript("window.productionDeskPortrait = portrait; window.dispatchEvent(new Event('productiondesk-layout'));", arguments: ["portrait": portrait], in: nil, in: .page) { [weak self] result in
+            if case .failure = result, self?.lastWebPortrait == portrait { self?.lastWebPortrait = nil }
+        }
+    }
+
+    private func layoutAppearanceFills() {
+        guard let webView else { return }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        topFill.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: webView.frame.minY)
+        bottomFill.frame = CGRect(x: 0, y: webView.frame.maxY, width: view.bounds.width, height: max(0, view.bounds.height - webView.frame.maxY))
+        let edge = NSNumber(value: Double(sidebarFraction))
+        topFill.colors = [sidebarColor.cgColor, sidebarColor.cgColor, paperColor.cgColor, paperColor.cgColor]
+        topFill.locations = [0, edge, edge, 1]
+        bottomFill.colors = [sidebarColor.cgColor, sidebarColor.cgColor, canvasColor.cgColor, canvasColor.cgColor]
+        let bottomEdge = fixedSidebar ? edge : 0
+        bottomFill.locations = [0, bottomEdge, bottomEdge, 1]
+        CATransaction.commit()
+    }
+
+    private func applyAppearance(_ theme: String, background: String, sidebar: String, paper: String) {
+        darkAppearance = theme == "dark"
+        canvasColor = Self.themeColor(background) ?? (darkAppearance ? UIColor(red: 25/255, green: 20/255, blue: 25/255, alpha: 1) : UIColor(red: 250/255, green: 248/255, blue: 249/255, alpha: 1))
+        sidebarColor = Self.themeColor(sidebar) ?? canvasColor
+        paperColor = Self.themeColor(paper) ?? canvasColor
+        overrideUserInterfaceStyle = darkAppearance ? .dark : .light
+        view.backgroundColor = canvasColor
+        view.window?.backgroundColor = canvasColor
+        webView?.backgroundColor = canvasColor
+        webView?.scrollView.backgroundColor = canvasColor
+        webView?.underPageBackgroundColor = canvasColor
+        errorLabel.textColor = darkAppearance ? .white : .label
+        setNeedsStatusBarAppearanceUpdate()
+        layoutAppearanceFills()
+    }
+
+    private static func themeColor(_ hex: String) -> UIColor? {
+        var text = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.hasPrefix("#") else { return nil }; text.removeFirst()
+        if text.count == 3 { text = text.map { "\($0)\($0)" }.joined() }
+        guard text.count == 6, let rgb = UInt32(text, radix: 16) else { return nil }
+        return UIColor(red: CGFloat((rgb >> 16) & 255)/255, green: CGFloat((rgb >> 8) & 255)/255, blue: CGFloat(rgb & 255)/255, alpha: 1)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        topFill.name = "theme-top-safe-area"; bottomFill.name = "theme-bottom-safe-area"
+        topFill.startPoint = CGPoint(x: 0, y: 0.5); topFill.endPoint = CGPoint(x: 1, y: 0.5)
+        bottomFill.startPoint = topFill.startPoint; bottomFill.endPoint = topFill.endPoint
+        view.layer.addSublayer(topFill); view.layer.addSublayer(bottomFill)
         let configuration = WKWebViewConfiguration()
         let root = Bundle.main.url(forResource: "Web", withExtension: nil)!
         configuration.setURLSchemeHandler(LocalWebScheme(root: root), forURLScheme: LocalWebScheme.scheme)
         configuration.userContentController.addScriptMessageHandler(WeakSchedulerHandler(controller: self), contentWorld: .page, name: "scheduler")
+        let tablet = UIDevice.current.userInterfaceIdiom == .pad
+        let portrait = view.bounds.height >= view.bounds.width
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.productionDeskTablet = \(tablet ? "true" : "false"); window.productionDeskPortrait = \(portrait ? "true" : "false");", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // Keep appearance preferences between launches; workspace data uses the
         // native store rather than browser local storage.
         configuration.websiteDataStore = .default()
@@ -30,13 +103,13 @@ final class DeskViewController: UIViewController, WKNavigationDelegate, WKUIDele
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.isOpaque = false
-        webView.backgroundColor = .white
-        webView.scrollView.backgroundColor = .white
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        applyAppearance(darkAppearance ? "dark" : "light", background: darkAppearance ? "#191419" : "#faf8f9", sidebar: darkAppearance ? "#211a20" : "#ffffff", paper: darkAppearance ? "#251d23" : "#ffffff")
         webView.accessibilityIdentifier = "production-desk-webview"
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
         NSLayoutConstraint.activate([
-            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor), webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor), webView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor), webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
         errorLabel.numberOfLines = 0
@@ -79,6 +152,16 @@ final class DeskViewController: UIViewController, WKNavigationDelegate, WKUIDele
             replyHandler(nil, NativeFileError.invalidRequest.localizedDescription); return
         }
         switch operation {
+        case "appearance":
+            guard let theme = body["theme"] as? String, ["light", "dark"].contains(theme),
+                  let background = body["background"] as? String, let sidebar = body["sidebar"] as? String, let paper = body["paper"] as? String else {
+                replyHandler(nil, NativeFileError.invalidRequest.localizedDescription); return
+            }
+            sidebarFraction = min(1, max(0, (body["sidebarFraction"] as? Double) ?? 1))
+            fixedSidebar = body["fixedSidebar"] as? Bool ?? false
+            UserDefaults.standard.set(theme, forKey: "productionDeskNativeTheme")
+            applyAppearance(theme, background: background, sidebar: sidebar, paper: paper)
+            replyHandler(true, nil)
         case "load", "save", "pdf", "export", "storePDF", "readPDF", "backupPDFs", "restorePDFs", "support":
             fileQueue.async { [weak self] in
                 guard let self else { return }
@@ -320,6 +403,8 @@ final class DeskViewController: UIViewController, WKNavigationDelegate, WKUIDele
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         recovering = false
+        lastWebPortrait = nil
+        syncWindowLayout()
         Task { @MainActor in
             for _ in 0..<150 {
                 if (try? await webView.evaluateJavaScript("document.body?.dataset.appReady==='true'")) as? Bool == true {

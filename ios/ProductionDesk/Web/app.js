@@ -5,6 +5,8 @@ import {createLinedDesk,removeCoverage,clearCoverageScene} from './lined-script.
 import {nativeAPI, nativePrint} from './native-platform.js';
 import {createAppSettings} from './settings.js';
 import {createElementActions} from './element-actions.js';
+import {bindWorkspacePanes} from './ios-workspace.js';
+import {DEMO_ENABLED,demoForWorkspace} from './demo/demo.js';
 const isIPadApp = !!window.webkit?.messageHandlers?.scheduler;
 if (window.productionDeskWindows) window.print = () => window.productionDeskWindows.print();
 const savedLabel = isIPadApp ? '✓ Saved on this device' : '✓ Saved on this computer';
@@ -137,16 +139,34 @@ function render() {
   $('#summary').innerHTML = `<div class="summary-stat"><strong>${scenes.length}</strong><span>scenes</span></div><div class="summary-stat"><strong>${pages(t.pages)}</strong><span>pages</span></div><div class="summary-stat"><strong>${dayCount}</strong><span>shoot days</span></div><div class="summary-stat"><strong>${scenes.length-scheduled}</strong><span>unscheduled</span></div><div class="summary-note"><span>●</span> Local files · USS 1.0.0</div>`;
   $('#add-scene').textContent=['shots','lined'].includes(view)?'＋ New shot':'＋ New scene';
   $('#content').innerHTML = view === 'lined' ? linedDesk.render() : view === 'shots' ? shotDesk.render() : view === 'workspace' ? workspaceView() : view === 'schedule' ? scheduleView() : view === 'elements' ? elementsView() : reportsView();
-  bindContent(); applyStripColors(); updateUndo();
+  bindContent(); bindWorkspacePanes($('#workspace-shell')); applyStripColors(); updateUndo();
+}
+let loadingDemo=false;
+async function loadDemo() {
+  if(loadingDemo||!DEMO_ENABLED)return;
+  loadingDemo=true;
+  const button=$('#load-demo');if(button)button.disabled=true;
+  try {
+    document.activeElement?.blur();
+    const result=await demoForWorkspace(workspace);
+    mutate(()=>{if(result.created)workspace.projects.push(result.project);workspace.activeProject=result.project.id;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';});
+    await window.slateDesktop.flush();
+    toast(result.created?'Fictional demo added separately. Your existing productions are preserved.':'Opened your existing demo, keeping its edits.');
+  } catch(error){toast('Demo could not open: '+error.message);}
+  finally{loadingDemo=false;if(button)button.disabled=false;}
 }
 function emptyPanel(message) { return `<div class="empty-state"><h3>A story starts here.</h3>${message}<br><button class="primary" data-action="import">Import your script</button></div>`; }
 function workspaceView() {
-  return `<div class="workspace">${scriptPanel()}${breakdownPanel()}</div>`;
+  return `<div id="workspace-shell"><div class="workspace-toolbar panel-header"><div class="workspace-tabs" role="tablist" aria-label="Main breakdown view"><button id="workspace-script-tab" role="tab" aria-controls="workspace-script" data-workspace-pane="script">Script</button><button id="workspace-breakdown-tab" role="tab" aria-controls="workspace-breakdown" data-workspace-pane="breakdown">Breakdown</button></div><button class="text-button" data-action="import">Import script</button><button class="text-button" data-action="edit-script" ${breakdown()?.type==='scene'?'':'disabled'}>Edit text</button></div><div class="workspace"><div id="workspace-script" aria-labelledby="workspace-script-tab">${scriptPanel()}</div><div id="workspace-breakdown" aria-labelledby="workspace-breakdown-tab">${breakdownPanel()}</div></div></div>`;
+}
+function scriptSceneOptions() {
+  return sceneList().filter(s=>`${s.scene} ${slug(s)} ${s.description}`.toLowerCase().includes(search.toLowerCase()))
+    .map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('');
 }
 function scriptPanel() {
-  const b = breakdown(), filtered = sceneList().filter(s=>`${s.scene} ${slug(s)} ${s.description}`.toLowerCase().includes(search.toLowerCase()));
+  const b = breakdown();
   return `<section class="panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▤</span>Script <span class="count">${sceneList().length} scenes</span></div><button class="text-button" data-action="import">Import script</button><button class="text-button" data-action="edit-script" ${b?.type==='scene'?'':'disabled'}>Edit text</button></div>
-    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button><select id="scene-picker" aria-label="Choose scene">${filtered.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('')}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
+    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button><select id="scene-picker" aria-label="Choose scene">${scriptSceneOptions()}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
     <div class="script-selection"><span>Select text in the script to tag a production element.</span><div class="tag-row"><select id="tag-category" aria-label="Tag category">${project.categories.filter(c=>c.ucid>=100).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('')}</select><button id="tag-selection">＋ Tag selection</button></div></div>
     <div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${scriptHTML(b)}</article>`}</div><div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
 }
@@ -268,7 +288,9 @@ function bindContent() {
   if(view==='lined')linedDesk.bind();
   $$('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));
   $('#scene-picker')?.addEventListener('change',e=>{selected=e.target.value;render();});
-  $('#scene-search')?.addEventListener('input',e=>{search=e.target.value;const value=search,caret=e.target.selectionStart;render();const input=$('#scene-search');input.focus();input.setSelectionRange(caret,caret);});
+  // Filtering changes only the picker options. Replacing a focused search
+  // field drops WebKit's keyboard/input session during native text entry.
+  $('#scene-search')?.addEventListener('input',e=>{search=e.target.value;$('#scene-picker').innerHTML=scriptSceneOptions();});
   $('#scenario-picker')?.addEventListener('change',e=>{scenarioIndex=Number(e.target.value);render();});
   // Save text as it is entered. Avoid replacing the focused input on blur,
   // which can swallow a click on the next field or scene-navigation button.
@@ -516,6 +538,7 @@ window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preven
 if(isIPadApp){
   document.body.classList.add('ipad-app');
   const importButton=document.createElement('button');importButton.id='import-open';importButton.textContent='Import…';importButton.onclick=importModal;$('.heading-actions').prepend(importButton);
+  if(DEMO_ENABLED){const demoButton=document.createElement('button');demoButton.id='load-demo';demoButton.textContent='Load Demo';demoButton.onclick=loadDemo;$('.heading-actions').prepend(demoButton);}
   $('.brand-edition').textContent='IPAD EDITION';
   $('.offline-pill').innerHTML='<span class="status-dot"></span>Entirely on your device';
   // Keep instructions shared with the desktop while identifying native actions.

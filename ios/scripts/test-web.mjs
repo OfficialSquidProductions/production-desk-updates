@@ -359,3 +359,38 @@ test('legacy full JSON backups with missing schedules are repaired without losin
  assert.deepEqual(result.workspace.projects[0].stripboards[0].boards[1].breakdownIds,p.breakdowns.map(b=>b.id));
  validateWorkspace(result.workspace);
 });
+
+test('offline demo contains an original script, editable theatre breakdown, schedule and shots',async()=>{
+ const {createDemoProduction,DEMO_KEY}=await import('../ProductionDesk/Web/demo/demo.js');
+ const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');
+ const p=createDemoProduction(text);validateUSS(p);
+ assert.equal(p.project,'DEMO · The Last Cue');assert.equal(p._betaDemo.key,DEMO_KEY);assert.equal(p._sourceScript.text,text);
+ assert.equal(p.breakdowns.length,3);assert.equal(p._shots.length,3);assert.equal(p.stripboards[0].boards[0].breakdownIds[0].length,3);
+ for(const name of ['Prop notebook','Practical lamp','Desk','Chair','Lighting cue 12'])assert.ok(p.elements.some(e=>e.name===name),name);
+ assert.match(text,/adult student stage manager/);assert.match(text,/adult student lighting operator/);
+ assert.ok(p.breakdowns.every(b=>b.description&&b.comments&&b._scriptText&&b.duration>0));
+});
+test('demo load is separate and non-mutating; repeated loads preserve renamed and edited work',async()=>{
+ const {demoForWorkspace}=await import('../ProductionDesk/Web/demo/demo.js');
+ const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');
+ const w=workspace(project()),original=structuredClone(w);
+ const first=await demoForWorkspace(w,async()=>text);assert.equal(first.created,true);assert.deepEqual(w,original);assert.notEqual(first.project.id,w.projects[0].id);
+ w.projects.push(first.project);first.project.project='My renamed rehearsal';first.project.breakdowns[0].description='Keep this edit';
+ const saved=structuredClone(w);const repeat=await demoForWorkspace(w,async()=>{throw Error('Repeated load must not reread or reset the sample');});
+ assert.equal(repeat.created,false);assert.equal(repeat.project,first.project);assert.deepEqual(w,saved);
+});
+test('edited demo exports and imports with its original script and relationships without replacing existing work',async()=>{
+ const {createDemoProduction}=await import('../ProductionDesk/Web/demo/demo.js');
+ const {projectFile,readProjectFile,mergeProductions}=await import('../ProductionDesk/Web/project-file.js');
+ const p=createDemoProduction(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8'));
+ p.breakdowns[0].comments='Demo edit retained';p._shots[0].notes='Try a second take';
+ const w=workspace(p),file=projectFile({...w,_pdfDocuments:{}}),returned=readProjectFile(JSON.parse(JSON.stringify(file)));
+ assert.deepEqual(returned.projects[0],p);
+ const existing=workspace(project()),before=structuredClone(existing);const merged=mergeProductions(existing,returned.projects,returned.activeProject);
+ assert.deepEqual(existing,before);assert.equal(merged.workspace.projects.length,2);assert.equal(merged.workspace.projects[0].id,before.projects[0].id);
+ assert.equal(merged.imported[0].breakdowns[0].comments,'Demo edit retained');assert.equal(merged.imported[0]._shots[0].notes,'Try a second take');
+});
+test('a failed demo asset load leaves existing productions untouched',async()=>{
+ const {demoForWorkspace}=await import('../ProductionDesk/Web/demo/demo.js');const w=workspace(project()),before=structuredClone(w);
+ await assert.rejects(()=>demoForWorkspace(w,async()=>{throw Error('Demo asset unavailable');}),/Demo asset unavailable/);assert.deepEqual(w,before);
+});

@@ -7,3 +7,6 @@ artifacts/
 *.log
 *.xcresult/
 bundle-id-build/
+# The vendored PDF renderer is runtime source, despite its upstream build/ name.
+!ProductionDesk/Web/vendor/pdfjs/legacy/build/
+!ProductionDesk/Web/vendor/pdfjs/legacy/build/*.mjs
