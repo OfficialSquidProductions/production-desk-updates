@@ -106,7 +106,12 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         let process = Process()
         let pythonHome = Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/Python3.framework/Versions/3.9")
         process.executableURL = pythonHome.appendingPathComponent("bin/python3.9")
-        process.arguments = ["-E", "-s", "-B", runtime.appendingPathComponent("server.py").path, "--port", "0", "--data", workspace.path, "--ready-file", readyFile.path, "--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]
+        #if APP_STORE
+        let serverScript = "store_server.py"
+        #else
+        let serverScript = "server.py"
+        #endif
+        process.arguments = ["-E", "-s", "-B", runtime.appendingPathComponent(serverScript).path, "--port", "0", "--data", workspace.path, "--ready-file", readyFile.path, "--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]
         // Ignore Python environment variables and user packages; find the stdlib in the bundle.
         process.environment = ["PATH": "/usr/bin:/bin", "HOME": fm.homeDirectoryForCurrentUser.path, "TMPDIR": NSTemporaryDirectory(), "LANG": "en_US.UTF-8"]
         process.currentDirectoryURL = runtime
