@@ -81,6 +81,15 @@ class ProjectFileAPITests(unittest.TestCase):
         status,raw=self.request(json.loads(raw)['url'],method='GET')
         self.assertEqual(status,200);self.assertEqual(json.loads(raw),original)
         self.assertEqual(self.server.datafile.read_bytes(),self.before)
+    def test_original_scenic_demo_uses_normal_json_export_without_changing_workspace(self):
+        content=(Path(__file__).resolve().parents[1]/'web/demo/the-last-light.scenic').read_text()
+        status,raw=self.request('/api/export',{'filename':'The-Last-Light.scenic','content':content,'mime':'application/json'})
+        self.assertEqual(status,200,raw)
+        status,download=self.request(json.loads(raw)['url'],method='GET')
+        self.assertEqual(status,200);self.assertEqual(download,content.encode())
+        self.assertEqual(len(json.loads(download)['scenes']),8)
+        self.assertEqual(self.server.datafile.read_bytes(),self.before)
+
     def test_malformed_and_unsupported_files_leave_disk_unchanged(self):
         for raw in [b'{bad',b'null',b'[]',b'{}',b'{"formatVersion":2}',b'['*1100+b']'*1100]:
             with self.subTest(raw=raw[:25]):

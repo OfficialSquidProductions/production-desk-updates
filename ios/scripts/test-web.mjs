@@ -458,3 +458,17 @@ test('demo controls report a failed final save truthfully and permit a safe retr
  assert.equal(h.workspace().projects.length,2);assert.match(h.stats().messages[0],/open but its save failed/);assert.equal(h.nodes.get('#load-demo').disabled,false);
  await h.nodes.get('#load-demo').onclick();assert.equal(h.workspace().projects.length,2);assert.equal(h.stats().imports,1);assert.match(h.stats().messages.at(-1),/existing demo/);
 });
+
+
+test('demo guide exports the paired Scenic file with the supported JSON export type',async()=>{
+ const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const h=demoControlsHarness(workspace(project()));
+ for(const key of ['#demo-guide-close','#demo-scenic-file','#demo-guide-open','#modal'])h.nodes.set(key,{disabled:false,close(){}});
+ h.config.modal=()=>{};let exported;
+ h.config.download=async(filename,content,type)=>{exported={filename,content,type};return true;};
+ const fixture=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.scenic',import.meta.url),'utf8');
+ globalThis.fetch=async()=>({ok:true,text:async()=>fixture});
+ createDemoControls(h.config).bind();h.nodes.get('#demo-guide').onclick();await h.nodes.get('#demo-scenic-file').onclick();
+ assert.equal(exported.filename,'The-Last-Light.scenic');assert.equal(exported.type,'application/json');
+ assert.equal(JSON.parse(exported.content).scenes.length,8);assert.equal(h.nodes.get('#demo-scenic-file').disabled,false);
+});
