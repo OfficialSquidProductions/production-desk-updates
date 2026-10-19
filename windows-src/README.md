@@ -91,3 +91,8 @@ application identity, update hosting, and signing keys before distribution.
 ## Portable project files (local development)
 
 This working copy adds **Save As…** for one complete `.productiondesk` project and **Import…** for cross-device transfer. All saved fields and original PDFs travel in one file. Existing JSON backups and USS remain supported. See `PORTABLE-PROJECTS.md` for the format, compatibility, tests and development-build limits.
+
+## Offline testing sample
+
+Load Demo beside the production selector opens the Scenic-matched Last Cue sample.
+See [content, coverage, safe reset and removal](DEMO-CONTENT.md).

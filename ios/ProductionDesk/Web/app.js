@@ -1,3 +1,4 @@
+import {createDemoControls} from './demo/demo-controls.js';
 import {mergeProductions} from './project-file.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
 import {createShotDesk} from './shots.js';
@@ -6,7 +7,6 @@ import {nativeAPI, nativePrint} from './native-platform.js';
 import {createAppSettings} from './settings.js';
 import {createElementActions} from './element-actions.js';
 import {bindWorkspacePanes} from './ios-workspace.js';
-import {DEMO_ENABLED,demoForWorkspace} from './demo/demo.js';
 const isIPadApp = !!window.webkit?.messageHandlers?.scheduler;
 if (window.productionDeskWindows) window.print = () => window.productionDeskWindows.print();
 const savedLabel = isIPadApp ? '✓ Saved on this device' : '✓ Saved on this computer';
@@ -57,13 +57,18 @@ function minutes(value) { const m = Math.round((value || 0)/60000); return m >= 
 function customStripAttrs(b){return validStripColor(b._stripColor)?`data-strip-color="${b._stripColor}"`:'';}
 function stripClass(b) { const tod = prop(b,2).toLowerCase(); return tod.includes('night') ? 'night' : /dusk|dawn|evening/.test(tod) ? 'dusk' : prop(b,1).includes('EXT') ? 'ext' : ''; }
 function sceneList() { return project.breakdowns.filter(b => b.type === 'scene'); }
-function mark() { revision++; $('#save-status').textContent = 'Saving to disk…'; clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+function saveStatus(text) {
+  $('#save-status').textContent=text;
+  $('#sidebar-save-text').textContent=text===savedLabel ? (isIPadApp?'Saved on your device':'Saved on your computer') : text.replace(/^✓ /,'');
+  $('.sidebar-save').dataset.state=text===savedLabel?'saved':text.startsWith('Save failed')?'error':'pending';
+}
+function mark() { revision++; saveStatus('Saving to disk…'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
 async function save() {
   if (saving || savedRevision === revision) return;
   saving = true;
   const target = revision, snapshot = clone(workspace);
-  try { await api('/api/workspace', snapshot); savedRevision = target; $('#save-status').textContent = savedLabel; }
-  catch(e) { $('#save-status').textContent = 'Save failed · click to retry'; toast(e.message); }
+  try { await api('/api/workspace', snapshot); savedRevision = target; saveStatus(savedRevision===revision?savedLabel:'Saving to disk…'); }
+  catch(e) { saveStatus('Save failed · click to retry'); toast(e.message); }
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
 function mutate(fn, redraw = true) {
@@ -140,20 +145,6 @@ function render() {
   $('#add-scene').textContent=['shots','lined'].includes(view)?'＋ New shot':'＋ New scene';
   $('#content').innerHTML = view === 'lined' ? linedDesk.render() : view === 'shots' ? shotDesk.render() : view === 'workspace' ? workspaceView() : view === 'schedule' ? scheduleView() : view === 'elements' ? elementsView() : reportsView();
   bindContent(); bindWorkspacePanes($('#workspace-shell')); applyStripColors(); updateUndo();
-}
-let loadingDemo=false;
-async function loadDemo() {
-  if(loadingDemo||!DEMO_ENABLED)return;
-  loadingDemo=true;
-  const button=$('#load-demo');if(button)button.disabled=true;
-  try {
-    document.activeElement?.blur();
-    const result=await demoForWorkspace(workspace);
-    mutate(()=>{if(result.created)workspace.projects.push(result.project);workspace.activeProject=result.project.id;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';});
-    await window.slateDesktop.flush();
-    toast(result.created?'Fictional demo added separately. Your existing productions are preserved.':'Opened your existing demo, keeping its edits.');
-  } catch(error){toast('Demo could not open: '+error.message);}
-  finally{loadingDemo=false;if(button)button.disabled=false;}
 }
 function emptyPanel(message) { return `<div class="empty-state"><h3>A story starts here.</h3>${message}<br><button class="primary" data-action="import">Import your script</button></div>`; }
 function workspaceView() {
@@ -526,6 +517,11 @@ const shotDesk=createShotDesk({
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
 $('#app-settings-open').onclick=()=>appSettings.open();
+const demoControls=createDemoControls({workspace:()=>workspace,importFile:file=>api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}),
+  apply:next=>mutate(()=>{workspace=next;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';}),
+  flush:()=>window.slateDesktop.flush(),modal,toast});
+demoControls.bind();
+
 
 $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[data-view]');if(button){view=button.dataset.view;render();}});
 $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.value;scenarioIndex=0;selected=undefined;search='';});};
@@ -538,9 +534,7 @@ window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preven
 if(isIPadApp){
   document.body.classList.add('ipad-app');
   const importButton=document.createElement('button');importButton.id='import-open';importButton.textContent='Import…';importButton.onclick=importModal;$('.heading-actions').prepend(importButton);
-  if(DEMO_ENABLED){const demoButton=document.createElement('button');demoButton.id='load-demo';demoButton.textContent='Load Demo';demoButton.onclick=loadDemo;$('.heading-actions').prepend(demoButton);}
   $('.brand-edition').textContent=window.SquidPlatform || (window.productionDeskTablet?'iPad':'iOS');
-  $('.offline-pill').innerHTML='<span class="status-dot"></span>Entirely on your device';
   // Keep instructions shared with the desktop while identifying native actions.
   const updateCopy=()=>{
     for(const el of $$('.modal-body p'))el.innerHTML=el.innerHTML.replaceAll('on this computer','on this device').replaceAll('on your computer','on your device').replace('Your local server must be running to use the app.','This app saves directly on your device.');
@@ -550,8 +544,8 @@ if(isIPadApp){
   window.print=()=>nativePrint().catch(e=>toast('PDF export failed: '+e.message));
   document.addEventListener('selectionchange',()=>{const selection=window.getSelection(),script=$('#script-text');if(script&&selection&&!selection.isCollapsed&&script.contains(selection.anchorNode)&&script.contains(selection.focusNode))selectedText=selection.toString().trim();});
 }
-try {workspace=await api('/api/workspace');useProject();render();$('#save-status').textContent=savedLabel;await appSettings.init();document.body.dataset.appReady='true';document.body.dataset.ready='true';}
-catch(e){$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;$('#save-status').textContent=isIPadApp?'Local files unavailable':'Local server unavailable';$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Production Desk, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
+try {workspace=await api('/api/workspace');useProject();render();saveStatus(savedLabel);await appSettings.init();document.body.dataset.appReady='true';document.body.dataset.ready='true';}
+catch(e){$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;saveStatus(isIPadApp?'Local files unavailable':'Local server unavailable');$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Production Desk, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
 
 window.productionDeskSave=()=>window.slateDesktop.flush();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)window.slateDesktop.flush();});

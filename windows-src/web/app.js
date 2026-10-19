@@ -1,3 +1,4 @@
+import {createDemoControls} from './demo/demo-controls.js';
 import {mergeProductions} from './project-file.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
 import {createShotDesk} from './shots.js';
@@ -61,13 +62,18 @@ function minutes(value) { const m = Math.round((value || 0)/60000); return m >= 
 function customStripAttrs(b){return validStripColor(b._stripColor)?`data-strip-color="${b._stripColor}"`:'';}
 function stripClass(b) { const tod = prop(b,2).toLowerCase(); return tod.includes('night') ? 'night' : /dusk|dawn|evening/.test(tod) ? 'dusk' : prop(b,1).includes('EXT') ? 'ext' : ''; }
 function sceneList() { return project.breakdowns.filter(b => b.type === 'scene'); }
-function mark() { revision++; $('#save-status').textContent = 'Saving to disk…'; clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+function saveStatus(text) {
+  $('#save-status').textContent=text;
+  $('#sidebar-save-text').textContent=text===savedLabel ? (isIPadApp?'Saved on your device':'Saved on your computer') : text.replace(/^✓ /,'');
+  $('.sidebar-save').dataset.state=text===savedLabel?'saved':text.startsWith('Save failed')?'error':'pending';
+}
+function mark() { revision++; saveStatus('Saving to disk…'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
 async function save() {
   if (saving || savedRevision === revision) return;
   saving = true;
   const target = revision, snapshot = clone(workspace);
-  try { await api('/api/workspace', snapshot); savedRevision = target; $('#save-status').textContent = savedLabel; }
-  catch(e) { $('#save-status').textContent = 'Save failed · click to retry'; toast(e.message); }
+  try { await api('/api/workspace', snapshot); savedRevision = target; saveStatus(savedRevision===revision?savedLabel:'Saving to disk…'); }
+  catch(e) { saveStatus('Save failed · click to retry'); toast(e.message); }
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
 function mutate(fn, redraw = true) {
@@ -505,6 +511,11 @@ const shotDesk=createShotDesk({
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
 $('#app-settings-open').onclick=()=>appSettings.open();
+const demoControls=createDemoControls({workspace:()=>workspace,importFile:file=>api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}),
+  apply:next=>mutate(()=>{workspace=next;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';}),
+  flush:()=>window.slateDesktop.flush(),modal,toast});
+demoControls.bind();
+
 
 $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[data-view]');if(button){view=button.dataset.view;render();}});
 $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.value;scenarioIndex=0;selected=undefined;search='';});};
@@ -517,7 +528,6 @@ window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preven
 if(isIPadApp){
   document.body.classList.add('ipad-app');
   $('.brand-edition').textContent='IPAD EDITION';
-  $('.offline-pill').innerHTML='<span class="status-dot"></span>Entirely on your iPad';
   // Keep instructions shared with the desktop while identifying native actions.
   const updateCopy=()=>{
     for(const el of $$('.modal-body p'))el.innerHTML=el.innerHTML.replaceAll('on this computer','on this iPad').replaceAll('on your computer','on your iPad').replace('Your local server must be running to use the app.','This app saves directly on your iPad.');
@@ -527,5 +537,5 @@ if(isIPadApp){
   window.print=()=>nativePrint().catch(e=>toast('PDF export failed: '+e.message));
   document.addEventListener('selectionchange',()=>{const selection=window.getSelection(),script=$('#script-text');if(script&&selection&&!selection.isCollapsed&&script.contains(selection.anchorNode)&&script.contains(selection.focusNode))selectedText=selection.toString().trim();});
 }
-try {workspace=await api('/api/workspace');useProject();render();$('#save-status').textContent=savedLabel;await appSettings.init();editorReady(true);}
-catch(e){editorReady(false);$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;$('#save-status').textContent=isIPadApp?'Local files unavailable':'Local server unavailable';$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Scheduler, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
+try {workspace=await api('/api/workspace');useProject();render();saveStatus(savedLabel);await appSettings.init();editorReady(true);}
+catch(e){editorReady(false);$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;saveStatus(isIPadApp?'Local files unavailable':'Local server unavailable');$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Scheduler, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}

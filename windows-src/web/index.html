@@ -10,14 +10,13 @@
   <link rel="stylesheet" href="/support.css">
   <script src="/support.js"></script>
   <script type="module" src="/app.js"></script>
-<link rel="stylesheet" href="/platform-branding.css"><script defer src="/platform-branding.js"></script></head>
+<link rel="stylesheet" href="/platform-branding.css"><script defer src="/platform-branding.js"></script><link rel="stylesheet" href="/production-start.css"></head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="/" aria-label="SP production desk home"><span class="sp-logo-frame"><img src="/assets/sp-logo.png" alt="SP logo"></span><span class="brand-title">PRODUCTION<br>DESK<span class="brand-edition" data-platform-label>Desktop</span></span></a>
-    <div class="sidebar-caption software-credit">A Squid Productions™ Software</div>
-    <div class="offline-pill sidebar-save"><span class="status-dot"></span>Saved on your computer</div>
-    <div class="production-picker-heading"><label class="project-label" for="project-picker">Production</label><button id="new-open" aria-label="New production" title="New production">+</button></div>
+    <a class="brand" href="/" aria-label="SP production desk home"><span class="sp-logo-frame"><img src="/assets/sp-logo.png" alt="SP logo"></span><span class="brand-copy"><span class="brand-title">PRODUCTION<br>DESK</span><span class="brand-edition" data-platform-label>Desktop</span><span class="software-credit">A Squid Productions™ Software</span><span class="offline-pill sidebar-save"><span class="status-dot"></span><span id="sidebar-save-text">Loading local files…</span></span></span></a>
+    <div class="production-picker-heading"><label class="project-label" for="project-picker">Production</label><button id="new-open" aria-label="New production" title="New production"><span class="new-production-glyph" aria-hidden="true">+</span></button></div>
     <select id="project-picker"></select>
+    <div id="demo-launcher" class="demo-launcher" hidden><button id="load-demo">Load Demo</button><button id="demo-guide">Demo guide</button><small>Offline sample · matches Scenic</small></div>
     <div class="sidebar-caption">PRODUCTION TOOLS</div>
     <nav id="navigation" aria-label="Main navigation">
       <button data-view="workspace" class="active"><span>▤</span>Main breakdown</button>

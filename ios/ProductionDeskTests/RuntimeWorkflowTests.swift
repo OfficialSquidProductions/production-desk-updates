@@ -398,10 +398,13 @@ final class RuntimeWorkflowTests: XCTestCase {
     }
 
     @MainActor func testDemoLoadEditRepeatPortableExportImportPreservesExistingProductions() async throws {
+        let fixture=try XCTUnwrap(Bundle(for:PlatformTests.self).url(forResource:"portable-desktop",withExtension:"productiondesk",subdirectory:"Fixtures"))
+        let lastLight=try String(contentsOf:fixture,encoding:.utf8)
         let desk=try await openDesk()
         let result=try await desk.webView.callAsyncJavaScript("""
         const {nativeAPI}=await import('/native-platform.js');
         const {projectFile}=await import('/project-file.js');
+        const {DEMO_KEY,managedDemo}=await import('/demo/demo.js');
         const $=s=>document.querySelector(s),clone=v=>structuredClone(v);
         const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
         const same=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
@@ -410,51 +413,161 @@ final class RuntimeWorkflowTests: XCTestCase {
           if(a&&b&&typeof a==='object'&&typeof b==='object')return [...new Set([...Object.keys(a),...Object.keys(b)])].flatMap(k=>differences(a[k],b[k],path+'/'+k));
           return [{path,before:a??null,after:b??null,beforeType:typeof a,afterType:typeof b}];
         };
-        const load=async()=>{$('#load-demo').click();for(let i=0;i<100&&$('#load-demo').disabled;i++)await new Promise(r=>setTimeout(r,25));await window.productionDeskSave();return nativeAPI('/api/workspace');};
-        // A fresh native workspace is stored before openDesk adds optional shot
-        // defaults. A clean flush has no dirty revision to persist. Select the
-        // same production through its real UI before taking the demo baseline.
-        const initial=await nativeAPI('/api/workspace');
-        $('#project-picker').dispatchEvent(new Event('change',{bubbles:true}));
-        if(!await window.productionDeskSave())throw Error('Initial production save did not finish');
-        const before=await nativeAPI('/api/workspace'),oldDemo=before.projects.find(p=>p._betaDemo?.key==='productiondesk.the-last-cue.v1');
-        const initializationDiagnostics=initial.projects.flatMap(p=>differences(p,before.projects.find(q=>q.id===p.id)).map(d=>({id:p.id,...d})));
-        const initializationAddsOnlyDefaults=initial.projects.length===before.projects.length&&initial.activeProject===before.activeProject&&initializationDiagnostics.every(d=>
-          d.beforeType==='undefined'&&((d.path==='/_shots'&&same(d.after,[]))||(d.path==='/_shotSettings'&&same(d.after,{startTime:'07:00'}))));
-        const first=await load(),demo=first.projects.find(p=>p.id===first.activeProject),demoID=demo.id;
-        if(!demo._betaDemo)throw Error('Bundled demo did not load: '+$('#toast').textContent);
-        const preserved=before.projects.every(p=>first.projects.some(q=>q.id===p.id&&same(p,q)));
-        const preservationDiagnostics=before.projects.flatMap(p=>{
-          const q=first.projects.find(q=>q.id===p.id);
-          return same(p,q)?[]:[{id:p.id,title:p.project,activeBefore:p.id===before.activeProject,activeAfter:p.id===first.activeProject,differences:differences(p,q)}];
-        });
+        const flush=async()=>{if(!await window.productionDeskSave())throw Error('Native disk flush failed');return nativeAPI('/api/workspace');};
+        const wait=async()=>{for(let i=0;i<200&&$('#load-demo').disabled;i++)await new Promise(r=>setTimeout(r,25));if($('#load-demo').disabled)throw Error('Demo did not finish: '+$('#toast').textContent);return flush();};
+        const load=async()=>{$('#load-demo').click();return wait();};
+        const reset=async()=>{$('#demo-guide').click();$('#demo-reset').click();$('#demo-reset-confirm').click();return wait();};
+        const unchanged=(before,after,except)=>before.projects.filter(p=>p.id!==except).every(p=>after.projects.some(q=>q.id===p.id&&same(p,q)));
+        const importText=async(text,name)=>{await window.slateDesktop.importProjectFile(new File([text],name,{type:'application/json'}));return flush();};
+        // Persist normal UI initialization before the demo preservation baseline.
+        $('#project-picker').dispatchEvent(new Event('change',{bubbles:true}));await flush();
+        // Explicit legacy and Last Light fixtures make their preservation checks
+        // independent of earlier simulator runs. Both enter by the real importer.
+        const legacy=await nativeAPI('/api/new',{title:'Legacy v1 demo preserved'});legacy._demo=true;legacy._betaDemo={key:'productiondesk.the-last-cue.v1',version:1};legacy._legacyNote='Preserve this original v1 sample';
+        let seeded=await importText(JSON.stringify(projectFile({version:1,activeProject:legacy.id,projects:[legacy],_pdfDocuments:{}})),'Legacy-v1.productiondesk');
+        const legacyID=seeded.activeProject;
+        seeded=await importText(lastLight,'The-Last-Light.productiondesk');const lastLightID=seeded.activeProject;
+        const before=await flush(),oldManaged=managedDemo(before);
+        const first=await load(),opened=managedDemo(first);
+        if(!opened)throw Error('Bundled demo ownership missing: '+$('#toast').textContent);
+        const preserved=unchanged(before,first),firstCount=first.projects.length===before.projects.length+(oldManaged?0:1);
+        const preservationDiagnostics=before.projects.flatMap(p=>differences(p,first.projects.find(q=>q.id===p.id)).map(d=>({id:p.id,...d})));
+        // A prior run may have left edits. Reset through the explicit confirmation
+        // so canonical assertions always inspect the shipped offline file.
+        const canonicalWorkspace=await reset(),canonical=managedDemo(canonicalWorkspace),demoID=canonical.id;
+        const firstResetPreservesOthers=unchanged(first,canonicalWorkspace,opened.id);
+        const reference=await (await fetch('/demo/scenic-reference.json')).json();
+        const shotReference=canonical._shots.every((s,i)=>['description','size','movement','camera','lens','equipment','status','notes'].every(k=>s[k]===reference.scene.shotList[i][k]));
+        const scenes=canonical.breakdowns.filter(b=>b.type==='scene'),banners=canonical.breakdowns.filter(b=>b.type==='banner');
+        const schedule=canonical.stripboards[0],alternate=canonical.stripboards[1],sceneID=scenes[0].id;
+        const scheduled=schedule.boards[0].breakdownIds.flat().includes(sceneID)&&!schedule.boards[1].breakdownIds.flat().includes(sceneID);
+        const unscheduled=!alternate.boards[0].breakdownIds.flat().includes(sceneID)&&alternate.boards[1].breakdownIds.flat().includes(sceneID);
+        const pdfDocument=canonical._linedScript.documents[0],hash=pdfDocument.sha256;
+        const linkedCoverage=pdfDocument.marks.filter(m=>m.type==='coverage').every(m=>canonical._shots.some(s=>s.id===m.shotId));
+        const departments=[104,110,111,112,113,115,116,119,123].every(ucid=>canonical.elements.some(e=>canonical.categories.find(c=>c.id===e.category)?.ucid===ucid));
+        const availability=canonical.elements.some(e=>e.events?.some(v=>v.type==='dayOff'))&&canonical.calendars.some(c=>c.events.some(v=>v.type==='dayOff'));
         const field=$('[data-field="description"]');field.value='Demo rehearsal edit retained';field.dispatchEvent(new Event('input',{bubbles:true}));
         $('#content [data-action="edit-script"]').click();$('#edit-text').value+='\\n\\nMAYA\\nKeep this demo rehearsal note.';$('#edit-submit').click();
-        await window.productionDeskSave();const edited=await nativeAPI('/api/workspace'),editedDemo=edited.projects.find(p=>p.id===demoID);
-        const repeated=await load();
-        const portable=projectFile({version:1,activeProject:demoID,projects:[clone(editedDemo)],_pdfDocuments:await window.webkit.messageHandlers.scheduler.postMessage({operation:'backupPDFs',workspace:{projects:[editedDemo]}})});
-        const encoded=JSON.stringify(portable);
-        await window.slateDesktop.importProjectFile(new File([encoded],'The-Last-Cue-edited.productiondesk',{type:'application/json'}));
-        await window.productionDeskSave();const imported=await nativeAPI('/api/workspace'),copy=imported.projects.find(p=>p.id===imported.activeProject);
-        return {preserved,preservationDiagnostics:JSON.stringify(preservationDiagnostics),initializationAddsOnlyDefaults,initializationDiagnostics:JSON.stringify(initializationDiagnostics),count:first.projects.length,expected:before.projects.length+(oldDemo?0:1),
-          repeatCount:repeated.projects.length,repeatID:repeated.activeProject===demoID,repeatEdits:same(repeated.projects.find(p=>p.id===demoID),editedDemo),
-          source:editedDemo._sourceScript.text.includes('The Last Cue'),scenes:editedDemo.breakdowns.length,shots:editedDemo._shots.length,
-          exportedEdit:portable.workspace.projects[0].breakdowns[0].description,
-          importCount:imported.projects.length===repeated.projects.length+1,importName:copy.project.includes('imported copy'),
-          importEdit:copy.breakdowns[0].description,importScript:copy.breakdowns[0]._scriptText.includes('Keep this demo rehearsal note.'),
-          existingAfterImport:repeated.projects.every(p=>imported.projects.some(q=>q.id===p.id&&same(p,q))),portable:encoded};
+        $('#settings-open').click();$('[data-field="title"]').value='Renamed edited Scenic demo';$('#settings-submit').click();
+        const edited=await flush(),editedDemo=managedDemo(edited),repeated=await load();
+        const attachments=await window.webkit.messageHandlers.scheduler.postMessage({operation:'backupPDFs',workspace:{projects:[editedDemo]}});
+        // Even a portable file carrying a forged registry cannot transfer reset
+        // ownership. Imported project/annotation IDs are remapped consistently.
+        const portable=projectFile({version:1,activeProject:demoID,projects:[clone(editedDemo)],_pdfDocuments:attachments,_demoProjects:{[DEMO_KEY]:demoID}});
+        const encoded=JSON.stringify(portable),imported=await importText(encoded,'The-Last-Cue-edited.productiondesk'),copy=imported.projects.find(p=>p.id===imported.activeProject);
+        const pdfBase64=await window.webkit.messageHandlers.scheduler.postMessage({operation:'readPDF',sha256:hash});
+        const copyDocument=copy._linedScript.documents[0];
+        const copyLinks=copyDocument.marks.filter(m=>m.type==='coverage').every(m=>copy._shots.some(s=>s.id===m.shotId))&&copy._shots.every(s=>copy.breakdowns.some(b=>b.id===s.sceneId));
+        $('#demo-guide').click();$('#demo-reset').click();$('#demo-reset-cancel').click();
+        const cancelled=await flush();
+        // The selected imported copy must remain untouched while the separately
+        // owned sample resets. Undo restores ownership, edits and selection.
+        const resetWorkspace=await reset(),resetDemo=managedDemo(resetWorkspace);
+        const resetPreservesOthers=unchanged(imported,resetWorkspace,demoID);
+        const resetCanonical=resetDemo.project==='DEMO · The Last Cue'&&resetDemo.breakdowns[0].description===canonical.breakdowns[0].description&&resetDemo.breakdowns[0]._scriptText===canonical.breakdowns[0]._scriptText&&same(resetDemo._shots.map(s=>s.description),canonical._shots.map(s=>s.description))&&resetDemo._linedScript.documents[0].sha256===hash&&resetDemo._linedScript.documents[0].marks.length===6;
+        $('#undo').click();const undone=await flush();
+        const afterUndoReopen=await load();
+        return {marker:DEMO_KEY,preserved,firstCount,preservationDiagnostics:JSON.stringify(preservationDiagnostics),firstResetPreservesOthers,
+          legacyPreserved:same(before.projects.find(p=>p.id===legacyID),afterUndoReopen.projects.find(p=>p.id===legacyID)),lastLightPreserved:same(before.projects.find(p=>p.id===lastLightID),afterUndoReopen.projects.find(p=>p.id===lastLightID)),
+          scenes:scenes.length,banners:banners.length,shots:canonical._shots.length,cameras:canonical._shots.map(s=>s.camera),lenses:canonical._shots.map(s=>s.lens),shotReference,scheduled,unscheduled,departments,availability,
+          marks:pdfDocument.marks.length,coverage:pdfDocument.marks.filter(m=>m.type==='coverage').length,markTypes:[...new Set(pdfDocument.marks.map(m=>m.type))].sort(),linkedCoverage,
+          repeatCount:repeated.projects.length===edited.projects.length,repeatID:repeated.activeProject===demoID,repeatEdits:same(managedDemo(repeated),editedDemo),
+          source:editedDemo._sourceScript.text.includes('The Last Cue'),exportedEdit:portable.workspace.projects[0].breakdowns[0].description,
+          importCount:imported.projects.length===repeated.projects.length+1,importName:copy.project.includes('imported copy'),importEdit:copy.breakdowns[0].description,importScript:copy.breakdowns[0]._scriptText.includes('Keep this demo rehearsal note.'),
+          existingAfterImport:unchanged(repeated,imported),importNoOwnership:imported._demoProjects[DEMO_KEY]===demoID&&copy.id!==demoID,copyLinks,pdfMatches:attachments[hash]===pdfBase64&&copyDocument.sha256===hash,
+          cancelUnchanged:same(cancelled,imported),resetPreservesOthers,resetCanonical,undoExact:same(undone,imported),undoReopensEdited:same(managedDemo(afterUndoReopen),editedDemo),noDuplicateAfterUndo:afterUndoReopen.projects.length===imported.projects.length,
+          pdfBase64,portable:encoded};
+        """,arguments:["lastLight":lastLight],in:nil,contentWorld:.page)
+        let v=try XCTUnwrap(result as? [String:Any])
+        var summary=v;summary.removeValue(forKey:"portable");summary.removeValue(forKey:"pdfBase64")
+        let report=XCTAttachment(data:try JSONSerialization.data(withJSONObject:summary,options:[.prettyPrinted,.sortedKeys]),uniformTypeIdentifier:"public.json");report.name="Native Scenic demo workflow results";report.lifetime = .keepAlways;add(report)
+        let diagnostics=XCTAttachment(string:try XCTUnwrap(v["preservationDiagnostics"] as? String));diagnostics.name="Scenic demo existing production field differences";diagnostics.lifetime = .keepAlways;add(diagnostics)
+        for key in ["preserved","firstCount","firstResetPreservesOthers","legacyPreserved","lastLightPreserved","shotReference","scheduled","unscheduled","departments","availability","linkedCoverage","repeatCount","repeatID","repeatEdits","source","importCount","importName","importScript","existingAfterImport","importNoOwnership","copyLinks","pdfMatches","cancelUnchanged","resetPreservesOthers","resetCanonical","undoExact","undoReopensEdited","noDuplicateAfterUndo"] {XCTAssertEqual(v[key] as? Bool,true,key)}
+        XCTAssertEqual(v["marker"] as? String,"productiondesk.scenic.the-last-cue.v2")
+        XCTAssertEqual(v["scenes"] as? Int,1);XCTAssertEqual(v["banners"] as? Int,2);XCTAssertEqual(v["shots"] as? Int,4)
+        XCTAssertEqual(v["cameras"] as? [String],["A","B","C","D"]);XCTAssertEqual(v["lenses"] as? [String],["24","50","85","35"])
+        XCTAssertEqual(v["marks"] as? Int,6);XCTAssertEqual(v["coverage"] as? Int,2)
+        XCTAssertEqual(v["markTypes"] as? [String],["arrow","coverage","highlighter","pen","text"])
+        XCTAssertEqual(v["exportedEdit"] as? String,"Demo rehearsal edit retained");XCTAssertEqual(v["importEdit"] as? String,"Demo rehearsal edit retained")
+        let pdfData=try XCTUnwrap(Data(base64Encoded:try XCTUnwrap(v["pdfBase64"] as? String)))
+        let pdf=try XCTUnwrap(PDFDocument(data:pdfData));XCTAssertEqual(pdf.pageCount,2);XCTAssertTrue(pdf.string?.contains("THE LAST CUE")==true)
+        let fixtureAttachment=XCTAttachment(string:try XCTUnwrap(v["portable"] as? String));fixtureAttachment.name="The-Last-Cue-v2-edited.productiondesk";fixtureAttachment.lifetime = .keepAlways;add(fixtureAttachment)
+    }
+
+    @MainActor func testSidebarPermanentDemoControlsAndSaveFailureRecovery() async throws {
+        let desk=try await openDesk()
+        let scene=try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window=try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let previous=window.rootViewController
+        defer { window.rootViewController=previous }
+        window.rootViewController=desk
+        let result=try await desk.webView.callAsyncJavaScript("""
+        const $=s=>document.querySelector(s),send=v=>window.webkit.messageHandlers.scheduler.postMessage(v);
+        const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
+        const same=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
+        if(!$('[data-field="pages"]')){
+          $('#load-demo').click();for(let i=0;i<200&&$('#load-demo').disabled;i++)await new Promise(r=>setTimeout(r,25));
+        }
+        $('#project-picker').dispatchEvent(new Event('change',{bubbles:true}));await window.productionDeskSave();
+        const initial=await send({operation:'load'}),pages=$('[data-field="pages"]'),originalPages=Number(pages.value),replacement=originalPages+.125;
+        // The editor first rejects this invalid value itself. Relax only this
+        // test element's min constraint to inject malformed data into the next
+        // validation boundary; the native bridge and disk stay untouched.
+        pages.value='-1';pages.dispatchEvent(new Event('input',{bubbles:true}));
+        const clientRejected=!pages.checkValidity()&&$('.sidebar-save').dataset.state==='saved',minimum=pages.getAttribute('min');
+        pages.removeAttribute('min');pages.dispatchEvent(new Event('input',{bubbles:true}));
+        const pending=$('.sidebar-save').dataset.state==='pending'&&$('#sidebar-save-text').textContent==='Saving to disk…';
+        const failedFlush=!await window.productionDeskSave(),error=$('.sidebar-save').dataset.state==='error'&&$('#sidebar-save-text').textContent.includes('Save failed');
+        const unchanged=same(await send({operation:'load'}),initial),failureReason=$('#toast').textContent;
+        if(minimum!==null)pages.setAttribute('min',minimum);
+        pages.value=String(replacement);pages.dispatchEvent(new Event('input',{bubbles:true}));
+        const saved=await window.productionDeskSave(),recovered=saved&&$('.sidebar-save').dataset.state==='saved'&&$('#sidebar-save-text').textContent==='Saved on your device';
+        const stored=await send({operation:'load'}),recoveredPersisted=stored.projects.find(p=>p.id===stored.activeProject).breakdowns.some(b=>b.id===$('#scene-picker').value&&b.pages===replacement);
+        $('#undo').click();await window.productionDeskSave();const restored=same(await send({operation:'load'}),initial);
+        return {clientRejected,pending,error,recovered,failedFlush,unchanged,restored,recoveredPersisted,failureReason,permanent:$('#load-demo').closest('.sidebar')!==null&&$('#demo-guide').closest('.sidebar')!==null&&document.querySelectorAll('#load-demo').length===1,
+          hierarchy:$('.brand-copy').contains($('.software-credit'))&&$('.brand-copy').contains($('.sidebar-save')),credit:$('.software-credit').textContent.trim(),platform:$('[data-platform-label]').textContent};
         """,arguments:[:],in:nil,contentWorld:.page)
         let v=try XCTUnwrap(result as? [String:Any])
-        for (key,name) in [("initializationDiagnostics","Initial production optional defaults"),("preservationDiagnostics","Demo load existing production field differences")] {
-            let diagnostics=XCTAttachment(string:try XCTUnwrap(v[key] as? String));diagnostics.name=name;diagnostics.lifetime = .keepAlways;add(diagnostics)
+        let trace=XCTAttachment(string:String(describing:v));trace.name="Sidebar native validation save failure and recovery";trace.lifetime = .keepAlways;add(trace)
+        for key in ["clientRejected","pending","error","recovered","failedFlush","unchanged","restored","recoveredPersisted","permanent","hierarchy"] {XCTAssertEqual(v[key] as? Bool,true,key)}
+        XCTAssertTrue((v["failureReason"] as? String)?.contains("nonnegative")==true)
+        XCTAssertEqual(v["credit"] as? String,"A Squid Productions™ Software")
+        XCTAssertEqual(v["platform"] as? String,UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iOS")
+        let sizes=UIDevice.current.userInterfaceIdiom == .pad ? [CGSize(width:744,height:1133),CGSize(width:1133,height:744)] : [CGSize(width:390,height:844),CGSize(width:844,height:390)]
+        for theme in ["light","dark"] {
+            _ = try await desk.webView.callAsyncJavaScript("""
+            document.querySelector('#app-settings-open').click();
+            const choice=document.querySelector('[data-theme-choice="'+theme+'"]');choice.click();
+            for(let i=0;i<50&&choice.disabled;i++)await new Promise(r=>setTimeout(r,20));
+            document.querySelector('#modal').close();
+            """,arguments:["theme":theme],in:nil,contentWorld:.page)
+            for size in sizes {
+                desk.view.frame=CGRect(origin:.zero,size:size);desk.view.layoutIfNeeded()
+                try await Task.sleep(for:.milliseconds(200))
+                let layout=try await desk.webView.callAsyncJavaScript("""
+                const $=s=>document.querySelector(s),r=s=>$(s).getBoundingClientRect(),shown=s=>r(s).width>0&&r(s).height>0&&getComputedStyle($(s)).visibility!=='hidden';
+                const credit=r('.software-credit'),edition=r('.brand-edition'),saved=r('.sidebar-save'),plus=r('#new-open'),title=$('.brand-title'),picker=$('#project-picker'),pickerStyle=getComputedStyle(picker);
+                return {width:innerWidth,height:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth+1,
+                  creditUnderName:credit.top>=edition.bottom-1,saveUnderCredit:saved.top>=credit.bottom-1,
+                  plusWidth:plus.width,plusHeight:plus.height,glyphSize:parseFloat(getComputedStyle($('.new-production-glyph')).fontSize),glyph:$('.new-production-glyph').textContent,
+                  controlsVisible:shown('#load-demo')&&shown('#demo-guide')&&shown('#new-open'),
+                  controlsInside:[r('#load-demo'),r('#demo-guide'),plus].every(v=>v.left>=-1&&v.right<=innerWidth+1),
+                  brandTitleClientWidth:title.clientWidth,brandTitleScrollWidth:title.scrollWidth,brandTitleFits:title.scrollWidth<=title.clientWidth,
+                  pickerHeight:r('#project-picker').height,pickerFont:pickerStyle.fontSize,pickerLineHeight:pickerStyle.lineHeight,pickerPadding:pickerStyle.padding,
+                  platform:$('[data-platform-label]').textContent,footer:$('.sidebar-bottom small').textContent,theme:document.documentElement.dataset.theme};
+                """,arguments:[:],in:nil,contentWorld:.page)
+                let l=try XCTUnwrap(layout as? [String:Any])
+                let attachment=XCTAttachment(string:String(describing:l));attachment.name="Sidebar \(theme) \(size)";attachment.lifetime = .keepAlways;add(attachment)
+                for key in ["creditUnderName","saveUnderCredit","controlsVisible","controlsInside","brandTitleFits"] {XCTAssertEqual(l[key] as? Bool,true,"\(key): \(l)")}
+                XCTAssertEqual(l["overflow"] as? Bool,false,"\(l)")
+                XCTAssertGreaterThanOrEqual(l["plusWidth"] as? Double ?? 0,44);XCTAssertGreaterThanOrEqual(l["plusHeight"] as? Double ?? 0,44)
+                XCTAssertGreaterThanOrEqual(l["pickerHeight"] as? Double ?? 0,44)
+                XCTAssertEqual(l["glyphSize"] as? Double,18);XCTAssertEqual(l["glyph"] as? String,"+")
+                XCTAssertEqual(l["platform"] as? String,UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iOS")
+                XCTAssertTrue((l["footer"] as? String)?.contains(Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "missing") == true)
+                XCTAssertEqual(l["theme"] as? String,theme)
+            }
         }
-        for key in ["initializationAddsOnlyDefaults","preserved","repeatID","repeatEdits","source","importCount","importName","importScript","existingAfterImport"] {XCTAssertEqual(v[key] as? Bool,true,key)}
-        XCTAssertEqual(v["count"] as? Int,v["expected"] as? Int)
-        XCTAssertEqual(v["repeatCount"] as? Int,v["count"] as? Int)
-        XCTAssertEqual(v["scenes"] as? Int,3);XCTAssertEqual(v["shots"] as? Int,3)
-        XCTAssertEqual(v["exportedEdit"] as? String,"Demo rehearsal edit retained")
-        XCTAssertEqual(v["importEdit"] as? String,"Demo rehearsal edit retained")
-        let fixture=XCTAttachment(string:try XCTUnwrap(v["portable"] as? String));fixture.name="The-Last-Cue-edited.productiondesk";fixture.lifetime = .keepAlways;add(fixture)
     }
 
 }

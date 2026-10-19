@@ -360,37 +360,101 @@ test('legacy full JSON backups with missing schedules are repaired without losin
  validateWorkspace(result.workspace);
 });
 
-test('offline demo contains an original script, editable theatre breakdown, schedule and shots',async()=>{
- const {createDemoProduction,DEMO_KEY}=await import('../ProductionDesk/Web/demo/demo.js');
- const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');
- const p=createDemoProduction(text);validateUSS(p);
- assert.equal(p.project,'DEMO · The Last Cue');assert.equal(p._betaDemo.key,DEMO_KEY);assert.equal(p._sourceScript.text,text);
- assert.equal(p.breakdowns.length,3);assert.equal(p._shots.length,3);assert.equal(p.stripboards[0].boards[0].breakdownIds[0].length,3);
- for(const name of ['Prop notebook','Practical lamp','Desk','Chair','Lighting cue 12'])assert.ok(p.elements.some(e=>e.name===name),name);
- assert.match(text,/adult student stage manager/);assert.match(text,/adult student lighting operator/);
- assert.ok(p.breakdowns.every(b=>b.description&&b.comments&&b._scriptText&&b.duration>0));
+const demoFixture=()=>JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.productiondesk',import.meta.url),'utf8')).workspace;
+const runtimeDemo=()=>{const w=demoFixture();delete w._pdfDocuments;return w;};
+
+test('offline sample retains the Scenic story, shots, portable PDF and every relationship',async()=>{
+ const {readProjectFile}=await import('../ProductionDesk/Web/project-file.js');
+ const value=JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.productiondesk',import.meta.url),'utf8'));
+ const w=readProjectFile(value),p=w.projects[0];validateUSS(p);
+ assert.equal(p.project,'DEMO · The Last Cue');assert.equal(p.breakdowns.filter(b=>b.type==='scene').length,1);
+ assert.equal(p.breakdowns.filter(b=>b.type==='banner').length,2);assert.equal(p.stripboards.length,2);
+ assert.equal(p._shots.length,4);assert.deepEqual(p._shots.map(s=>s.camera),['A','B','C','D']);
+ assert.deepEqual(p._shots.map(s=>String(s.lens)),['24','50','85','35']);
+ assert.ok(p._shots.every(s=>s.sceneId===p.breakdowns[0].id&&s.status==='Planned'));
+ assert.equal(p._linedScript.documents[0].marks.length,6);
+ const raw=Buffer.from(Object.values(w._pdfDocuments)[0],'base64');assert.ok(raw.subarray(0,8).toString().startsWith('%PDF-1.4'));
+ const {createHash}=await import('node:crypto');assert.equal(createHash('sha256').update(raw).digest('hex'),p._linedScript.activePdf);
+ const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');assert.equal(p._sourceScript.text,text);
+ for(const sentence of ['From the top. Desk set, notebook ready. Stand by cue twelve.','I followed thirteen. My mistake. Reset twelve?','And rehearsal complete.'])assert.ok(text.includes(sentence));
 });
-test('demo load is separate and non-mutating; repeated loads preserve renamed and edited work',async()=>{
- const {demoForWorkspace}=await import('../ProductionDesk/Web/demo/demo.js');
- const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');
- const w=workspace(project()),original=structuredClone(w);
- const first=await demoForWorkspace(w,async()=>text);assert.equal(first.created,true);assert.deepEqual(w,original);assert.notEqual(first.project.id,w.projects[0].id);
- w.projects.push(first.project);first.project.project='My renamed rehearsal';first.project.breakdowns[0].description='Keep this edit';
- const saved=structuredClone(w);const repeat=await demoForWorkspace(w,async()=>{throw Error('Repeated load must not reread or reset the sample');});
- assert.equal(repeat.created,false);assert.equal(repeat.project,first.project);assert.deepEqual(w,saved);
+test('demo load preserves legacy samples, same-title productions, workspace extensions and edited repeats',async()=>{
+ const {DEMO_KEY,planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const incoming=runtimeDemo(),w=workspace(project());w.projects[0].project=incoming.projects[0].project;w.projects[0]._betaDemo={key:'productiondesk.the-last-cue.v1'};w._extension={keep:true};
+ const before=structuredClone(w),first=planDemo(w,incoming);assert.deepEqual(w,before);assert.equal(first.workspace.projects.length,2);
+ assert.deepEqual(first.workspace.projects[0],w.projects[0]);assert.deepEqual(first.workspace._extension,w._extension);
+ const demo=managedDemo(first.workspace);assert.equal(first.workspace._demoProjects[DEMO_KEY],demo.id);assert.notEqual(demo.id,w.projects[0].id);
+ demo.project='My renamed rehearsal';demo.breakdowns[0].description='Keep this edit';
+ const saved=structuredClone(first.workspace),repeat=planDemo(first.workspace);assert.equal(repeat.created,false);assert.deepEqual(first.workspace,saved);
+ assert.equal(repeat.workspace.activeProject,demo.id);assert.deepEqual(managedDemo(repeat.workspace),demo);assert.equal(repeat.workspace.projects.length,2);
 });
-test('edited demo exports and imports with its original script and relationships without replacing existing work',async()=>{
- const {createDemoProduction}=await import('../ProductionDesk/Web/demo/demo.js');
- const {projectFile,readProjectFile,mergeProductions}=await import('../ProductionDesk/Web/project-file.js');
- const p=createDemoProduction(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8'));
- p.breakdowns[0].comments='Demo edit retained';p._shots[0].notes='Try a second take';
- const w=workspace(p),file=projectFile({...w,_pdfDocuments:{}}),returned=readProjectFile(JSON.parse(JSON.stringify(file)));
- assert.deepEqual(returned.projects[0],p);
- const existing=workspace(project()),before=structuredClone(existing);const merged=mergeProductions(existing,returned.projects,returned.activeProject);
- assert.deepEqual(existing,before);assert.equal(merged.workspace.projects.length,2);assert.equal(merged.workspace.projects[0].id,before.projects[0].id);
- assert.equal(merged.imported[0].breakdowns[0].comments,'Demo edit retained');assert.equal(merged.imported[0]._shots[0].notes,'Try a second take');
+test('portable copies never acquire reset ownership; safe reset replaces only its managed sample',async()=>{
+ const {planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const {mergeProductions,projectFile,readProjectFile}=await import('../ProductionDesk/Web/project-file.js');
+ const source=demoFixture(),first=planDemo(workspace(project()),runtimeDemo()).workspace,owned=managedDemo(first);
+ owned.breakdowns[0].comments='Only this edited demo may reset';
+ const portable=projectFile({version:1,activeProject:owned.id,projects:[structuredClone(owned)],_pdfDocuments:source._pdfDocuments});
+ const returned=readProjectFile(JSON.parse(JSON.stringify(portable)));
+ const merged=mergeProductions(first,returned.projects,returned.activeProject).workspace,imported=merged.projects.at(-1);
+ assert.notEqual(imported.id,owned.id);assert.equal(managedDemo(merged).id,owned.id);assert.equal(imported.breakdowns[0].comments,'Only this edited demo may reset');
+ assert.throws(()=>planDemo(merged,runtimeDemo(),imported.id),/Only the demo created here/);
+ const before=structuredClone(merged),reset=planDemo(merged,runtimeDemo(),owned.id).workspace;
+ assert.deepEqual(merged,before);assert.equal(reset.projects.length,merged.projects.length);
+ for(const p of merged.projects.filter(p=>p.id!==owned.id))assert.deepEqual(reset.projects.find(q=>q.id===p.id),p);
+ assert.notEqual(managedDemo(reset).breakdowns[0].comments,owned.breakdowns[0].comments);
+ // A copied marker without the workspace-local registry is an ordinary production.
+ assert.equal(managedDemo({version:1,projects:[imported],activeProject:imported.id}),undefined);
 });
-test('a failed demo asset load leaves existing productions untouched',async()=>{
- const {demoForWorkspace}=await import('../ProductionDesk/Web/demo/demo.js');const w=workspace(project()),before=structuredClone(w);
- await assert.rejects(()=>demoForWorkspace(w,async()=>{throw Error('Demo asset unavailable');}),/Demo asset unavailable/);assert.deepEqual(w,before);
+test('collision and stale-registry demo loading preserves imported copies and valid relationships',async()=>{
+ const {DEMO_KEY,planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const incoming=runtimeDemo(),w=structuredClone(incoming);w._demoProjects={[DEMO_KEY]:'deleted-production'};
+ const before=structuredClone(w),added=planDemo(w,incoming).workspace;
+ assert.deepEqual(w,before);assert.equal(added.projects.length,2);assert.deepEqual(added.projects[0],w.projects[0]);
+ const demo=managedDemo(added);assert.notEqual(demo.id,w.projects[0].id);assert.notEqual(demo.breakdowns[0].id,w.projects[0].breakdowns[0].id);
+ assert.equal(demo._shots[0].sceneId,demo.breakdowns[0].id);assert.equal(demo._linedScript.documents[0].marks[0].shotId,demo._shots[0].id);validateWorkspace(added);
+});
+test('invalid or stale demo operations leave workspace untouched',async()=>{
+ const {planDemo}=await import('../ProductionDesk/Web/demo/demo.js');const w=workspace(project()),before=structuredClone(w);
+ for(const value of [undefined,{projects:[]},{projects:[project()]}])assert.throws(()=>planDemo(w,value),/bundled demo/);
+ assert.throws(()=>planDemo(w,runtimeDemo(),'stale-ID'),/Only the demo created here/);assert.deepEqual(w,before);
+});
+
+test('turning off the demo flag rejects new loads without changing saved productions',async()=>{
+ const source=readFileSync(new URL('../ProductionDesk/Web/demo/demo.js',import.meta.url),'utf8')
+   .replace("'../project-file.js'",JSON.stringify(new URL('../ProductionDesk/Web/project-file.js',import.meta.url).href))
+   .replace('export const DEMO_ENABLED = true','export const DEMO_ENABLED = false');
+ const disabled=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const w=runtimeDemo(),before=structuredClone(w);assert.equal(disabled.DEMO_ENABLED,false);
+ assert.throws(()=>disabled.planDemo(w,runtimeDemo()),/disabled/);assert.deepEqual(w,before);validateWorkspace(w);
+});
+
+function demoControlsHarness(initial,options={}) {
+ const nodes=new Map(['#load-demo','#demo-guide','#demo-launcher'].map(key=>[key,{disabled:false,hidden:true}]));
+ globalThis.document={querySelector:key=>nodes.get(key),activeElement:{blur(){}}};
+ let current=initial,applied=0,imports=0,fetches=0,messages=[];
+ globalThis.fetch=async()=>{fetches++;if(options.fetchError)throw Error(options.fetchError);await options.duringFetch?.();return {ok:true,arrayBuffer:async()=>new ArrayBuffer(1)};};
+ const config={workspace:()=>current,flush:async()=>options.flush?.()??true,
+   importFile:async()=>{imports++;return {workspace:runtimeDemo()};},apply:w=>{current=w;applied++;},toast:m=>messages.push(m)};
+ return {nodes,config,workspace:()=>current,stats:()=>({applied,imports,fetches,messages})};
+}
+test('demo controls stop on failed current save or missing asset and keep existing work intact',async()=>{
+ const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const before=workspace(project()),failed=demoControlsHarness(before,{flush:()=>false});createDemoControls(failed.config).bind();
+ await failed.nodes.get('#load-demo').onclick();assert.equal(failed.workspace(),before);assert.equal(failed.stats().applied,0);assert.equal(failed.stats().fetches,0);assert.match(failed.stats().messages[0],/Save your current work/);assert.equal(failed.nodes.get('#load-demo').disabled,false);
+ const missing=demoControlsHarness(before,{fetchError:'Missing sample'});createDemoControls(missing.config).bind();await missing.nodes.get('#load-demo').onclick();
+ assert.equal(missing.workspace(),before);assert.equal(missing.stats().applied,0);assert.match(missing.stats().messages[0],/Missing sample/);
+});
+test('demo controls merge against current async edits and repeated load reuses the saved sample offline',async()=>{
+ const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const w=workspace(project()),h=demoControlsHarness(w,{duringFetch:()=>{w.projects[0].description='Edit made while reading sample';}});
+ createDemoControls(h.config).bind();await h.nodes.get('#load-demo').onclick();
+ assert.equal(h.workspace().projects.length,2);assert.equal(h.workspace().projects[0].description,'Edit made while reading sample');assert.equal(h.stats().imports,1);
+ h.workspace().projects.at(-1).project='Renamed managed sample';await h.nodes.get('#load-demo').onclick();
+ assert.equal(h.workspace().projects.length,2);assert.equal(h.workspace().projects.at(-1).project,'Renamed managed sample');assert.equal(h.stats().fetches,1);assert.equal(h.stats().imports,1);assert.equal(h.nodes.get('#demo-launcher').hidden,false);
+});
+test('demo controls report a failed final save truthfully and permit a safe retry',async()=>{
+ const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');let saves=0;
+ const h=demoControlsHarness(workspace(project()),{flush:()=>++saves!==2});createDemoControls(h.config).bind();await h.nodes.get('#load-demo').onclick();
+ assert.equal(h.workspace().projects.length,2);assert.match(h.stats().messages[0],/open but its save failed/);assert.equal(h.nodes.get('#load-demo').disabled,false);
+ await h.nodes.get('#load-demo').onclick();assert.equal(h.workspace().projects.length,2);assert.equal(h.stats().imports,1);assert.match(h.stats().messages.at(-1),/existing demo/);
 });

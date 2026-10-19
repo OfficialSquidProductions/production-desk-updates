@@ -323,8 +323,21 @@ final class ProductionDeskUITests: XCTestCase {
         let web=app.webViews["production-desk-webview"]
         XCTAssertTrue(web.waitForExistence(timeout:15))
         let load=web.buttons["Load Demo"];XCTAssertTrue(load.waitForExistence(timeout:10));load.tap()
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:load)
+        XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed)
+        let guide=web.buttons["Demo guide"];XCTAssertTrue(guide.waitForExistence(timeout:5));guide.tap()
+        XCTAssertTrue(web.staticTexts["Demo production · The Last Cue"].firstMatch.waitForExistence(timeout:5))
+        let guideShot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());guideShot.name="Offline demo guide and explicit reset entry";guideShot.lifetime = .keepAlways;add(guideShot)
+        web.buttons["Reset demo…"].tap()
+        XCTAssertTrue(web.buttons["Reset only demo"].waitForExistence(timeout:5))
+        let confirmation=XCTAttachment(screenshot:XCUIScreen.main.screenshot());confirmation.name="Reset affects only the owned sample confirmation";confirmation.lifetime = .keepAlways;add(confirmation)
+        web.buttons["Cancel"].tap()
+        XCTAssertFalse(web.buttons["Reset only demo"].exists)
+        guide.tap();web.buttons["Reset demo…"].tap();web.buttons["Reset only demo"].tap()
         let title=web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","DEMO · The Last Cue")).firstMatch
         XCTAssertTrue(title.waitForExistence(timeout:10),app.debugDescription)
+        let resetReady=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:load)
+        XCTAssertEqual(XCTWaiter.wait(for:[resetReady],timeout:10),.completed)
         load.tap()
         XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Opened your existing demo")).firstMatch.waitForExistence(timeout:5))
         if UIDevice.current.userInterfaceIdiom == .pad {web.buttons["Script"].tap()}
@@ -339,7 +352,15 @@ final class ProductionDeskUITests: XCTestCase {
         web.buttons["Save scene text"].tap()
         let closed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:web.buttons["Close dialog"])
         XCTAssertEqual(XCTWaiter.wait(for:[closed],timeout:10),.completed)
-        let screenshot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());screenshot.name="The Last Cue offline editable demo";screenshot.lifetime = .keepAlways;add(screenshot)
+        load.tap()
+        XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Opened your existing demo")).firstMatch.waitForExistence(timeout:5))
+        let screenshot=XCTAttachment(screenshot:XCUIScreen.main.screenshot());screenshot.name="Scenic-matched offline demo with permanent sidebar controls";screenshot.lifetime = .keepAlways;add(screenshot)
+        web.buttons.matching(NSPredicate(format:"label CONTAINS %@","Shot list")).firstMatch.tap()
+        let shots=XCTAttachment(screenshot:XCUIScreen.main.screenshot());shots.name="Four Scenic-matched shots and cameras A–D";shots.lifetime = .keepAlways;add(shots)
+        web.buttons.matching(NSPredicate(format:"label CONTAINS %@","Lined script")).firstMatch.tap()
+        XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label == '2 pages' OR label == 'Page 1 of 2'")).firstMatch.waitForExistence(timeout:10),app.debugDescription)
+        let lined=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lined.name="Bundled original PDF with linked editable demo coverage";lined.lifetime = .keepAlways;add(lined)
+        web.buttons.matching(NSPredicate(format:"label CONTAINS %@","Main breakdown")).firstMatch.tap()
         let stem="The-Last-Cue-Demo-"+String(UUID().uuidString.prefix(8))
         web.buttons["Save As…"].tap()
         let filename=app.textFields["DOCPicker.filenameTextField"]
@@ -372,7 +393,16 @@ final class ProductionDeskUITests: XCTestCase {
         web.buttons["Import locally"].tap()
         let imported=web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","DEMO · The Last Cue · imported copy")).firstMatch
         XCTAssertTrue(imported.waitForExistence(timeout:10),app.debugDescription)
-        let evidence=XCTAttachment(screenshot:XCUIScreen.main.screenshot());evidence.name="Demo imported as a separate editable production from Files";evidence.lifetime = .keepAlways;add(evidence)
+        let evidence=XCTAttachment(screenshot:XCUIScreen.main.screenshot());evidence.name="Demo imported as a separate PDF-backed editable production from Files";evidence.lifetime = .keepAlways;add(evidence)
+        // Reset while the imported copy is selected. The operation addresses the
+        // workspace-owned sample; Undo must return to this imported copy.
+        guide.tap();web.buttons["Reset demo…"].tap();web.buttons["Cancel"].tap()
+        XCTAssertTrue(imported.exists,app.debugDescription)
+        guide.tap();web.buttons["Reset demo…"].tap();web.buttons["Reset only demo"].tap()
+        XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Only the sample was reset")).firstMatch.waitForExistence(timeout:10))
+        web.buttons["Undo"].tap()
+        XCTAssertTrue(imported.waitForExistence(timeout:10),app.debugDescription)
+        let undone=XCTAttachment(screenshot:XCUIScreen.main.screenshot());undone.name="Undo reset restores the edited imported copy selection";undone.lifetime = .keepAlways;add(undone)
     }
 
 }

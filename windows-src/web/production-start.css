@@ -1,0 +1,35 @@
+/* Match Scenic's top-left hierarchy while keeping full accessible targets. */
+.sidebar{overflow-y:auto}
+.sidebar .brand{align-items:center;gap:10px;margin:0 0 20px;min-width:0}
+.brand-copy{display:block;min-width:0}
+.brand .brand-title{display:block;font:16px/1.25 "SP Headings",Futura,sans-serif;letter-spacing:.3px}
+.brand .brand-edition[data-platform-label]{display:block;margin:5px 0 0;font:10px/1.4 Futura,sans-serif;letter-spacing:.6px}
+.brand .software-credit{display:block;margin:7px 0 0;font:8px/1.5 Futura,sans-serif;letter-spacing:0;color:var(--muted);white-space:normal}
+.brand .sidebar-save{display:flex;align-items:baseline;gap:5px;margin:6px 0 0;font:8px/1.5 Futura,sans-serif;color:var(--muted);letter-spacing:0}
+.brand .sidebar-save .status-dot{width:5px;height:5px;flex-shrink:0}
+.brand .sidebar-save[data-state="pending"] .status-dot{opacity:.45}
+.brand .sidebar-save[data-state="error"]{color:var(--accent-ink,#a81231)}
+.production-picker-heading{margin:0 0 4px;gap:8px}
+.production-picker-heading .project-label{font-size:12px;color:var(--ink);font-weight:500}
+.production-picker-heading #new-open{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;border:0;border-radius:6px;padding:6px;background:transparent;color:var(--ink)}
+#new-open .new-production-glyph{font:400 18px/1 Futura,"Century Gothic",sans-serif;letter-spacing:0}
+.production-picker-heading #new-open:hover{background:var(--hover,var(--bg))}
+.sidebar #project-picker{margin-bottom:9px}
+.demo-launcher{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin:0 0 17px;min-width:0}
+.demo-launcher[hidden]{display:none!important}
+.demo-launcher button{min-height:44px;padding:8px;font-size:11px;white-space:normal}
+.demo-launcher #load-demo{font-weight:600;text-align:left}
+.demo-launcher #demo-guide{color:var(--muted);background:transparent}
+.demo-launcher small{grid-column:1/-1;font-size:9px;line-height:1.5;color:var(--muted)}
+.ipad-app .sidebar .brand{grid-row:1/4;margin-bottom:0}
+.ipad-app .sidebar .brand .software-credit,.ipad-app .sidebar .brand .sidebar-save{margin-left:0;margin-right:0;align-self:auto}
+.ipad-app .demo-launcher{grid-column:1/-1;margin:6px 0 8px}
+.ipad-app .sidebar > *{flex-shrink:0}
+.ipad-app .sidebar #project-picker{height:44px;min-height:44px;padding:8px 10px;line-height:1.3}
+@media(min-width:1101px){.ipad-app .sidebar .brand{gap:5px}.ipad-app .brand .brand-title{font-size:14px}}
+@media(max-width:599px){.sidebar .brand{margin-bottom:12px}.brand .brand-title{font-size:16px}.brand .software-credit{font-size:8px}.demo-launcher{margin-bottom:10px}.brand .sidebar-save{margin-top:6px}}
+@media(max-width:760px){.sidebar .brand{margin-bottom:0}}
+@media(max-height:780px) and (min-width:761px){.sidebar .brand{margin-bottom:12px}.demo-launcher{margin-bottom:10px}}
+@media print{.demo-launcher{display:none!important}}
+
+@media(min-width:600px) and (max-width:1100px){.ipad-app .production-picker-heading{grid-row:1;margin:0;align-self:start}.ipad-app .sidebar #project-picker{grid-row:2;align-self:start}.ipad-app .sidebar .brand{grid-row:1/3}}
