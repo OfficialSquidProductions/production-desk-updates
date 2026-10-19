@@ -3,7 +3,7 @@ import {mergeProductions} from '../project-file.js';
 // Temporary beta entry point. Disable this flag in both bundled copies to hide
 // the controls at launch; saved sample productions remain ordinary user files.
 export const DEMO_ENABLED = true;
-export const DEMO_KEY = 'productiondesk.scenic.the-last-cue.v2';
+export const DEMO_KEY = 'productiondesk.the-last-light.v3';
 
 // Ownership is workspace-local. Portable imports never grant reset ownership.
 export function managedDemo(workspace) {

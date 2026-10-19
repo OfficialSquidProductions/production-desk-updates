@@ -33,9 +33,9 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
     await js(`document.querySelector('[data-field="modal-value"]').value='Native demo preservation fixture';document.querySelector('#modal-ok').click();`);
     await waitFor('document.querySelector("#project-title").textContent === "Native demo preservation fixture"');
     assert.equal(await flush(),true);
-    const assetResponse=await fetch(origin+'/demo/the-last-cue.productiondesk');assert.equal(assetResponse.status,200);
+    const assetResponse=await fetch(origin+'/demo/the-last-light.productiondesk');assert.equal(assetResponse.status,200);
     const raw=await assetResponse.text(),asset=JSON.parse(raw);
-    const parsed=await post('/api/import',raw,{'X-Filename':'the-last-cue.productiondesk'});
+    const parsed=await post('/api/import',raw,{'X-Filename':'the-last-light.productiondesk'});
     let workspace=await read();
     const legacy=structuredClone(parsed.workspace.projects[0]);legacy.id=randomUUID();legacy.project='Legacy V1 sample — preserve';legacy._betaDemo={key:'productiondesk.demo.the-last-cue.v1',version:1};
     const priorCopy=structuredClone(parsed.workspace.projects[0]);priorCopy.id=randomUUID();priorCopy.project='Existing imported demo — preserve';
@@ -43,12 +43,12 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
     const baseline=(await read()).projects;
     const preserved = async () => {const w=await read();for(const p of baseline)assert.deepEqual(w.projects.find(x=>x.id===p.id),p,'Preserve '+p.project);return w;};
     await click('#demo-guide');assert.equal(await js('document.querySelector("#modal-content").textContent.includes("Scene 1 and shots 1A–1D")'),true);await click('#demo-guide-close');
-    await click('#load-demo');await waitFor('!document.querySelector("#load-demo").disabled && document.querySelector("#project-title").textContent.includes("The Last Cue")');
-    workspace=await preserved();const key='productiondesk.scenic.the-last-cue.v2',ownedID=workspace._demoProjects[key];let demo=workspace.projects.find(p=>p.id===ownedID);
-    assert.equal(workspace.activeProject,ownedID);assert.equal(demo.breakdowns.filter(b=>b.type==='scene').length,1);assert.equal(demo.breakdowns.filter(b=>b.type==='banner').length,2);assert.equal(demo._shots.length,4);assert.equal(demo.stripboards.length,2);assert.equal(demo._linedScript.documents[0].marks.length,6);
+    await click('#load-demo');await waitFor('!document.querySelector("#load-demo").disabled && document.querySelector("#project-title").textContent.includes("The Last Light")');
+    workspace=await preserved();const key='productiondesk.the-last-light.v3',ownedID=workspace._demoProjects[key];let demo=workspace.projects.find(p=>p.id===ownedID);
+    assert.equal(workspace.activeProject,ownedID);assert.equal(demo.breakdowns.filter(b=>b.type==='scene').length,8);assert.equal(demo.breakdowns.filter(b=>b.type==='banner').length,3);assert.equal(demo._shots.length,16);assert.equal(demo.stripboards.length,2);assert.equal(demo._linedScript.documents[0].marks.length,12);
     const count=workspace.projects.length,hash=demo._linedScript.activePdf;
     const pdf=Buffer.from(await(await fetch(origin+'/api/pdf/'+hash)).arrayBuffer());assert.equal(createHash('sha256').update(pdf).digest('hex'),hash);assert.deepEqual(pdf,Buffer.from(asset.workspace._pdfDocuments[hash],'base64'));
-    checks.push('Packaged Load Demo and guide: Scenic-aligned scene, two banners, four shots, two scenarios, exact original PDF and six marks');
+    checks.push('Packaged Load Demo and guide: eight original scenes, three banners,16 shots,two scenarios,exact original PDF and12 marks');
     const bounds=win.getBounds(),wasVisible=win.isVisible(),layouts=[],captures=[];
     try {
       if(!wasVisible)win.showInactive();
@@ -58,7 +58,7 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
         const layout=await js(`(() => {
           const title=document.querySelector('.brand-title'),brand=document.querySelector('.brand'),range=document.createRange();range.selectNodeContents(title);
           const rect=node=>{const r=node.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
-          return {viewport:{width:innerWidth,height:innerHeight},title:rect(title),text:Array.from(range.getClientRects(),r=>({x:r.x,y:r.y,right:r.right,bottom:r.bottom})),brand:rect(brand),sidebar:rect(document.querySelector('.sidebar')),plus:rect(document.querySelector('#new-open')),selector:rect(document.querySelector('#project-picker')),font:getComputedStyle(title).font,productionTitle:document.querySelector('#project-title').textContent,version:window.SquidBuild.version};
+          return {viewport:{width:innerWidth,height:innerHeight},title:rect(title),text:Array.from(range.getClientRects(),r=>({x:r.x,y:r.y,right:r.right,bottom:r.bottom})),brand:rect(brand),sidebar:rect(document.querySelector('.sidebar')),plus:rect(document.querySelector('#new-open')),selector:rect(document.querySelector('#project-picker')),font:getComputedStyle(title).font,productionTitle:document.querySelector('#project-title').textContent,version:window.SquidBuild.version,demo:rect(document.querySelector('#load-demo')),demoStyle:{color:getComputedStyle(document.querySelector('#load-demo')).color,background:getComputedStyle(document.querySelector('#load-demo')).backgroundColor}};
         })()`);
         layouts.push(layout);
         fs.writeFileSync(path.join(output,'demo-sidebar-layout.json'),JSON.stringify(layouts,null,2));
@@ -85,7 +85,8 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
         assert.ok(layout.text.every(rect=>rect.right<=layout.brand.right+1&&rect.x>=layout.brand.x-1),'Painted native Windows app title must fit inside brand at '+width+'px');
         assert.ok(layout.plus.width>=44&&layout.plus.height>=44,'New-production target remains44px');
         assert.ok(layout.selector.width>100&&layout.selector.height>0,'Production selector remains visible');
-        assert.equal(layout.productionTitle,'DEMO · The Last Cue');assert.equal(layout.version,require('./package.json').version);
+        assert.ok(layout.demo.height>=44&&layout.demo.width>100,'Demo entry remains prominent with a44px target');assert.notEqual(layout.demoStyle.color,layout.demoStyle.background,'Demo label must contrast with button background');
+        assert.equal(layout.productionTitle,'DEMO · The Last Light');assert.equal(layout.version,require('./package.json').version);
       }
     } finally {win.setBounds(bounds);if(!wasVisible)win.hide();}
     checks.push('Painted Windows demo title fits900/1008/1280px viewports, with correct production/version, visible selector and44px plus target');
@@ -98,7 +99,7 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
     checks.push('Native demo shot edit saves; repeated Load Demo preserves edits and avoids duplicates; sidebar pending/saved state matches disk flush');
     const portablePath=await download(()=>js('window.slateDesktop.saveAs()'));
     const portableRaw=fs.readFileSync(portablePath,'utf8'),portable=JSON.parse(portableRaw);assert.equal(portable.format,'org.squidproductions.productiondesk.project');assert.equal(portable.workspace.projects.length,1);assert.deepEqual(Buffer.from(portable.workspace._pdfDocuments[hash],'base64'),pdf);
-    await js(`window.slateDesktop.importProjectFile(new File([${JSON.stringify(portableRaw)}],'Native-demo.productiondesk'))`);assert.equal(await flush(),true);workspace=await preserved();const imported=workspace.projects.find(p=>p.id===workspace.activeProject);assert.notEqual(imported.id,ownedID);assert.ok(imported.project.includes('imported copy'));assert.equal(workspace.projects.length,count+1);assert.equal(imported._shots.length,4);assert.equal(imported._linedScript.documents[0].marks.length,6);assert.equal(workspace._demoProjects[key],ownedID);
+    await js(`window.slateDesktop.importProjectFile(new File([${JSON.stringify(portableRaw)}],'Native-demo.productiondesk'))`);assert.equal(await flush(),true);workspace=await preserved();const imported=workspace.projects.find(p=>p.id===workspace.activeProject);assert.notEqual(imported.id,ownedID);assert.ok(imported.project.includes('imported copy'));assert.equal(workspace.projects.length,count+1);assert.equal(imported._shots.length,16);assert.equal(imported._linedScript.documents[0].marks.length,12);assert.equal(workspace._demoProjects[key],ownedID);
     checks.push('Actual native portable download/import embeds the exact original PDF and creates a separate editable copy without reset ownership');
     const beforeCancel=await read();await click('#demo-guide');await click('#demo-reset');await click('#demo-reset-cancel');assert.deepEqual(await read(),beforeCancel);
     await click('#demo-guide');await click('#demo-reset');await click('#demo-reset-confirm');await waitFor('!document.querySelector("#load-demo").disabled');assert.equal(await flush(),true);workspace=await preserved();demo=workspace.projects.find(p=>p.id===workspace.activeProject);assert.notEqual(demo._shots[0].description,'Native Windows edited demo');assert.deepEqual(workspace.projects.find(p=>p.id===imported.id),imported);assert.equal(workspace.projects.length,count+1);

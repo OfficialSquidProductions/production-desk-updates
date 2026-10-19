@@ -39,8 +39,8 @@ macOS and Windows are the public desktop editions. iPhone and iPad builds are av
 
 ## Get started
 
-1. Choose **Load Demo** in the sidebar to explore **The Last Cue**, then open
-   **Demo guide** for the script, schedule, shots, and lined PDF. Existing productions
+1. Choose **Load The Last Light demo** in the sidebar to explore **The Last Light**, then open
+   **Demo guide** for all eight scenes, schedules, shots, lined PDF, reports and the matching Scenic handoff. Existing productions
    remain available in the production selector; choose **New production** to start your own.
 2. Choose **Import script / USS** to bring in a screenplay or schedule. Imports create a
    separate production and preserve your existing projects.

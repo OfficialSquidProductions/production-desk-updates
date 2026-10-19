@@ -10,4 +10,4 @@ For distribution, use the existing team and matching app-specific profile. `scri
 
 See [portable project format](PORTABLE-PROJECTS.md) for compatibility and limits. Physical Files providers, AirDrop and large-production memory usage remain physical-device QA items.
 
-Temporary TestFlight demo: **Load Demo** adds or reopens the separate fictional *The Last Cue* production without replacing existing work. See [demo content and removal](DEMO-CONTENT.md).
+Temporary TestFlight demo: **Load The Last Light demo** adds or reopens the separate fictional eight-scene *The Last Light* production without replacing existing work. See [demo content and removal](DEMO-CONTENT.md).

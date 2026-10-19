@@ -360,23 +360,23 @@ test('legacy full JSON backups with missing schedules are repaired without losin
  validateWorkspace(result.workspace);
 });
 
-const demoFixture=()=>JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.productiondesk',import.meta.url),'utf8')).workspace;
+const demoFixture=()=>JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.productiondesk',import.meta.url),'utf8')).workspace;
 const runtimeDemo=()=>{const w=demoFixture();delete w._pdfDocuments;return w;};
 
-test('offline sample retains the Scenic story, shots, portable PDF and every relationship',async()=>{
+test('offline Last Light sample covers all scenes, schedules, shots and original PDF pages',async()=>{
  const {readProjectFile}=await import('../ProductionDesk/Web/project-file.js');
- const value=JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.productiondesk',import.meta.url),'utf8'));
+ const value=JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.productiondesk',import.meta.url),'utf8'));
  const w=readProjectFile(value),p=w.projects[0];validateUSS(p);
- assert.equal(p.project,'DEMO · The Last Cue');assert.equal(p.breakdowns.filter(b=>b.type==='scene').length,1);
- assert.equal(p.breakdowns.filter(b=>b.type==='banner').length,2);assert.equal(p.stripboards.length,2);
- assert.equal(p._shots.length,4);assert.deepEqual(p._shots.map(s=>s.camera),['A','B','C','D']);
- assert.deepEqual(p._shots.map(s=>String(s.lens)),['24','50','85','35']);
- assert.ok(p._shots.every(s=>s.sceneId===p.breakdowns[0].id&&s.status==='Planned'));
- assert.equal(p._linedScript.documents[0].marks.length,6);
+ assert.equal(p.project,'DEMO · The Last Light');assert.equal(p.breakdowns.filter(b=>b.type==='scene').length,8);
+ assert.equal(p.breakdowns.filter(b=>b.type==='banner').length,3);assert.equal(p.stripboards.length,2);
+ assert.equal(p._shots.length,16);assert.equal(new Set(p._shots.map(s=>s.sceneId)).size,8);
+ assert.ok(p._shots.some(s=>s.status==='Done'&&s.takes===3&&s.circleTake==='2'&&s.actualMinutes===20));
+ assert.equal(p._linedScript.documents[0].marks.length,12);
+ assert.equal(new Set(p._linedScript.documents[0].marks.map(m=>m.page)).size,8);
  const raw=Buffer.from(Object.values(w._pdfDocuments)[0],'base64');assert.ok(raw.subarray(0,8).toString().startsWith('%PDF-1.4'));
  const {createHash}=await import('node:crypto');assert.equal(createHash('sha256').update(raw).digest('hex'),p._linedScript.activePdf);
- const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-cue.fountain',import.meta.url),'utf8');assert.equal(p._sourceScript.text,text);
- for(const sentence of ['From the top. Desk set, notebook ready. Stand by cue twelve.','I followed thirteen. My mistake. Reset twelve?','And rehearsal complete.'])assert.ok(text.includes(sentence));
+ const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.fountain',import.meta.url),'utf8');assert.equal(p._sourceScript.text,text);
+ for(const sentence of ['We should have left yesterday.',"One hundred and twelve steps. Your father counted every morning.",'Now I am.'])assert.ok(text.includes(sentence));
 });
 test('demo load preserves legacy samples, same-title productions, workspace extensions and edited repeats',async()=>{
  const {DEMO_KEY,planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');

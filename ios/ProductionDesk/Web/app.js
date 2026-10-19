@@ -519,7 +519,7 @@ const elementActions=createElementActions({project:()=>project,mutate,confirm:co
 $('#app-settings-open').onclick=()=>appSettings.open();
 const demoControls=createDemoControls({workspace:()=>workspace,importFile:file=>api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}),
   apply:next=>mutate(()=>{workspace=next;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';}),
-  flush:()=>window.slateDesktop.flush(),modal,toast});
+  flush:()=>window.slateDesktop.flush(),modal,toast,download});
 demoControls.bind();
 
 

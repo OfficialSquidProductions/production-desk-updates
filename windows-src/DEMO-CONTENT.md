@@ -1,77 +1,79 @@
-# The Last Cue — offline demo
+# The Last Light — temporary offline demo
 
-**Load Demo** and **Demo guide** sit beside the production selector on desktop,
-iPhone and iPad, visible on the start screen and every main view. The sample
-is a separate editable production and works offline.
+**Load The Last Light demo** is a prominent permanent entry beside the production
+selector on Mac, Windows, iPhone and iPad. **Demo guide** explains every tool and
+contains the explicit sample-only reset and original Scenic file handoff.
 
-The canonical reference is the actual shipped Scenic 1.4.20 (25) sample:
-`DEMO · The Last Cue`, `INT. BLACK-BOX THEATRE — EVENING`, Maya (22), Leo (23),
-lighting cue twelve, the missed stage wash, and their reset. Dialogue and action
-match Scenic. Scene 1 has shots 1A–1D: cameras A–D, lenses 24/50/85/35 mm, the same
-descriptions, framing, movement, equipment, planned status and 5/3-minute
-setup/shoot estimates. Scenic Normal priority maps to PD's middle Preferred
-priority. Fountain punctuation is adapted for the script parser.
+Production Desk's original `DEMO` screenplay in `server.py` is canonical. The
+bundled Fountain is byte-identical: eight scenes, Maya/Eli/Jonah, North coast and
+Point Harbor lighthouse, the wagon, folded map, brass key, letter, photograph
+and compass. Added planning data is fictional and is labeled as testing data.
+The screenplay has not been rewritten to fit a different demo.
 
-The older desktop The Last Light and iOS The Last Cue v1 samples remain ordinary
-saved productions. Neither titles nor the older marker grant reset ownership.
-
-## Feature coverage
-
-| Feature | Included sample / test route |
+| Tab / tool | Reference data and exercise |
 | --- | --- |
-| Script reading, editing, search and tagging | One original rehearsal scene with canonical dialogue and retained source Fountain. Edit text or tag an element. |
-| Breakdown fields and review | Synopsis, cue notes, pages, script pages, duration, set, INT/EXT, evening, script day, unit and location. Toggle review/completion. |
-| Cast and department elements | Maya/Leo, notebook, lamp, desk/chair, cameras, tripods, wash/console, sound, art, special equipment and reset notes. Rename, tag, unlink or add, then Undo. |
-| Relationships and availability | Locked cast IDs, linked cast, weekends off and a fictional availability exception. |
-| Schedule, banners, colors, boneyard | Rehearsal shoot places the scene between PREP/WRAP banners with a custom color; Unscheduled planning copy leaves the scene in the boneyard. Move/recolor/reorder/add a day. |
-| Calendars and scenarios | First date 2026-11-02, weekends off, a fictional additional day off; two scenarios sharing a calendar. |
-| Shot planning and tracking | Four shots with cameras/lenses/framing/movement/equipment/timing/notes. Planned status, zero takes; try takes, circle take, actual time, completion or reorder, then Undo. |
-| Lined script | Embedded original two-page PDF; six editable marks: solid/wavy linked coverage, pen, highlighter, arrow and text. Edit, change pages or export a lined PDF. |
-| Reports | One-line schedule, scene breakdowns and Cast workdays. |
-| Files and printing | Ordinary Save As/import, full backup, USS, schedule CSV, shot CSV, lined PDF and Print / Save PDF. |
-| Undo/redo and autosave | Loading/reset use normal undoable mutations; sidebar and top bar track pending, failed and successful saves. |
-| Appearance and platform shell | Existing themes, settings, keyboard shortcuts, file dialogs and updater paths remain normal app features. |
+| Main breakdown | Eight original scenes, script text/search/tagging, synopses, pages, durations, location, script day, unit, sequence, continuity notes, review and completion examples. |
+| Shooting schedule | Location-first and Story-order alternatives; three shooting days, PREP/MEAL/WRAP banners, custom strip colors, an unscheduled scene, weekends/turnaround and a cast availability exception. Move, reorder or recolor, then Undo. |
+| Lined script | Eight embedded original PDF pages, one per scene. Eight linked coverage lines (solid/wavy), pen, highlighter, arrow and text. Export an editable production or lined PDF. |
+| Shot list | Sixteen shots, two per scene, cameras A/B, 24/35/50/85 mm lenses, static/tracking/tilt/pan moves, support and timing examples. Fictional scene 3A has three takes, circle take 2 and 20 actual minutes; other shots are Ready/Planned. |
+| Elements | Cast, sets, locations, wardrobe, props, vehicle, camera, grip, electric, sound, art, dressing, greenery and continuity. Linked cast, locked board IDs and availability. No background cast, animals or stunt performers are invented. |
+| Reports | Populated One-line schedule, Scene breakdowns and Cast workdays. Switch schedule scenarios to compare. Hold/drop/pickup accounting remains unsupported. |
+| Files / settings | Normal Save As/import, full backup, USS, CSV, lined PDF, Print/PDF, themes and production settings. USS intentionally omits script text and shots. |
 
-The script has no vehicles, stunts, animals, wardrobe changes, VFX or background
-performers, so those departments remain empty. No extra story scenes or completed
-takes are invented; add disposable entries and Undo while testing. Cast workdays
-lists scheduled workdays; hold/drop/pickup accounting remains unimplemented.
-Scenic's geometry, blocking playback and camera/lighting calculations belong to
-Scenic, not PD. Updates, permissions, external sharing, physical printing and
-physical-device file providers require separate QA.
+Scenic has the same eight numbered scenes and sixteen numbered shots, original
+script passages in scene notes, named characters/props/locations, scene-specific
+illustrative maps, camera links and movement/lighting examples. The maps are
+blocking references, not surveyed locations or physical safety plans. Vertical
+tilt, stair height, real tides and calibrated lighting are not simulated.
 
-## Preserve, reopen and reset
+## Local connection to Scenic
 
-Loading first flushes current edits; failure stops the load. The sample merges
-through the existing portable validation/import path, including the checksum
-PDF. It preserves existing productions and workspace extensions, including edits
-made while the bundled file loads.
+Load The Last Light in both apps. Alternatively use **Demo guide → Save original
+Scenic demo…**, then Scenic **Import project…**. This imports a separate original
+starting copy; it does not contain later Production Desk edits.
 
-Repeated Load Demo reopens the managed sample, preserving edits and renamed
-title without duplicates. Demo guide → Reset demo… → Reset only demo confirms
-replacement of only that sample. Cancel does nothing. Undo restores its edited
-state. The reset target remains the managed sample if another project is selected.
+For updated shots: Production Desk **Shot list → All days / All scenes / All
+statuses → Export shots**; Scenic **Shot list → Import shot list CSV**. Preview the
+eight existing scenes and import. Scene numbers 1–8 and shot numbers 1A–8B match;
+reimport updates details and preserves maps, camera links and coverage checks.
+Renumbering creates new entries under the existing importer contract. Inspect a
+camera/relink it when a changed lens or shot size should also change its map
+framing. Shooting status/takes are distinct from Scenic coverage checks.
 
-Ownership requires workspace-local
-`_demoProjects['productiondesk.scenic.the-last-cue.v2']` plus the matching project
-marker. Titles and markers alone never grant ownership. Save As excludes the
-registry and normal imports merge only productions, so imported copies cannot
-be reset. Older samples remain untouched. Deleting the managed sample through
-Production settings permits a fresh Load Demo.
+There is no account, network handoff or automatic sync. Script edits, schedules
+and map geometry do not travel in shot CSV. Scenic CSV does not import back into
+Production Desk. Use each app's full portable file to preserve its complete data.
 
-## Regenerate or remove
+`web/demo/the-last-light-spec.json` is the non-secret shared reference for other
+local test tools (including Camera Stats): canonical script SHA256, original
+scene IDs/numbers/text, characters/locations/props and camera/shot/take examples.
 
-`web/demo/scenic-reference.json` retains the shipped reference with source hash.
-From `windows-src/`, run `python3 tools/build_demo.py`, then copy the generated
-`.productiondesk` and `.fountain` from `web/demo/` into
-`../ios/ProductionDesk/Web/demo/`. Controllers, reference JSON and
-`production-start.css` also stay byte-identical; regression checks enforce this.
-No external download or private production assets are used.
+## Preserve, reopen, reset
 
-For launch removal set `DEMO_ENABLED = false` in both
-`windows-src/web/demo/demo.js` and `ios/ProductionDesk/Web/demo/demo.js`. This
-hides and disables loading/reset; saved samples stay editable and exportable.
-To remove bundled assets entirely, also remove each controller import and
-construction plus the static launcher, then remove the demo directories.
-Never automatically delete saved productions, alter portable formats or remove
-markers from user copies.
+Loading first flushes current work, then validates/imports the bundled file.
+A failed current save stops loading. The portable PDF is checksum verified.
+Repeated loading reopens the workspace-owned sample, keeping edits and its
+renamed title; it does not add duplicates. Reset requires explicit confirmation,
+replaces only the owned sample, and is undoable. Cancel is inert.
+
+Ownership uses workspace-local `_demoProjects['productiondesk.the-last-light.v3']`
+and the matching project marker. A title or marker alone never grants ownership.
+Portable exports omit the registry, and imports do not grant it. Existing Last
+Light, Last Cue, legacy samples and imported copies remain ordinary productions;
+this new sample never upgrades or overwrites them. Scenic uses the same ownership
+principle with key `scenic-the-last-light-v2`.
+
+## Regenerate / remove entry points later
+
+From `windows-src`, run `python3 tools/build_demo.py --scenic-root ../../scenic-store`.
+It reads the original `server.py` screenplay and generates paired files, the
+shared spec, the PDF/annotations and Scenic fixture. PD mobile demo assets are
+copied automatically. Run `python3 ios/prepare.py` in Scenic to refresh all mobile
+web resources. Scenic's generator template is `tools/demo-controller.js`.
+
+For production removal set `DEMO_ENABLED = false` in both PD `demo/demo.js`
+copies and set `enabled=false` in Scenic `tools/demo-controller.js`, regenerate,
+then run Scenic's mobile preparation. This hides/disables entry points without
+deleting saved samples or user edits. If removing bundled assets entirely,
+remove the controller imports/construction and HTML entry points together.
+Never auto-delete saved productions or remove portable-format support.

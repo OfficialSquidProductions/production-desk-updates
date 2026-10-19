@@ -436,12 +436,12 @@ final class RuntimeWorkflowTests: XCTestCase {
         // so canonical assertions always inspect the shipped offline file.
         const canonicalWorkspace=await reset(),canonical=managedDemo(canonicalWorkspace),demoID=canonical.id;
         const firstResetPreservesOthers=unchanged(first,canonicalWorkspace,opened.id);
-        const reference=await (await fetch('/demo/scenic-reference.json')).json();
-        const shotReference=canonical._shots.every((s,i)=>['description','size','movement','camera','lens','equipment','status','notes'].every(k=>s[k]===reference.scene.shotList[i][k]));
+        const reference=await (await fetch('/demo/the-last-light.scenic')).json();
+        const shotReference=canonical._shots.every((s,i)=>['description','size','movement','camera','lens','equipment','status','notes'].every(k=>s[k]===reference.scenes.flatMap(scene=>scene.shotList)[i][k]));
         const scenes=canonical.breakdowns.filter(b=>b.type==='scene'),banners=canonical.breakdowns.filter(b=>b.type==='banner');
         const schedule=canonical.stripboards[0],alternate=canonical.stripboards[1],sceneID=scenes[0].id;
         const scheduled=schedule.boards[0].breakdownIds.flat().includes(sceneID)&&!schedule.boards[1].breakdownIds.flat().includes(sceneID);
-        const unscheduled=!alternate.boards[0].breakdownIds.flat().includes(sceneID)&&alternate.boards[1].breakdownIds.flat().includes(sceneID);
+        const lastID=scenes[7].id;const unscheduled=schedule.boards[1].breakdownIds.flat().includes(lastID)&&alternate.boards[0].breakdownIds.flat().includes(lastID);
         const pdfDocument=canonical._linedScript.documents[0],hash=pdfDocument.sha256;
         const linkedCoverage=pdfDocument.marks.filter(m=>m.type==='coverage').every(m=>canonical._shots.some(s=>s.id===m.shotId));
         const departments=[104,110,111,112,113,115,116,119,123].every(ucid=>canonical.elements.some(e=>canonical.categories.find(c=>c.id===e.category)?.ucid===ucid));
@@ -454,7 +454,7 @@ final class RuntimeWorkflowTests: XCTestCase {
         // Even a portable file carrying a forged registry cannot transfer reset
         // ownership. Imported project/annotation IDs are remapped consistently.
         const portable=projectFile({version:1,activeProject:demoID,projects:[clone(editedDemo)],_pdfDocuments:attachments,_demoProjects:{[DEMO_KEY]:demoID}});
-        const encoded=JSON.stringify(portable),imported=await importText(encoded,'The-Last-Cue-edited.productiondesk'),copy=imported.projects.find(p=>p.id===imported.activeProject);
+        const encoded=JSON.stringify(portable),imported=await importText(encoded,'The-Last-Light-edited.productiondesk'),copy=imported.projects.find(p=>p.id===imported.activeProject);
         const pdfBase64=await window.webkit.messageHandlers.scheduler.postMessage({operation:'readPDF',sha256:hash});
         const copyDocument=copy._linedScript.documents[0];
         const copyLinks=copyDocument.marks.filter(m=>m.type==='coverage').every(m=>copy._shots.some(s=>s.id===m.shotId))&&copy._shots.every(s=>copy.breakdowns.some(b=>b.id===s.sceneId));
@@ -464,7 +464,7 @@ final class RuntimeWorkflowTests: XCTestCase {
         // owned sample resets. Undo restores ownership, edits and selection.
         const resetWorkspace=await reset(),resetDemo=managedDemo(resetWorkspace);
         const resetPreservesOthers=unchanged(imported,resetWorkspace,demoID);
-        const resetCanonical=resetDemo.project==='DEMO · The Last Cue'&&resetDemo.breakdowns[0].description===canonical.breakdowns[0].description&&resetDemo.breakdowns[0]._scriptText===canonical.breakdowns[0]._scriptText&&same(resetDemo._shots.map(s=>s.description),canonical._shots.map(s=>s.description))&&resetDemo._linedScript.documents[0].sha256===hash&&resetDemo._linedScript.documents[0].marks.length===6;
+        const resetCanonical=resetDemo.project==='DEMO · The Last Light'&&resetDemo.breakdowns[0].description===canonical.breakdowns[0].description&&resetDemo.breakdowns[0]._scriptText===canonical.breakdowns[0]._scriptText&&same(resetDemo._shots.map(s=>s.description),canonical._shots.map(s=>s.description))&&resetDemo._linedScript.documents[0].sha256===hash&&resetDemo._linedScript.documents[0].marks.length===12;
         $('#undo').click();const undone=await flush();
         const afterUndoReopen=await load();
         return {marker:DEMO_KEY,preserved,firstCount,preservationDiagnostics:JSON.stringify(preservationDiagnostics),firstResetPreservesOthers,
@@ -472,7 +472,7 @@ final class RuntimeWorkflowTests: XCTestCase {
           scenes:scenes.length,banners:banners.length,shots:canonical._shots.length,cameras:canonical._shots.map(s=>s.camera),lenses:canonical._shots.map(s=>s.lens),shotReference,scheduled,unscheduled,departments,availability,
           marks:pdfDocument.marks.length,coverage:pdfDocument.marks.filter(m=>m.type==='coverage').length,markTypes:[...new Set(pdfDocument.marks.map(m=>m.type))].sort(),linkedCoverage,
           repeatCount:repeated.projects.length===edited.projects.length,repeatID:repeated.activeProject===demoID,repeatEdits:same(managedDemo(repeated),editedDemo),
-          source:editedDemo._sourceScript.text.includes('The Last Cue'),exportedEdit:portable.workspace.projects[0].breakdowns[0].description,
+          source:editedDemo._sourceScript.text.includes('The Last Light'),exportedEdit:portable.workspace.projects[0].breakdowns[0].description,
           importCount:imported.projects.length===repeated.projects.length+1,importName:copy.project.includes('imported copy'),importEdit:copy.breakdowns[0].description,importScript:copy.breakdowns[0]._scriptText.includes('Keep this demo rehearsal note.'),
           existingAfterImport:unchanged(repeated,imported),importNoOwnership:imported._demoProjects[DEMO_KEY]===demoID&&copy.id!==demoID,copyLinks,pdfMatches:attachments[hash]===pdfBase64&&copyDocument.sha256===hash,
           cancelUnchanged:same(cancelled,imported),resetPreservesOthers,resetCanonical,undoExact:same(undone,imported),undoReopensEdited:same(managedDemo(afterUndoReopen),editedDemo),noDuplicateAfterUndo:afterUndoReopen.projects.length===imported.projects.length,
@@ -483,15 +483,15 @@ final class RuntimeWorkflowTests: XCTestCase {
         let report=XCTAttachment(data:try JSONSerialization.data(withJSONObject:summary,options:[.prettyPrinted,.sortedKeys]),uniformTypeIdentifier:"public.json");report.name="Native Scenic demo workflow results";report.lifetime = .keepAlways;add(report)
         let diagnostics=XCTAttachment(string:try XCTUnwrap(v["preservationDiagnostics"] as? String));diagnostics.name="Scenic demo existing production field differences";diagnostics.lifetime = .keepAlways;add(diagnostics)
         for key in ["preserved","firstCount","firstResetPreservesOthers","legacyPreserved","lastLightPreserved","shotReference","scheduled","unscheduled","departments","availability","linkedCoverage","repeatCount","repeatID","repeatEdits","source","importCount","importName","importScript","existingAfterImport","importNoOwnership","copyLinks","pdfMatches","cancelUnchanged","resetPreservesOthers","resetCanonical","undoExact","undoReopensEdited","noDuplicateAfterUndo"] {XCTAssertEqual(v[key] as? Bool,true,key)}
-        XCTAssertEqual(v["marker"] as? String,"productiondesk.scenic.the-last-cue.v2")
-        XCTAssertEqual(v["scenes"] as? Int,1);XCTAssertEqual(v["banners"] as? Int,2);XCTAssertEqual(v["shots"] as? Int,4)
-        XCTAssertEqual(v["cameras"] as? [String],["A","B","C","D"]);XCTAssertEqual(v["lenses"] as? [String],["24","50","85","35"])
-        XCTAssertEqual(v["marks"] as? Int,6);XCTAssertEqual(v["coverage"] as? Int,2)
+        XCTAssertEqual(v["marker"] as? String,"productiondesk.the-last-light.v3")
+        XCTAssertEqual(v["scenes"] as? Int,8);XCTAssertEqual(v["banners"] as? Int,3);XCTAssertEqual(v["shots"] as? Int,16)
+        XCTAssertEqual(v["cameras"] as? [String],Array(repeating:["A","B"],count:8).flatMap{$0});XCTAssertEqual(v["lenses"] as? [String],["24","50","35","85","24","85","35","85","50","85","35","85","85","50","50","24"])
+        XCTAssertEqual(v["marks"] as? Int,12);XCTAssertEqual(v["coverage"] as? Int,8)
         XCTAssertEqual(v["markTypes"] as? [String],["arrow","coverage","highlighter","pen","text"])
         XCTAssertEqual(v["exportedEdit"] as? String,"Demo rehearsal edit retained");XCTAssertEqual(v["importEdit"] as? String,"Demo rehearsal edit retained")
         let pdfData=try XCTUnwrap(Data(base64Encoded:try XCTUnwrap(v["pdfBase64"] as? String)))
-        let pdf=try XCTUnwrap(PDFDocument(data:pdfData));XCTAssertEqual(pdf.pageCount,2);XCTAssertTrue(pdf.string?.contains("THE LAST CUE")==true)
-        let fixtureAttachment=XCTAttachment(string:try XCTUnwrap(v["portable"] as? String));fixtureAttachment.name="The-Last-Cue-v2-edited.productiondesk";fixtureAttachment.lifetime = .keepAlways;add(fixtureAttachment)
+        let pdf=try XCTUnwrap(PDFDocument(data:pdfData));XCTAssertEqual(pdf.pageCount,8);XCTAssertTrue(pdf.string?.contains("THE LAST LIGHT")==true)
+        let fixtureAttachment=XCTAttachment(string:try XCTUnwrap(v["portable"] as? String));fixtureAttachment.name="The-Last-Light-v2-edited.productiondesk";fixtureAttachment.lifetime = .keepAlways;add(fixtureAttachment)
     }
 
     @MainActor func testSidebarPermanentDemoControlsAndSaveFailureRecovery() async throws {
@@ -551,6 +551,7 @@ final class RuntimeWorkflowTests: XCTestCase {
                   creditUnderName:credit.top>=edition.bottom-1,saveUnderCredit:saved.top>=credit.bottom-1,
                   plusWidth:plus.width,plusHeight:plus.height,glyphSize:parseFloat(getComputedStyle($('.new-production-glyph')).fontSize),glyph:$('.new-production-glyph').textContent,
                   controlsVisible:shown('#load-demo')&&shown('#demo-guide')&&shown('#new-open'),
+                  demoReadable:getComputedStyle($('#load-demo')).backgroundColor!==getComputedStyle($('#load-demo')).color&&getComputedStyle($('#load-demo')).backgroundColor!=='rgba(0, 0, 0, 0)',demoHeight:r('#load-demo').height,
                   controlsInside:[r('#load-demo'),r('#demo-guide'),plus].every(v=>v.left>=-1&&v.right<=innerWidth+1),
                   brandTitleClientWidth:title.clientWidth,brandTitleScrollWidth:title.scrollWidth,brandTitleFits:title.scrollWidth<=title.clientWidth,
                   pickerHeight:r('#project-picker').height,pickerFont:pickerStyle.fontSize,pickerLineHeight:pickerStyle.lineHeight,pickerPadding:pickerStyle.padding,
@@ -558,10 +559,11 @@ final class RuntimeWorkflowTests: XCTestCase {
                 """,arguments:[:],in:nil,contentWorld:.page)
                 let l=try XCTUnwrap(layout as? [String:Any])
                 let attachment=XCTAttachment(string:String(describing:l));attachment.name="Sidebar \(theme) \(size)";attachment.lifetime = .keepAlways;add(attachment)
-                for key in ["creditUnderName","saveUnderCredit","controlsVisible","controlsInside","brandTitleFits"] {XCTAssertEqual(l[key] as? Bool,true,"\(key): \(l)")}
+                for key in ["creditUnderName","saveUnderCredit","controlsVisible","controlsInside","brandTitleFits","demoReadable"] {XCTAssertEqual(l[key] as? Bool,true,"\(key): \(l)")}
                 XCTAssertEqual(l["overflow"] as? Bool,false,"\(l)")
                 XCTAssertGreaterThanOrEqual(l["plusWidth"] as? Double ?? 0,44);XCTAssertGreaterThanOrEqual(l["plusHeight"] as? Double ?? 0,44)
                 XCTAssertGreaterThanOrEqual(l["pickerHeight"] as? Double ?? 0,44)
+                XCTAssertGreaterThanOrEqual(l["demoHeight"] as? Double ?? 0,44)
                 XCTAssertEqual(l["glyphSize"] as? Double,18);XCTAssertEqual(l["glyph"] as? String,"+")
                 XCTAssertEqual(l["platform"] as? String,UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iOS")
                 XCTAssertTrue((l["footer"] as? String)?.contains(Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "missing") == true)
