@@ -1,7 +1,11 @@
-Production Desk 1.5.6
+Production Desk 1.5.7
 
-Show the app platform beside Production Desk: MacBook on macOS, Desktop on Windows, iPad on iPad, and iOS on iPhone. The label follows the native device, including resized windows.
+Open the offline The Last Cue demo from the sidebar, with a guide to the script breakdown, schedule, shots and lined script. Scene 1 and shots 1A–1D match the Scenic rehearsal demo.
 
-Show the application version from native build metadata.
+The sample includes one story scene, two schedule banners, four camera setups, two planning scenarios, a two-page original PDF and six editable lining marks. Portable Production Desk files keep the original PDF and annotations.
 
-Keep portable production files, demos, original PDFs, recent interface improvements and the existing desktop update workflow.
+Load Demo reopens your edited sample without duplicates. Reset changes only the managed demo; existing productions, legacy samples and imported copies are preserved, and Undo restores demo edits.
+
+A tidier sidebar places the software credit and live save status beneath the app/platform label. Production selection moves up, and the new-production plus retains a generous accessible target.
+
+Existing project files, desktop updater consent/save safeguards, CSV/USS exports and original-PDF workflows remain available.
