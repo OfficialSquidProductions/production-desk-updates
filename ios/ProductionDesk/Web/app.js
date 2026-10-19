@@ -539,7 +539,7 @@ if(isIPadApp){
   document.body.classList.add('ipad-app');
   const importButton=document.createElement('button');importButton.id='import-open';importButton.textContent='Import…';importButton.onclick=importModal;$('.heading-actions').prepend(importButton);
   if(DEMO_ENABLED){const demoButton=document.createElement('button');demoButton.id='load-demo';demoButton.textContent='Load Demo';demoButton.onclick=loadDemo;$('.heading-actions').prepend(demoButton);}
-  $('.brand-edition').textContent='IPAD EDITION';
+  $('.brand-edition').textContent=window.SquidPlatform || (window.productionDeskTablet?'iPad':'iOS');
   $('.offline-pill').innerHTML='<span class="status-dot"></span>Entirely on your device';
   // Keep instructions shared with the desktop while identifying native actions.
   const updateCopy=()=>{

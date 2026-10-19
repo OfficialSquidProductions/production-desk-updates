@@ -69,6 +69,7 @@ def build(args):
     flags = ['-D','APP_STORE']
     if pd:
         sources.append(source_dir / 'StoreMain.swift'); flags += ['-D','SUPPORT_TESTING']
+        sources.append(source_dir / 'StoreExports.swift')
         framework = Path('/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework')
         frameworks = contents / 'Frameworks'; frameworks.mkdir()
         shutil.copytree(framework, frameworks / framework.name, symlinks=True)

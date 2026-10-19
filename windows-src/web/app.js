@@ -3,6 +3,7 @@ import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from '
 import {createShotDesk} from './shots.js';
 import {createLinedDesk,removeCoverage,clearCoverageScene} from './lined-script.js';
 import {nativeAPI, nativePrint} from './native-platform.js';
+import {resolveMacStoreExport} from './mac-store-exports.js';
 import {createAppSettings} from './settings.js';
 import {createElementActions} from './element-actions.js';
 const isIPadApp = !!window.webkit?.messageHandlers?.scheduler;
@@ -43,7 +44,7 @@ async function api(path, data, headers = {}) {
   const response = await fetch(path, options);
   const value = await response.json();
   if (!response.ok) throw new Error(value.error || 'Local operation failed.');
-  return value;
+  return await resolveMacStoreExport(value);
 }
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3500); }
 function activeScenario() { return project.stripboards[scenarioIndex] || project.stripboards[0]; }
@@ -399,7 +400,7 @@ async function saveProjectFile(destination='files') {
     const result=await api('/api/project-file',{workspace:{version:1,activeProject:snapshot.id,projects:[snapshot]},filename:name+'.productiondesk',destination});
     if(result.cancelled)return;
     if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=name+'.productiondesk';document.body.append(a);a.click();a.remove();toast('Choose where to save your Production Desk file.');}
-    else toast(destination==='share'?'Project shared.':'Project saved to Files.');
+    else toast(window.productionDeskMacStore?'Project saved.':destination==='share'?'Project shared.':'Project saved to Files.');
   }catch(e){toast('Could not save project: '+e.message);}
 }
 function stripColorModal(bid){
@@ -480,7 +481,7 @@ function availabilityModal(eid) {
   };
 }
 async function download(filename,data,type='application/json',encoding) {
-  try{const result=await api('/api/export',{filename,content:data,mime:type,encoding});if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Export file is ready.');return true;}
+  try{const result=await api('/api/export',{filename,content:data,mime:type,encoding});if(result.cancelled)return null;if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast(window.productionDeskMacStore?'Export saved.':'Export file is ready.');return true;}
   catch(e){toast('Export failed: '+e.message);return false;}
 }
 function exportModal() {
@@ -488,7 +489,7 @@ function exportModal() {
   const filename=((project.project||project.name).replace(/[^\w -]/g,'').trim()||'production').slice(0,150);
   $('#save-project-file').onclick=()=>saveProjectFile('files');
   $('#export-uss').onclick=()=>{const clean=value=>Array.isArray(value)?value.map(clean):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[k,clean(v)])):value;const output=clean(project);output.source='Production Desk — Local Film Scheduler';download(filename+'.uss',JSON.stringify({universalScheduleStandard:output},null,2));toast('USS file exported.');};
-  $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
+  $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});if(result.cancelled)return;if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
   $('#export-csv').onclick=()=>{const rows=[['Day','Date','Scene','INT/EXT','Set','Day/Night','Synopsis','Pages','Minutes','Cast','Location']];let day=0;const ds=dates(scheduleGroups().filter(Array.isArray).length);for(const g of scheduleGroups()){if(Array.isArray(g))day++;for(const bid of Array.isArray(g)?g:[g]){const b=breakdown(bid);if(!b)continue;rows.push([day||'',day?ds[day-1]:'',b.scene,prop(b,1),b.type==='banner'?b.bannerText:prop(b,0),prop(b,2),b.description,b.pages,(b.duration||0)/60000,prop(b,100),prop(b,6)]);}}const safe=v=>{const s=String(v??'');return /^[=+@\-\t\r]/.test(s)?"'"+s:s;};download(filename+'-schedule.csv',rows.map(row=>row.map(v=>'"'+safe(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');};
   $('#export-shots').onclick=()=>shotDesk.csv();
   $('#export-print').onclick=()=>{report='oneline';$('#modal').close();action('print');};

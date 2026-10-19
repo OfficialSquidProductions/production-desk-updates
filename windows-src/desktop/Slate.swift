@@ -14,11 +14,26 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     var isQuitting = false
     let updates = ProductionDeskUpdates()
     var sessionFile: URL?
+    #if APP_STORE
+    let storeExports = StoreExports()
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         createMenu()
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.SquidPlatform='MacBook';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let buildMetadata = ["version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+                             "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""]
+        let buildJSON = String(data: try! JSONSerialization.data(withJSONObject: buildMetadata), encoding: .utf8)!
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.SquidBuild=" + buildJSON + ";", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        #if APP_STORE
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "storeExport")
+        let metadata = StoreExportPolicy.metadataScript(
+            version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown")
+        configuration.userContentController.addUserScript(WKUserScript(source: metadata, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        #endif
         configuration.userContentController.add(self, name: "slatePrint")
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "supportCopy")
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "supportEmail")
@@ -204,6 +219,18 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
 
     }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        #if APP_STORE
+        if message.name == "storeExport" {
+            guard StoreExportPolicy.authorized(mainFrame: message.frameInfo.isMainFrame,
+                    scheme: message.frameInfo.securityOrigin.protocol,
+                    host: message.frameInfo.securityOrigin.host, port: message.frameInfo.securityOrigin.port,
+                    origin: localOrigin), let origin = localOrigin, let path = message.body as? String else {
+                replyHandler(nil, "A local main-frame export is required."); return
+            }
+            storeExports.save(path: path, origin: origin, window: window, reply: replyHandler)
+            return
+        }
+        #endif
         guard ["supportCopy", "supportEmail"].contains(message.name), message.frameInfo.isMainFrame,
               message.frameInfo.securityOrigin.protocol == "http", message.frameInfo.securityOrigin.host == "127.0.0.1",
               message.frameInfo.securityOrigin.port == localOrigin?.port,

@@ -94,6 +94,10 @@ final class DeskViewController: UIViewController, WKNavigationDelegate, WKUIDele
         configuration.setURLSchemeHandler(LocalWebScheme(root: root), forURLScheme: LocalWebScheme.scheme)
         configuration.userContentController.addScriptMessageHandler(WeakSchedulerHandler(controller: self), contentWorld: .page, name: "scheduler")
         let tablet = UIDevice.current.userInterfaceIdiom == .pad
+        let metadata = ["version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown", "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""]
+        let metadataJSON = String(data: try! JSONSerialization.data(withJSONObject: metadata), encoding: .utf8)!
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.SquidBuild=" + metadataJSON + ";", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.SquidPlatform='\(tablet ? "iPad" : "iOS")';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let portrait = view.bounds.height >= view.bounds.width
         configuration.userContentController.addUserScript(WKUserScript(source: "window.productionDeskTablet = \(tablet ? "true" : "false"); window.productionDeskPortrait = \(portrait ? "true" : "false");", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         // Keep appearance preferences between launches; workspace data uses the

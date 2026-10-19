@@ -196,7 +196,7 @@ async function start() {
   const bounds = settings.bounds || {};
   win = new BrowserWindow({width:bounds.width || 1440, height:bounds.height || 940,
     minWidth:900, minHeight:650, title:isBeta?'Production Desk Beta':'Production Desk', backgroundColor:'#191419', show:!smokeResult,
-    webPreferences:{preload:path.join(__dirname,'preload.cjs'), nodeIntegration:false,
+    webPreferences:{preload:path.join(__dirname,'preload.cjs'), additionalArguments:['--squid-version='+app.getVersion()], nodeIntegration:false,
       contextIsolation:true, sandbox:true, spellcheck:false}});
   win.webContents.on('render-process-gone', async (_event, details) => {
     if (quitting) return;

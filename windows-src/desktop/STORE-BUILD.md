@@ -53,3 +53,18 @@ validation only. Distribution signing, Apple's processing, and the existing
 owner group's Testing state must all be verified before claiming a Mac release.
 Native file dialogs, printing/sharing, and TestFlight installation remain owner
 acceptance checks.
+
+
+Store export requests now use a reply-capable native bridge and NSSavePanel.
+Only a main-frame request from the active loopback origin may request the exact
+local download-token path. Redirects, unsafe filenames, unexpected responses,
+and oversized files are rejected. Cancel and write errors return to the editor;
+the browser/direct-download fallback and original project formats remain intact.
+The Store sidebar reads its version/build from the bundle, rather than HTML.
+Platform branding uses native host identity: iOS on iPhone, iPad on iPad,
+MacBook on macOS, and Desktop on Windows. Window width only changes layout.
+
+Run `node --test tests/mac-store-exports.cjs tests/platform-branding.cjs` plus
+`swiftc desktop/StoreExports.swift tests/MacStoreExportCheck.swift -o /tmp/store-export-check`
+and `/tmp/store-export-check` for focused regressions. Actual signed sandbox
+save/cancel/CSV and portable round-trip checks are still required before upload.

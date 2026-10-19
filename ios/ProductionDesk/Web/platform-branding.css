@@ -1,0 +1,6 @@
+/* Platform text follows native host identity, independently of viewport size. */
+.brand-edition[data-platform-label],.brand-platform{display:block;font:10px/1.4 Futura,sans-serif;letter-spacing:.6px;margin-top:6px;text-transform:none;color:var(--muted,#72656d)}
+.platform-brand-compact{display:none;flex-shrink:0;flex-direction:column;gap:1px;line-height:1.1;margin-right:4px;color:var(--ink)}
+.platform-brand-compact strong{font:12px/1.1 Futura,sans-serif;letter-spacing:.2px}
+.platform-brand-compact small{font:9px/1.1 Futura,sans-serif;letter-spacing:.2px}
+html[data-brand-platform="iOS"] .platform-brand-compact,html[data-brand-platform="iPad"] .platform-brand-compact{display:flex}
