@@ -62,13 +62,13 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
         })()`);
         layouts.push(layout);
         fs.writeFileSync(path.join(output,'demo-sidebar-layout.json'),JSON.stringify(layouts,null,2));
+        const image=(await win.webContents.capturePage()).toPNG();fs.writeFileSync(path.join(output,'demo-app-'+width+'.png'),image);
+        if(width===1280)fs.writeFileSync(path.join(output,'demo-app.png'),image);
         assert.equal(layout.viewport.width,width,'Actual native CSS viewport width');assert.equal(layout.viewport.height,height,'Actual native CSS viewport height');
         assert.ok(layout.text.every(rect=>rect.right<=layout.brand.right+1&&rect.x>=layout.brand.x-1),'Painted native Windows app title must fit inside brand at '+width+'px');
         assert.ok(layout.plus.width>=44&&layout.plus.height>=44,'New-production target remains44px');
         assert.ok(layout.selector.width>100&&layout.selector.height>0,'Production selector remains visible');
         assert.equal(layout.productionTitle,'DEMO · The Last Cue');assert.equal(layout.version,require('./package.json').version);
-        const image=(await win.webContents.capturePage()).toPNG();fs.writeFileSync(path.join(output,'demo-app-'+width+'.png'),image);
-        if(width===1280)fs.writeFileSync(path.join(output,'demo-app.png'),image);
       }
     } finally {win.setBounds(bounds);if(!wasVisible)win.hide();}
     checks.push('Painted Windows demo title fits900/1008/1280px viewports, with correct production/version, visible selector and44px plus target');
