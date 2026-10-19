@@ -49,7 +49,7 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
     const count=workspace.projects.length,hash=demo._linedScript.activePdf;
     const pdf=Buffer.from(await(await fetch(origin+'/api/pdf/'+hash)).arrayBuffer());assert.equal(createHash('sha256').update(pdf).digest('hex'),hash);assert.deepEqual(pdf,Buffer.from(asset.workspace._pdfDocuments[hash],'base64'));
     checks.push('Packaged Load Demo and guide: Scenic-aligned scene, two banners, four shots, two scenarios, exact original PDF and six marks');
-    const bounds=win.getBounds(),wasVisible=win.isVisible(),layouts=[];
+    const bounds=win.getBounds(),wasVisible=win.isVisible(),layouts=[],captures=[];
     try {
       if(!wasVisible)win.showInactive();
       for(const [width,height] of [[1008,655],[900,655],[1280,800]]) {
@@ -62,7 +62,24 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
         })()`);
         layouts.push(layout);
         fs.writeFileSync(path.join(output,'demo-sidebar-layout.json'),JSON.stringify(layouts,null,2));
-        const image=(await win.webContents.capturePage()).toPNG();fs.writeFileSync(path.join(output,'demo-app-'+width+'.png'),image);
+        let image;
+        for(let attempt=1;attempt<=3;attempt++) {
+          // Chromium's compositor can lag the two renderer animation frames after
+          // a native resize on hosted Windows. Retry only its transient copy error.
+          await new Promise(resolve=>setTimeout(resolve,200*attempt));
+          try {
+            const captured=await win.webContents.capturePage();
+            assert.equal(captured.isEmpty(),false,'Painted native screenshot must contain pixels');
+            image=captured.toPNG();captures.push({width,attempt,passed:true});break;
+          } catch(error) {
+            captures.push({width,attempt,error:String(error)});
+            if(!String(error).includes('UnknownVizError')||attempt===3)throw error;
+            await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+          } finally {
+            fs.writeFileSync(path.join(output,'demo-screenshot-captures.json'),JSON.stringify(captures,null,2));
+          }
+        }
+        fs.writeFileSync(path.join(output,'demo-app-'+width+'.png'),image);
         if(width===1280)fs.writeFileSync(path.join(output,'demo-app.png'),image);
         assert.equal(layout.viewport.width,width,'Actual native CSS viewport width');assert.equal(layout.viewport.height,height,'Actual native CSS viewport height');
         assert.ok(layout.text.every(rect=>rect.right<=layout.brand.right+1&&rect.x>=layout.brand.x-1),'Painted native Windows app title must fit inside brand at '+width+'px');
