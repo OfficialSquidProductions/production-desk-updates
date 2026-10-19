@@ -12,6 +12,28 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
       await delay(100);
     }
   };
+  // A recovered renderer needs a visible native surface for compositor copies
+  // on hosted Windows. This window exists only for the isolated smoke run.
+  if(!win.isVisible())win.showInactive();
+  const captures=[];
+  const screenshot = async name => {
+    await js('document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))');
+    for(let attempt=1;attempt<=3;attempt++) {
+      await delay(200*attempt);
+      try {
+        const image=await win.webContents.capturePage();
+        assert.equal(image.isEmpty(),false,'Native screenshot must contain pixels');
+        fs.writeFileSync(path.join(output,name),image.toPNG());
+        captures.push({name,attempt,passed:true});return;
+      } catch(error) {
+        captures.push({name,attempt,error:String(error)});
+        if(!String(error).includes('UnknownVizError')||attempt===3)throw Error('Native screenshot '+name+' failed: '+String(error));
+        await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      } finally {
+        fs.writeFileSync(path.join(output,'native-screenshot-captures.json'),JSON.stringify(captures,null,2));
+      }
+    }
+  };
   const checks = [];
   await waitFor('document.querySelector("#project-picker")?.options.length > 0');
   assert.equal(await js('window.slateDesktop.ready'), true);
@@ -125,7 +147,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   fs.writeFileSync(path.join(output,'schedule.pdf'),pdf);
   checks.push('Schedule report PDF rendered by the bundled desktop engine');
   await js(`document.querySelector('[data-view="workspace"]').click()`);
-  fs.writeFileSync(path.join(output,'windows-app.png'),(await win.webContents.capturePage()).toPNG());
+  await screenshot('windows-app.png');
   const blocked=await fetch(origin+'/api/workspace',{headers:{Origin:'https://example.com'}});
   assert.equal(blocked.status,403);
   checks.push('Cross-origin requests rejected');
@@ -136,7 +158,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   fs.writeFileSync(path.join(output,'continuous-script-export.pdf'),Buffer.from(await js('window.workspaceLayoutExport.content'),'base64'));
   const exported=await js('window.linedTestExport.content');
   fs.writeFileSync(path.join(output,'lined-script-export.pdf'),Buffer.from(exported,'base64'));
-  fs.writeFileSync(path.join(output,'lined-script.png'),(await win.webContents.capturePage()).toPNG());
+  await screenshot('lined-script.png');
   const linedDownloaded=new Promise((resolve,reject)=>win.webContents.session.once('will-download',(_event,item)=>item.once('done',(_event,state)=>state==='completed'?resolve(item.getSavePath()):reject(Error('Lined PDF download '+state)))));
   await js('document.querySelector("#lined-export").click()');
   const linedPath=await Promise.race([linedDownloaded,delay(20000).then(()=>{throw Error('Lined PDF download timed out');})]);
