@@ -5,14 +5,14 @@
     <link>https://productiondesk.squidproductions.org/</link>
     <language>en</language>
     <item>
-      <title>Production Desk 1.5.9</title>
-      <pubDate>Mon, 19 Oct 2026 02:47:23 +0000</pubDate>
-      <description>&lt;h2&gt;Production Desk 1.5.9&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Open the offline The Last Cue demo from the sidebar, with a guide to the script breakdown, schedule, shots and lined script. Scene 1 and shots 1A–1D match the Scenic rehearsal demo.&lt;/li&gt;&lt;li&gt;The sample includes one story scene, two schedule banners, four camera setups, two planning scenarios, a two-page original PDF and six editable lining marks. Portable Production Desk files keep the original PDF and annotations.&lt;/li&gt;&lt;li&gt;Load Demo reopens your edited sample without duplicates. Reset changes only the managed demo; existing productions, legacy samples and imported copies are preserved, and Undo restores demo edits.&lt;/li&gt;&lt;li&gt;Keep the full app title readable in narrow and wide desktop windows, including Windows scrollbars while retaining the 44px new-production target, production selector and save controls.&lt;/li&gt;&lt;li&gt;A tidier sidebar places the software credit and live save status beneath the app/platform label. Production selection moves up, and the new-production plus retains a generous accessible target.&lt;/li&gt;&lt;li&gt;Existing project files, desktop updater consent/save safeguards, CSV/USS exports and original-PDF workflows remain available.&lt;/li&gt;&lt;/ul&gt;
+      <title>Production Desk 1.5.10</title>
+      <pubDate>Mon, 19 Oct 2026 16:44:37 +0000</pubDate>
+      <description>&lt;h2&gt;Production Desk 1.5.10&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Load The Last Light from the sidebar to explore an editable eight-scene production with sixteen shots, two planning scenarios and three shoot days.&lt;/li&gt;&lt;li&gt;Follow the demo guide through screenplay breakdown, scheduling, shot lists, reports and an eight-page original lined script with twelve editable marks.&lt;/li&gt;&lt;li&gt;Export the matching Scenic project and shot-list CSV to compare camera setups, blocking and coverage across both apps.&lt;/li&gt;&lt;li&gt;Reopening the managed demo preserves edits. Reset affects only that demo and supports cancellation and Undo; imported copies and existing productions remain separate.&lt;/li&gt;&lt;li&gt;The fictional demo is included temporarily for beta testing and reference. Its entry point will be removed before production. Existing portable files and desktop update safeguards remain available.&lt;/li&gt;&lt;/ul&gt;
 </description>
-      <sparkle:version>29</sparkle:version>
-      <sparkle:shortVersionString>1.5.9</sparkle:shortVersionString>
+      <sparkle:version>31</sparkle:version>
+      <sparkle:shortVersionString>1.5.10</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.9-29.zip" length="21280454" type="application/octet-stream" sparkle:edSignature="JRjdV97/kuZjxvBSWqUk80YUdRiejwWC4bYDHq9hdOIWceSJB8H0dO2hJI7kAhdgmRKxyZFq9MiJLRkrlNZ6Dw==" />
+      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.10-31.zip" length="21305724" type="application/octet-stream" sparkle:edSignature="H65bT4422wGzwBdoqsp2BXxEXELDzp5M77OcTI+4/jvRW2A7yfDBM5ndYOEJk9zGPINGVBGHIjwB2dCjvUSiCg==" />
     </item>
   </channel>
 </rss>
