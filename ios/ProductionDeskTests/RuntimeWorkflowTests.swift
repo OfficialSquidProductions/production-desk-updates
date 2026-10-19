@@ -405,11 +405,29 @@ final class RuntimeWorkflowTests: XCTestCase {
         const $=s=>document.querySelector(s),clone=v=>structuredClone(v);
         const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
         const same=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
+        const differences=(a,b,path='')=>{
+          if(same(a,b))return [];
+          if(a&&b&&typeof a==='object'&&typeof b==='object')return [...new Set([...Object.keys(a),...Object.keys(b)])].flatMap(k=>differences(a[k],b[k],path+'/'+k));
+          return [{path,before:a??null,after:b??null,beforeType:typeof a,afterType:typeof b}];
+        };
         const load=async()=>{$('#load-demo').click();for(let i=0;i<100&&$('#load-demo').disabled;i++)await new Promise(r=>setTimeout(r,25));await window.productionDeskSave();return nativeAPI('/api/workspace');};
-        await window.productionDeskSave();const before=await nativeAPI('/api/workspace'),oldDemo=before.projects.find(p=>p._betaDemo?.key==='productiondesk.the-last-cue.v1');
+        // A fresh native workspace is stored before openDesk adds optional shot
+        // defaults. A clean flush has no dirty revision to persist. Select the
+        // same production through its real UI before taking the demo baseline.
+        const initial=await nativeAPI('/api/workspace');
+        $('#project-picker').dispatchEvent(new Event('change',{bubbles:true}));
+        if(!await window.productionDeskSave())throw Error('Initial production save did not finish');
+        const before=await nativeAPI('/api/workspace'),oldDemo=before.projects.find(p=>p._betaDemo?.key==='productiondesk.the-last-cue.v1');
+        const initializationDiagnostics=initial.projects.flatMap(p=>differences(p,before.projects.find(q=>q.id===p.id)).map(d=>({id:p.id,...d})));
+        const initializationAddsOnlyDefaults=initial.projects.length===before.projects.length&&initial.activeProject===before.activeProject&&initializationDiagnostics.every(d=>
+          d.beforeType==='undefined'&&((d.path==='/_shots'&&same(d.after,[]))||(d.path==='/_shotSettings'&&same(d.after,{startTime:'07:00'}))));
         const first=await load(),demo=first.projects.find(p=>p.id===first.activeProject),demoID=demo.id;
         if(!demo._betaDemo)throw Error('Bundled demo did not load: '+$('#toast').textContent);
         const preserved=before.projects.every(p=>first.projects.some(q=>q.id===p.id&&same(p,q)));
+        const preservationDiagnostics=before.projects.flatMap(p=>{
+          const q=first.projects.find(q=>q.id===p.id);
+          return same(p,q)?[]:[{id:p.id,title:p.project,activeBefore:p.id===before.activeProject,activeAfter:p.id===first.activeProject,differences:differences(p,q)}];
+        });
         const field=$('[data-field="description"]');field.value='Demo rehearsal edit retained';field.dispatchEvent(new Event('input',{bubbles:true}));
         $('#content [data-action="edit-script"]').click();$('#edit-text').value+='\\n\\nMAYA\\nKeep this demo rehearsal note.';$('#edit-submit').click();
         await window.productionDeskSave();const edited=await nativeAPI('/api/workspace'),editedDemo=edited.projects.find(p=>p.id===demoID);
@@ -418,7 +436,7 @@ final class RuntimeWorkflowTests: XCTestCase {
         const encoded=JSON.stringify(portable);
         await window.slateDesktop.importProjectFile(new File([encoded],'The-Last-Cue-edited.productiondesk',{type:'application/json'}));
         await window.productionDeskSave();const imported=await nativeAPI('/api/workspace'),copy=imported.projects.find(p=>p.id===imported.activeProject);
-        return {preserved,count:first.projects.length,expected:before.projects.length+(oldDemo?0:1),
+        return {preserved,preservationDiagnostics:JSON.stringify(preservationDiagnostics),initializationAddsOnlyDefaults,initializationDiagnostics:JSON.stringify(initializationDiagnostics),count:first.projects.length,expected:before.projects.length+(oldDemo?0:1),
           repeatCount:repeated.projects.length,repeatID:repeated.activeProject===demoID,repeatEdits:same(repeated.projects.find(p=>p.id===demoID),editedDemo),
           source:editedDemo._sourceScript.text.includes('The Last Cue'),scenes:editedDemo.breakdowns.length,shots:editedDemo._shots.length,
           exportedEdit:portable.workspace.projects[0].breakdowns[0].description,
@@ -427,7 +445,10 @@ final class RuntimeWorkflowTests: XCTestCase {
           existingAfterImport:repeated.projects.every(p=>imported.projects.some(q=>q.id===p.id&&same(p,q))),portable:encoded};
         """,arguments:[:],in:nil,contentWorld:.page)
         let v=try XCTUnwrap(result as? [String:Any])
-        for key in ["preserved","repeatID","repeatEdits","source","importCount","importName","importScript","existingAfterImport"] {XCTAssertEqual(v[key] as? Bool,true,key)}
+        for (key,name) in [("initializationDiagnostics","Initial production optional defaults"),("preservationDiagnostics","Demo load existing production field differences")] {
+            let diagnostics=XCTAttachment(string:try XCTUnwrap(v[key] as? String));diagnostics.name=name;diagnostics.lifetime = .keepAlways;add(diagnostics)
+        }
+        for key in ["initializationAddsOnlyDefaults","preserved","repeatID","repeatEdits","source","importCount","importName","importScript","existingAfterImport"] {XCTAssertEqual(v[key] as? Bool,true,key)}
         XCTAssertEqual(v["count"] as? Int,v["expected"] as? Int)
         XCTAssertEqual(v["repeatCount"] as? Int,v["count"] as? Int)
         XCTAssertEqual(v["scenes"] as? Int,3);XCTAssertEqual(v["shots"] as? Int,3)
