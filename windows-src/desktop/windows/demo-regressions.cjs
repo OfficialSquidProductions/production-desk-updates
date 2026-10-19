@@ -42,7 +42,7 @@ module.exports = async ({win, origin, output, flush, waitFor}) => {
     workspace.projects.push(legacy,priorCopy);await post('/api/workspace',workspace);await reload();
     const baseline=(await read()).projects;
     const preserved = async () => {const w=await read();for(const p of baseline)assert.deepEqual(w.projects.find(x=>x.id===p.id),p,'Preserve '+p.project);return w;};
-    await click('#demo-guide');assert.equal(await js('document.querySelector("#modal-content").textContent.includes("Scene 1 and shots 1A–1D")'),true);await click('#demo-guide-close');
+    await click('#demo-guide');assert.equal(await js('document.querySelector("#modal-content").textContent.includes("original eight-scene screenplay") && document.querySelector("#modal-content").textContent.includes("16 setups")'),true);await click('#demo-guide-close');
     await click('#load-demo');await waitFor('!document.querySelector("#load-demo").disabled && document.querySelector("#project-title").textContent.includes("The Last Light")');
     workspace=await preserved();const key='productiondesk.the-last-light.v3',ownedID=workspace._demoProjects[key];let demo=workspace.projects.find(p=>p.id===ownedID);
     assert.equal(workspace.activeProject,ownedID);assert.equal(demo.breakdowns.filter(b=>b.type==='scene').length,8);assert.equal(demo.breakdowns.filter(b=>b.type==='banner').length,3);assert.equal(demo._shots.length,16);assert.equal(demo.stripboards.length,2);assert.equal(demo._linedScript.documents[0].marks.length,12);
