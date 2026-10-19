@@ -29,9 +29,8 @@
 @media(min-width:1101px){.ipad-app .sidebar .brand{gap:5px}.ipad-app .brand .brand-title{font-size:14px}}
 @media(max-width:599px){.sidebar .brand{margin-bottom:12px}.brand .brand-title{font-size:16px}.brand .software-credit{font-size:8px}.demo-launcher{margin-bottom:10px}.brand .sidebar-save{margin-top:6px}}
 @media(max-width:760px){.sidebar .brand{margin-bottom:0}}
-@media(min-width:761px){body:not(.ipad-app) .sidebar .brand{gap:5px}}
+@media(min-width:761px){body:not(.ipad-app) .sidebar .brand{gap:5px}body:not(.ipad-app) .brand .brand-title{font-size:14px}}
 @media(min-width:761px) and (max-width:1100px){
- body:not(.ipad-app) .brand .brand-title{font-size:14px}
  body:not(.ipad-app) .sidebar .sp-logo-frame{width:35px;height:53px}
  body:not(.ipad-app) .sidebar .sp-logo-frame img{width:60px;height:60px;left:-13px;top:-4px}
 }
