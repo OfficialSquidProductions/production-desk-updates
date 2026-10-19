@@ -18,6 +18,19 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   assert.equal(await js('typeof window.productionDeskWindows?.print'), 'function');
   assert.equal(await js('typeof window.require'), 'undefined');
   checks.push('Isolated native window and print bridge');
+  const bounds = win.getBounds();
+  try {
+    for (const width of [420, 1440]) {
+      win.setSize(width, Math.max(bounds.height, 720));
+      assert.equal(await js('window.SquidPlatform'), 'Desktop');
+      assert.equal(await js('document.documentElement.dataset.brandPlatform'), 'Desktop');
+      const labels = await js('Array.from(document.querySelectorAll("[data-platform-label]"), node => node.textContent)');
+      assert.ok(labels.length > 0 && labels.every(label => label === 'Desktop'));
+      assert.equal(await js('document.querySelector(".sidebar-bottom small").textContent'), 'PRODUCTION DESK / ' + require('./package.json').version);
+    }
+  } finally { win.setBounds(bounds); }
+  checks.push('Native Desktop branding and exact packaged version survive narrow and wide layouts');
+
   const original = await (await fetch(origin+'/api/workspace')).json();
   assert.ok(original.projects.length);
   for(const view of ['workspace','schedule','shots','elements','reports']) {
