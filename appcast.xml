@@ -5,14 +5,14 @@
     <link>https://productiondesk.squidproductions.org/</link>
     <language>en</language>
     <item>
-      <title>Production Desk 1.5.5</title>
-      <pubDate>Sun, 18 Oct 2026 04:42:43 +0000</pubDate>
-      <description>&lt;h2&gt;Production Desk 1.5.5&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;See available desktop updates and their changelog after your workspace opens. Choose Install Update or Later; postponed updates can be reopened from the menu.&lt;/li&gt;&lt;li&gt;Installation requires your choice and a successful save. Finish or cancel open editor dialogs before updating so unfinished drafts stay intact. Ordinary exit never installs an update.&lt;/li&gt;&lt;li&gt;Avoid repeated update notices and duplicate installations. Automatic checks stay quiet offline and when update information is invalid.&lt;/li&gt;&lt;li&gt;Keep existing portable productions, scripts, original PDFs, schedules, annotations and shots.&lt;/li&gt;&lt;/ul&gt;
+      <title>Production Desk 1.5.6</title>
+      <pubDate>Mon, 19 Oct 2026 01:04:23 +0000</pubDate>
+      <description>&lt;h2&gt;Production Desk 1.5.6&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Show the app platform beside Production Desk: MacBook on macOS, Desktop on Windows, iPad on iPad, and iOS on iPhone. The label follows the native device, including resized windows.&lt;/li&gt;&lt;li&gt;Show the application version from native build metadata.&lt;/li&gt;&lt;li&gt;Keep portable production files, demos, original PDFs, recent interface improvements and the existing desktop update workflow.&lt;/li&gt;&lt;/ul&gt;
 </description>
-      <sparkle:version>24</sparkle:version>
-      <sparkle:shortVersionString>1.5.5</sparkle:shortVersionString>
+      <sparkle:version>26</sparkle:version>
+      <sparkle:shortVersionString>1.5.6</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.5-24.zip" length="21257221" type="application/octet-stream" sparkle:edSignature="h/KTG+jgbVQuXrATDIBZV8hA+MktBXD+lTKvcWVzNhIsvQrGXMXLO4D/aKUMw2QJCPbizAH1F0Q9x5/dbdUeAw==" />
+      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.6-26.zip" length="21261216" type="application/octet-stream" sparkle:edSignature="u8bPF8eVe6wu8EtW1edm0wDynm3UxEVx/c/tkVFcbCEcwBCqfS0Lfes9lxsVvtmcx0j5oVsSbCOX6InQ2FzHCA==" />
     </item>
   </channel>
 </rss>
