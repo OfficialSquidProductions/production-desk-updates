@@ -73,6 +73,59 @@ final class RuntimeWorkflowTests: XCTestCase {
         XCTAssertEqual((restored as? [String: Any])?["activeProject"] as? String, fields["id"] as? String)
     }
 
+    @MainActor func testBreakdownTagsAndActorsRetainEditingContext() async throws {
+        let desk = try await openDesk()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let original = window.rootViewController
+        defer { window.rootViewController = original }
+        window.rootViewController = desk
+        desk.view.layoutIfNeeded()
+        let result = try await desk.webView.callAsyncJavaScript(#"""
+        const $=s=>document.querySelector(s),expect=(v,m)=>{if(!v)throw Error(m);};
+        const frame=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        window.slateDesktop.importScript();
+        $('#paste-script').value='1 INT. FIRST ROOM - DAY\n\nUntouched.\n\n2 EXT. SECOND ROOM - NIGHT\n\n'+('The copper lantern lights the road.\n\n'.repeat(140));
+        $('#import-submit').click();
+        for(let i=0;i<200&&$('#modal').open;i++)await new Promise(r=>setTimeout(r,25));
+        expect(!$('#modal').open,'Import failed');
+        $('#scene-picker').value=$('#scene-picker').options[1].value;$('#scene-picker').dispatchEvent(new Event('change',{bubbles:true}));
+        const sceneID=$('#scene-picker').value,script=$('#script-text'),shell=$('#workspace-shell');
+        const show=pane=>$('[data-workspace-pane="'+pane+'"]').click();
+        show('script');await frame();
+        const text=script.querySelectorAll('p')[80].firstChild,range=document.createRange();
+        range.setStart(text,4);range.setEnd(text,18);getSelection().removeAllRanges();getSelection().addRange(range);
+        // iOS captures native touch selection via selectionchange, without mouseup.
+        document.dispatchEvent(new Event('selectionchange'));
+        const scroll=$('.script-scroll');scroll.scrollTop=900;const scriptTop=scroll.scrollTop;
+        expect(scriptTop>0,'Script must overflow');$('#tag-category').value='104';$('#tag-selection').click();await frame();
+        expect($('#script-text')===script&&$('#workspace-shell')===shell,'Tag replaced editor nodes');
+        expect(getSelection().toString()==='copper lantern','Tag lost selected text');
+        expect($('#tag-category').value==='104'&&$('#scene-picker').value===sceneID,'Tag changed category or scene');
+        expect(Math.abs(scroll.scrollTop-scriptTop)<2,'Tag reset script scroll');
+        show('breakdown');await frame();
+        const form=$('[data-add-category="100"]'),input=form.querySelector('input'),sheet=$('.breakdown-scroll');
+        for(const name of ['Native Actor One','Native Actor Two']){
+          input.focus({preventScroll:true});input.value=name;sheet.scrollTop=450;const top=sheet.scrollTop;
+          expect(top>0,'Sheet must overflow');form.requestSubmit();await frame();
+          expect(input.isConnected&&document.activeElement===input&&input.value==='','Actor entry lost focus');
+          expect(Math.abs(sheet.scrollTop-top)<2,'Actor reset sheet scroll');
+          expect($('#workspace-shell')===shell&&$('#script-text')===script,'Actor replaced workspace');
+        }
+        show('script');await frame();expect(Math.abs(scroll.scrollTop-scriptTop)<2,'Pane toggle lost script position');
+        expect($('#tag-category').value==='104'&&$('#scene-picker').value===sceneID,'Actor changed category or scene');
+        expect(await window.productionDeskSave(),'Native save failed');
+        const w=await window.webkit.messageHandlers.scheduler.postMessage({operation:'load'}),p=w.projects.find(p=>p.id===w.activeProject),b=p.breakdowns.find(b=>b.id===sceneID);
+        const names=p.elements.filter(e=>b.elements.includes(e.id)).map(e=>e.name);
+        expect(names.includes('Native Actor One')&&names.includes('Native Actor Two')&&names.includes('copper lantern'),'Native save lost assignments');
+        expect(!p.breakdowns[0].elements.some(id=>p.elements.find(e=>e.id===id)?.name==='copper lantern'),'Tagged first scene');
+        return {passed:true,width:innerWidth};
+        """#, arguments: [:], in: nil, contentWorld: .page)
+        let values = try XCTUnwrap(result as? [String: Any])
+        XCTAssertEqual(values["passed"] as? Bool, true)
+        XCTAssertGreaterThan(values["width"] as? Double ?? 0, 0)
+    }
+
     @MainActor func testFinalDraftBrowserParserAndInvalidXML() async throws {
         let desk = try await openDesk()
         let result = try await desk.webView.callAsyncJavaScript("""

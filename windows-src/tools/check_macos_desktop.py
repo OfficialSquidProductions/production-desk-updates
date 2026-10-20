@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Test the packaged Mac runtime and UI in native WebKit with synthetic data."""
+import argparse
 import json
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -10,10 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source", action="store_true", help="Check this checkout with the current Python, without building or signing an app")
+    args = parser.parse_args()
     app = ROOT / ('dist/Production Desk Beta.app' if json.loads((ROOT / 'desktop/release.json').read_text()).get('channel') == 'beta' else 'dist/Production Desk.app')
     python = app / 'Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9'
     runtime = app / 'Contents/Resources/runtime'
+    if args.source:
+        python, runtime = Path(sys.executable), ROOT
     binary = ROOT / '.cache/check-desktop-webkit'
+    binary.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(['swiftc', '-parse-as-library', '-module-cache-path', str(ROOT / '.cache/swift'),
                     str(ROOT / 'tests/DesktopWebKitCheck.swift'), '-o', str(binary)], check=True)
     with tempfile.TemporaryDirectory(prefix='production-desk-native-check-') as folder:

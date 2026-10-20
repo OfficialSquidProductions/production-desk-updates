@@ -133,6 +133,7 @@ function totals(ids) { return ids.map(x=>breakdown(x)).filter(Boolean).reduce((a
 function allScheduled() { return activeBoard()?.breakdownIds.flat() || []; }
 
 function render() {
+  selectedText = ''; // A selection belongs only to the script nodes being displayed.
   elementActions.close();
   useProject();
   document.body.classList.toggle('view-shots',view==='shots');
@@ -187,14 +188,45 @@ function breakdownPanel() {
     <div class="scene-strip-preview ${stripClass(b)} ${validStripColor(b._stripColor)?'custom-color':''}" ${customStripAttrs(b)}><span class="scene-big-number">${esc(b.scene)}</span><div><div class="preview-heading">${esc(slug(b))}</div><div class="preview-desc">${pages(b.pages)} pages · ${minutes(b.duration)} estimated</div></div></div>
     ${b._needsReview?'<div class="notice">Imported page count and cast are estimates. Review this sheet, then mark it reviewed below.</div>':''}
     <div class="fields"><div class="form-grid">${field('Scene number','scene',b.scene)}${field('Script page','scriptPage',b.scriptPage)}${propertyField('INT / EXT',1,b,['INT','EXT','I/E'])}${propertyField('Time of day',2,b,['Day','Night','Dawn','Dusk'])}${propertyField('Set',0,b)}${propertyField('Shoot location',6,b)}${field('Pages (decimal eighths)','pages',b.pages,'number',false,'min="0" step="0.125"')}${field('Shoot time (minutes)','duration',(b.duration||0)/60000,'number',false,'min="0" step="5"')}${propertyField('Script day',3,b)}${propertyField('Unit',4,b)}<label class="field wide">Synopsis<textarea data-field="description">${esc(b.description)}</textarea></label></div></div>
-    <div class="divider-title">PRODUCTION ELEMENTS <span>${b.elements.filter(eid=>project.categories.find(c=>c.id===project.elements.find(e=>e.id===eid)?.category)?.ucid>=100).length} tagged</span></div>
+    <div class="divider-title">PRODUCTION ELEMENTS <span id="tagged-count">${b.elements.filter(eid=>project.categories.find(c=>c.id===project.elements.find(e=>e.id===eid)?.category)?.ucid>=100).length} tagged</span></div>
     <div class="category-list">${visibleCats.map(c=>categoryCard(c,b)).join('')}<div class="element-entry"><select id="extra-category" aria-label="Additional element category">${project.categories.filter(c=>c.ucid>=100&&!visibleCats.includes(c)).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('')}</select><button data-action="extra-element">＋</button></div></div>
     <div class="sheet-bottom"><label class="field">Production notes<textarea data-field="comments">${esc(b.comments)}</textarea></label><label class="check-label"><input type="checkbox" id="reviewed" ${b._needsReview?'':'checked'}>Breakdown reviewed</label><label class="check-label"><input type="checkbox" data-field="_completed" ${b._completed?'checked':''}>Scene completed</label><div class="sheet-actions"><select id="move-target" aria-label="Move scene to shooting day"><option value="unscheduled">Unscheduled</option>${scheduleGroups().map((g,i)=>Array.isArray(g)?`<option value="${i}">Shoot day ${dayOrdinal(i)}</option>`:'').join('')}</select><button data-action="move-scene">Move scene</button><button data-action="delete-scene" class="danger" title="Delete selected scene" aria-label="Delete selected scene">×</button></div></div>
     </div></section>`;
 }
+function categoryChips(c,b) {
+  return items(b,c.ucid).map(e=>`<span class="chip">${e.elementId?esc(e.elementId)+' · ':''}${esc(e.name)}<button data-remove-element="${esc(e.id)}" aria-label="Remove ${esc(e.name)}">×</button></span>`).join('');
+}
+function categoryOptions(c) {
+  return project.elements.filter(e=>e.category===c.id).map(e=>`<option value="${esc(e.name)}">`).join('');
+}
 function categoryCard(c,b) {
-  const elements = project.elements.filter(e=>e.category===c.id&&b.elements.includes(e.id));
-  return `<div class="category-card"><div class="category-heading"><span class="category-dot"></span>${esc(c.name)}<span class="tiny">${elements.length || '—'}</span></div><div class="chips">${elements.map(e=>`<span class="chip">${e.elementId?esc(e.elementId)+' · ':''}${esc(e.name)}<button data-remove-element="${esc(e.id)}" aria-label="Remove ${esc(e.name)}">×</button></span>`).join('')}</div><form class="element-entry" data-add-category="${c.ucid}"><input placeholder="Add ${esc(c.name.toLowerCase())}…" aria-label="Add ${esc(c.name)}" list="elements-${c.ucid}"><datalist id="elements-${c.ucid}">${project.elements.filter(e=>e.category===c.id).map(e=>`<option value="${esc(e.name)}">`).join('')}</datalist><button aria-label="Add element">＋</button></form></div>`;
+  return `<div class="category-card" data-category-card="${c.ucid}"><div class="category-heading"><span class="category-dot"></span>${esc(c.name)}<span class="tiny" data-category-count>${items(b,c.ucid).length || '—'}</span></div><div class="chips">${categoryChips(c,b)}</div><form class="element-entry" data-add-category="${c.ucid}"><input placeholder="Add ${esc(c.name.toLowerCase())}…" aria-label="Add ${esc(c.name)}" list="elements-${c.ucid}"><datalist id="elements-${c.ucid}">${categoryOptions(c)}</datalist><button aria-label="Add element">＋</button></form></div>`;
+}
+// Element edits keep the script, pane controls, fields and entry forms mounted.
+// Replacing #content here loses WebKit's selection, keyboard session and scroll.
+function mutateBreakdownElements(fn) {
+  mutate(fn,false);
+  const b=breakdown(), list=$('.category-list');
+  if(!b || !list)return;
+  const scrolls=[];
+  for(let node=list.parentElement;node;node=node.parentElement)scrolls.push([node,node.scrollTop,node.scrollLeft]);
+  for(const c of project.categories.filter(c=>c.ucid>=100)) {
+    let card=$(`[data-category-card="${c.ucid}"]`,list);
+    if(!card && items(b,c.ucid).length) {
+      list.lastElementChild.insertAdjacentHTML('beforebegin',categoryCard(c,b));
+      card=$(`[data-category-card="${c.ucid}"]`,list);
+    }
+    if(card) {
+      $('[data-category-count]',card).textContent=items(b,c.ucid).length || '—';
+      $('.chips',card).innerHTML=categoryChips(c,b);
+      $('datalist',card).innerHTML=categoryOptions(c);
+    }
+  }
+  $('#tagged-count').textContent=b.elements.filter(eid=>project.categories.find(c=>c.id===project.elements.find(e=>e.id===eid)?.category)?.ucid>=100).length+' tagged';
+  const extra=$('#extra-category'), value=extra.value;
+  extra.innerHTML=project.categories.filter(c=>c.ucid>=100&&!$(`[data-category-card="${c.ucid}"]`,list)).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('');
+  if([...extra.options].some(option=>option.value===value))extra.value=value;
+  for(const [node,top,left] of scrolls){node.scrollTop=top;node.scrollLeft=left;}
 }
 function dayOrdinal(index) { return scheduleGroups().slice(0,index+1).filter(Array.isArray).length; }
 function scenarioSelect() { return `<select id="scenario-picker" aria-label="Schedule scenario">${project.stripboards.map((s,i)=>`<option value="${i}" ${i===scenarioIndex?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`; }
@@ -299,10 +331,22 @@ function bindContent() {
     input.addEventListener('blur',()=>{editing=false;});
   });
   $('#reviewed')?.addEventListener('change',e=>mutate(()=>breakdown()._needsReview=!e.target.checked));
-  $$('[data-add-category]').forEach(form=>form.addEventListener('submit',e=>{e.preventDefault();const name=$('input',form).value;if(name.trim())mutate(()=>addElement(breakdown(),Number(form.dataset.addCategory),name));}));
-  $$('[data-remove-element]').forEach(button=>button.addEventListener('click',()=>mutate(()=>{breakdown().elements=breakdown().elements.filter(x=>x!==button.dataset.removeElement);}))); 
+  // Delegate within the retained list so newly visible categories work too.
+  $('.category-list')?.addEventListener('submit',e=>{
+    const form=e.target.closest('[data-add-category]');if(!form)return;
+    e.preventDefault();const input=$('input',form),name=input.value;
+    if(!name.trim())return;
+    mutateBreakdownElements(()=>addElement(breakdown(),Number(form.dataset.addCategory),name));
+    input.value='';input.focus({preventScroll:true});
+  });
+  $('.category-list')?.addEventListener('click',e=>{
+    const button=e.target.closest('[data-remove-element]');if(!button)return;
+    const input=$('input',button.closest('.category-card')),focused=document.activeElement===button;
+    mutateBreakdownElements(()=>{breakdown().elements=breakdown().elements.filter(x=>x!==button.dataset.removeElement);});
+    if(focused)input.focus({preventScroll:true});
+  });
   $('#script-text')?.addEventListener('mouseup',()=>{const selection=window.getSelection();if(selection&&$('#script-text').contains(selection.anchorNode))selectedText=selection.toString().trim();});
-  $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutate(()=>addElement(breakdown(),Number($('#tag-category').value),text));selectedText='';toast(`Tagged “${text}”`);});
+  $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutateBreakdownElements(()=>addElement(breakdown(),Number($('#tag-category').value),text));toast(`Tagged “${text}”`);});
   $$('[data-color-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();stripColorModal(button.dataset.colorStrip);}));
   $$('[data-move-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();moveStripModal(button.dataset.moveStrip);}));
   $$('[data-strip]').forEach(strip=>{
@@ -361,7 +405,7 @@ function action(name) {
   if(name==='new-scenario')textModal('Duplicate schedule','Scenario name',activeScenario().name+' · alternate',value=>mutate(()=>{const s=clone(activeScenario());s.id=id();s.name=value;s.boards.forEach(b=>b.id=id());project.stripboards.push(s);scenarioIndex=project.stripboards.length-1;}));
   if(name==='add-banner')textModal('Add a board banner','Banner text','Company move',value=>mutate(()=>{const b={id:id(),bannerText:value,comments:null,created:stamp(),description:null,elements:[],pages:null,scene:null,scriptPage:null,duration:null,type:'banner'};project.breakdowns.push(b);for(const s of project.stripboards)s.boards[1].breakdownIds.push(b.id);selected=b.id;}));
   if(name==='edit-script')scriptEditModal();
-  if(name==='extra-element'){const ucid=Number($('#extra-category').value);if(!ucid)return;const c=category(ucid);textModal('Add '+c.name,'Element name','',value=>mutate(()=>addElement(breakdown(),ucid,value)));}
+  if(name==='extra-element'){const ucid=Number($('#extra-category').value);if(!ucid)return;const c=category(ucid);textModal('Add '+c.name,'Element name','',value=>mutateBreakdownElements(()=>addElement(breakdown(),ucid,value)));}
   if(name==='new-element')newElementModal();
   if(name==='print'&&view==='shots')return shotDesk.print();
   if(name==='print'){ $('#print-area').innerHTML=`<h1>${esc(project.project || project.name)}</h1><p>${esc(activeScenario().name)} · ${report==='dood'?'Cast workdays':report==='breakdowns'?'Scene breakdowns':'One-line shooting schedule'}</p>${reportHTML()}`;applyStripColors($('#print-area'));window.print(); }
