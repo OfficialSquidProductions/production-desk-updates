@@ -9,7 +9,7 @@ export function createScriptPDF(c) {
   function stop() {
     if(!state)return;
     if(state.scroll.isConnected)positions.set(state.key,{top:state.scroll.scrollTop,left:state.scroll.scrollLeft,scale:state.scale});
-    state.closed=true;state.observer?.disconnect();state.resize?.disconnect();
+    state.closed=true;state.observer?.disconnect();state.resize?.disconnect();cancelAnimationFrame(state.resizeFrame);
     for(const item of state.pages){item.task?.cancel();item.layer?.cancel();}
     state=undefined;
   }
@@ -117,7 +117,12 @@ export function createScriptPDF(c) {
         if(item.visible)paint(s,item);else if(!item.painting){item.canvas.width=item.canvas.height=1;item.drawnScale=undefined;}
       }},{root:s.scroll,rootMargin:'700px'});
       for(const item of s.pages)s.observer.observe(item.node);
-      s.resize=new ResizeObserver(()=>layout(s));s.resize.observe(s.scroll);
+      // Layout changes can resize this observer's target (e.g. scrollbars on
+      // native Windows). Apply them next frame, outside observer delivery.
+      s.resize=new ResizeObserver(()=>{
+        cancelAnimationFrame(s.resizeFrame);
+        s.resizeFrame=requestAnimationFrame(()=>layout(s));
+      });s.resize.observe(s.scroll);
       const saved=positions.get(s.key),scenePage=Number.parseInt(c.scene()?.scriptPage,10);
       if(saved){s.scroll.scrollTop=saved.top*(saved.scale?s.scale/saved.scale:1);s.scroll.scrollLeft=saved.left;}
       else go(s,Number.isFinite(scenePage)?scenePage-1:0);

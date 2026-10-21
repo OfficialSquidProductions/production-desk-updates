@@ -1,6 +1,6 @@
 .script-pdf-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);font-size:11px;background:var(--paper)}
 .script-pdf-toolbar>span:first-child{margin-right:auto}.script-pdf-toolbar label{display:flex;align-items:center;gap:4px}.script-pdf-toolbar input{width:54px;padding:5px}.script-pdf-toolbar select{max-width:106px;padding:5px}.script-pdf-toolbar button{padding:4px 10px}
-.workspace .script-pdf-scroll{position:relative;padding:12px;overflow:auto;background:#ccc8cb;overscroll-behavior:contain;overflow-anchor:none;min-height:260px;height:calc(100vh - 502px)}
+.workspace .script-pdf-scroll{position:relative;padding:12px;overflow:auto;background:#ccc8cb;overscroll-behavior:contain;overflow-anchor:none;scrollbar-gutter:stable;min-height:260px;height:calc(100vh - 502px)}
 .script-pdf-pages{position:relative;display:flow-root;min-width:100%;width:max-content;color:#111;line-height:normal;user-select:text;-webkit-user-select:text}
 .script-pdf-page{position:relative;margin:0 auto 16px;background:white;box-shadow:0 2px 9px #0003;flex-shrink:0;isolation:isolate;--scale-round-x:1px;--scale-round-y:1px}
 .script-pdf-page canvas{display:block;width:100%;height:100%;pointer-events:none;user-select:none;-webkit-user-select:none}

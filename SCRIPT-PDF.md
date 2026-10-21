@@ -1,6 +1,6 @@
 # Original PDF reading in Main Breakdown
 
-Desktop 1.5.11 (32) displays original PDF pages in Main Breakdown using the already
+Desktop 1.5.11 (33) displays original PDF pages in Main Breakdown using the already
 bundled offline PDF.js renderer and its aligned, selectable text layer. No hosted
 viewer, OCR service, or script upload is involved. The original PDF bytes and
 existing breakdown/project formats are unchanged.
@@ -46,6 +46,10 @@ regression with action wrongly rendered as dialogue. The corrected source passes
 - All 40 native/unit/runtime tests on each of iPad mini (A17 Pro) and iPhone 17 Pro
   simulators, iOS 26.5. Native PDF tests read files through the existing iOS bridge,
   tag text, retain selection/focus, navigate pages, save, and reopen.
+
+Native resize observation schedules layout on the next animation frame to avoid
+feedback loops while a PDF and its scrollbars initialize. The packaged Windows
+startup support check keeps this path covered rather than suppressing errors.
 
 WebKit's missing ReadableStream async iterator is avoided by giving the PDF.js
 text layer its stream directly; it consumes that stream with supported readers.
