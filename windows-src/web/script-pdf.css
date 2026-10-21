@@ -1,0 +1,16 @@
+.script-pdf-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);font-size:11px;background:var(--paper)}
+.script-pdf-toolbar>span:first-child{margin-right:auto}.script-pdf-toolbar label{display:flex;align-items:center;gap:4px}.script-pdf-toolbar input{width:54px;padding:5px}.script-pdf-toolbar select{max-width:106px;padding:5px}.script-pdf-toolbar button{padding:4px 10px}
+.workspace .script-pdf-scroll{position:relative;padding:12px;overflow:auto;background:#ccc8cb;overscroll-behavior:contain;overflow-anchor:none;min-height:260px;height:calc(100vh - 502px)}
+.script-pdf-pages{position:relative;display:flow-root;min-width:100%;width:max-content;color:#111;line-height:normal;user-select:text;-webkit-user-select:text}
+.script-pdf-page{position:relative;margin:0 auto 16px;background:white;box-shadow:0 2px 9px #0003;flex-shrink:0;isolation:isolate;--scale-round-x:1px;--scale-round-y:1px}
+.script-pdf-page canvas{display:block;width:100%;height:100%;pointer-events:none;user-select:none;-webkit-user-select:none}
+.script-pdf-status{margin:0;padding:8px 12px;min-height:32px;border-top:1px solid var(--line);color:var(--muted,#71636a);font-size:11px;line-height:1.5}
+.script-transcript{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.script-pdf-fallback{max-width:720px;box-sizing:border-box}.script-pdf-fallback-note{padding:10px;font:12px/1.5 Futura,sans-serif;color:var(--ink);background:var(--surface)}
+/* Text-layer geometry follows Mozilla PDF.js (Apache-2.0), bundled offline.
+   Transparent glyphs align selection to the original canvas, including rotation. */
+.script-pdf-text{position:absolute;inset:0;overflow:clip;line-height:1;text-align:initial;letter-spacing:normal;word-spacing:normal;text-size-adjust:none;-webkit-text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;color-scheme:only light;--min-font-size:1;--text-scale-factor:calc(var(--total-scale-factor) * var(--min-font-size));--min-font-size-inv:calc(1 / var(--min-font-size))}
+.script-pdf-text :is(span,br){position:absolute;color:transparent;white-space:pre;cursor:text;transform-origin:0 0;user-select:text;-webkit-user-select:text}
+.script-pdf-text>:not(.markedContent),.script-pdf-text .markedContent span:not(.markedContent){--font-height:0;font-size:calc(var(--text-scale-factor) * var(--font-height));--scale-x:1;--rotate:0deg;transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv))}
+.script-pdf-text .markedContent{display:contents}.script-pdf-text ::selection{color:transparent;background:rgba(0,100,255,.3)}.script-pdf-text br::selection{background:transparent}
+.script-pdf-text[data-main-rotation="90"]{transform:rotate(90deg) translateY(-100%)}.script-pdf-text[data-main-rotation="180"]{transform:rotate(180deg) translate(-100%,-100%)}.script-pdf-text[data-main-rotation="270"]{transform:rotate(270deg) translateX(-100%)}
+@media(max-width:1200px){.workspace .script-pdf-scroll{height:460px}}@media(max-width:760px){.workspace .script-pdf-scroll{height:400px}}

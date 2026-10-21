@@ -126,6 +126,56 @@ final class RuntimeWorkflowTests: XCTestCase {
         XCTAssertGreaterThan(values["width"] as? Double ?? 0, 0)
     }
 
+    @MainActor func testOriginalPDFReadingSelectionAndTags() async throws {
+        let desk = try await openDesk()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let original = window.rootViewController
+        defer { window.rootViewController = original }
+        window.rootViewController = desk
+        desk.view.layoutIfNeeded()
+        let result = try await desk.webView.callAsyncJavaScript(#"""
+        const $=s=>document.querySelector(s),expect=(v,m)=>{if(!v)throw Error(m);};
+        const wait=async f=>{for(let i=0;i<300&&!f();i++)await new Promise(r=>setTimeout(r,30));expect(f(),'PDF reader timed out: '+$('#script-pdf-status')?.textContent+'; '+$('#script-text')?.dataset.error);};
+        const pdf=await PDFLib.PDFDocument.create(),font=await pdf.embedFont(PDFLib.StandardFonts.Courier);
+        let page=pdf.addPage([612,792]);
+        for(const [text,x,y] of [['1 INT. STUDIO - DAY',72,720],['MAYA',240,690],['Keep rolling.',180,670],['The brass key stays on the table.',72,640]])page.drawText(text,{x,y,font,size:12});
+        page=pdf.addPage([612,792]);page.drawText('2 EXT. ROAD - NIGHT',{x:72,y:720,font,size:12});page.drawText('The second original page.',{x:72,y:690,font,size:12});
+        const bytes=await pdf.save();await window.slateDesktop.importProjectFile(new File([bytes],'Native-original-PDF.pdf',{type:'application/pdf'}));
+        $('#workspace-script-tab').click();await wait(()=>$('#script-text')?.dataset.ready==='true');
+        const root=$('#script-text'),scroll=$('.script-pdf-scroll');
+        expect(root.querySelectorAll('.script-pdf-page').length===2,'Original pages missing');
+        expect(!root.querySelector('.dialogue'),'Original PDF reflowed as dialogue');
+        const layer=root.querySelector('.script-pdf-text'),walker=document.createTreeWalker(layer,NodeFilter.SHOW_TEXT);
+        let node;while((node=walker.nextNode())&&!node.textContent.includes('brass key')){}
+        expect(node,'Selectable text missing');const offset=node.textContent.indexOf('brass key'),range=document.createRange();range.setStart(node,offset);range.setEnd(node,offset+9);
+        getSelection().removeAllRanges();getSelection().addRange(range);document.dispatchEvent(new Event('selectionchange'));
+        $('#tag-category').value='104';scroll.scrollTop=300;const top=scroll.scrollTop;
+        $('#tag-selection').click();$('#tag-selection').click();
+        expect(root===$('#script-text')&&getSelection().toString()==='brass key','PDF tag lost nodes or selection');
+        expect(scroll.scrollTop===top&&$('#tag-category').value==='104','PDF tag reset scroll/category');
+        $('#workspace-breakdown-tab').click();const input=$('[data-add-category="100"] input');input.focus({preventScroll:true});input.value='Native PDF Actor';input.form.requestSubmit();
+        expect(input.isConnected&&document.activeElement===input,'Actor entry interrupted native keyboard focus');
+        $('#workspace-script-tab').click();expect(root===$('#script-text')&&scroll.scrollTop===top,'Pane switch or actor addition reset PDF');
+        $('#scene-picker').value=$('#scene-picker').options[1].value;$('#scene-picker').dispatchEvent(new Event('change',{bubbles:true}));
+        await wait(()=>$('#script-text')?.dataset.ready==='true');expect($('#script-pdf-page').value==='2','Scene did not open original page two');
+        expect(await window.productionDeskSave(),'Native PDF save failed');
+        const w=await window.webkit.messageHandlers.scheduler.postMessage({operation:'load'}),p=w.projects.find(p=>p.id===w.activeProject),prop=p.elements.find(e=>e.name==='brass key');
+        expect(p.breakdowns[0].elements.filter(id=>id===prop.id).length===1,'Repeated tag duplicated/lost assignment');
+        expect(p.elements.some(e=>e.name==='Native PDF Actor'),'Actor not saved');
+        const encoded=await window.webkit.messageHandlers.scheduler.postMessage({operation:'readPDF',sha256:p._linedScript.activePdf});
+        expect(atob(encoded).length===bytes.length,'Original bytes changed');
+        return {passed:true};
+        """#, arguments: [:], in: nil, contentWorld: .page)
+        XCTAssertEqual((result as? [String: Any])?["passed"] as? Bool, true)
+        let reopened = try await openDesk()
+        let restored = try await reopened.webView.callAsyncJavaScript("""
+        for(let i=0;i<300&&document.querySelector('#script-text')?.dataset.ready!=='true';i++)await new Promise(r=>setTimeout(r,30));
+        return document.querySelector('#script-text')?.dataset.ready==='true';
+        """, arguments: [:], in: nil, contentWorld: .page)
+        XCTAssertEqual(restored as? Bool, true)
+    }
+
     @MainActor func testFinalDraftBrowserParserAndInvalidXML() async throws {
         let desk = try await openDesk()
         let result = try await desk.webView.callAsyncJavaScript("""

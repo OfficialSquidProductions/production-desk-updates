@@ -1,11 +1,11 @@
-Production Desk 1.5.10
+Production Desk 1.5.11
 
-Load The Last Light from the sidebar to explore an editable eight-scene production with sixteen shots, two planning scenarios and three shoot days.
+Main Breakdown displays original PDF pages with selectable text, preserving screenplay layout instead of inferring dialogue formatting from extraction.
 
-Follow the demo guide through screenplay breakdown, scheduling, shot lists, reports and an eight-page original lined script with twelve editable marks.
+Tag PDF text across pages without resetting scroll, the selected scene, chosen category or text selection. Repeated actor entries keep input focus and existing drafts.
 
-Export the matching Scenic project and shot-list CSV to compare camera setups, blocking and coverage across both apps.
+Navigate scenes using their imported PDF page references; zoom and read rotated pages locally. Long scripts release offscreen page images while retaining selectable text.
 
-Reopening the managed demo preserves edits. Reset affects only that demo and supports cancellation and Undo; imported copies and existing productions remain separate.
+Missing originals fall back to unformatted extracted scene text. Image-only pages explain that text selection needs a searchable PDF; typed breakdown entries remain available. No OCR service or script upload is used.
 
-The fictional demo is included temporarily for beta testing and reference. Its entry point will be removed before production. Existing portable files and desktop update safeguards remain available.
+Existing breakdowns, reusable elements, schedules, shot lists and portable backups retain their data. App Store and TestFlight submissions are unchanged.

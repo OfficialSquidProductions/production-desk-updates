@@ -1,6 +1,10 @@
-# Breakdown editing correction
+# Breakdown editing correction — original local checkpoint
 
-Local branch: `fix/breakdown-editing-context`, based on current Production Desk
+This correction is included in desktop 1.5.11 source together with the
+[original PDF reader](SCRIPT-PDF.md). The validation below records its first local
+checkpoint before the combined release.
+
+Original local branch: `fix/breakdown-editing-context`, based on current Production Desk
 1.5.10 source commit `b7fd96a4840d27259f465c5ddb47a716f966141d`.
 The original checkout, its untracked Android work, the older Scheduler UI edits,
 and the separate Call Sheet export experiment were left intact.

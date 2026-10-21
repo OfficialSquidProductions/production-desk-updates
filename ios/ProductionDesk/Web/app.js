@@ -1,3 +1,4 @@
+import {createScriptPDF} from './script-pdf.js';
 import {createDemoControls} from './demo/demo-controls.js';
 import {mergeProductions} from './project-file.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
@@ -22,7 +23,7 @@ const stamp = () => new Date().toISOString();
 const clone = value => structuredClone(value);
 let workspace, project, selected, view = 'workspace', report = 'oneline', scenarioIndex = 0;
 let history = [], future = [], revision = 0, savedRevision = 0, saving = false, saveTimer;
-let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', toastTimer;
+let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', selectedRange, toastTimer;
 // The desktop window asks for a disk flush before quitting.
 window.slateDesktop = {importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), flush:async()=>{
   clearTimeout(saveTimer);
@@ -43,6 +44,14 @@ async function api(path, data, headers = {}) {
   return value;
 }
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3500); }
+function rememberScriptSelection(){
+  const selection=getSelection(),script=$('#script-text');
+  if(script&&selection?.rangeCount&&script.contains(selection.anchorNode)&&script.contains(selection.focusNode)){
+    selectedText=selection.toString().trim();selectedRange=selectedText?selection.getRangeAt(0).cloneRange():undefined;
+  }
+}
+document.addEventListener('selectionchange',rememberScriptSelection);
+
 function activeScenario() { return project.stripboards[scenarioIndex] || project.stripboards[0]; }
 function calendar() { return project.calendars.find(c => c.id === activeScenario()?.calendar); }
 function activeBoard() { return activeScenario()?.boards[0]; }
@@ -128,7 +137,8 @@ function totals(ids) { return ids.map(x=>breakdown(x)).filter(Boolean).reduce((a
 function allScheduled() { return activeBoard()?.breakdownIds.flat() || []; }
 
 function render() {
-  selectedText = ''; // A selection belongs only to the script nodes being displayed.
+  selectedText = ''; selectedRange=undefined; // Selections belong only to the displayed script.
+  scriptPDF.stop();
   elementActions.close();
   useProject();
   document.body.classList.toggle('view-shots',view==='shots');
@@ -145,7 +155,7 @@ function render() {
   $('#summary').innerHTML = `<div class="summary-stat"><strong>${scenes.length}</strong><span>scenes</span></div><div class="summary-stat"><strong>${pages(t.pages)}</strong><span>pages</span></div><div class="summary-stat"><strong>${dayCount}</strong><span>shoot days</span></div><div class="summary-stat"><strong>${scenes.length-scheduled}</strong><span>unscheduled</span></div><div class="summary-note"><span>●</span> Local files · USS 1.0.0</div>`;
   $('#add-scene').textContent=['shots','lined'].includes(view)?'＋ New shot':'＋ New scene';
   $('#content').innerHTML = view === 'lined' ? linedDesk.render() : view === 'shots' ? shotDesk.render() : view === 'workspace' ? workspaceView() : view === 'schedule' ? scheduleView() : view === 'elements' ? elementsView() : reportsView();
-  bindContent(); bindWorkspacePanes($('#workspace-shell')); applyStripColors(); updateUndo();
+  bindContent(); bindWorkspacePanes($('#workspace-shell')); scriptPDF.bind(); applyStripColors(); updateUndo();
 }
 function emptyPanel(message) { return `<div class="empty-state"><h3>A story starts here.</h3>${message}<br><button class="primary" data-action="import">Import your script</button></div>`; }
 function workspaceView() {
@@ -160,9 +170,10 @@ function scriptPanel() {
   return `<section class="panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▤</span>Script <span class="count">${sceneList().length} scenes</span></div><button class="text-button" data-action="import">Import script</button><button class="text-button" data-action="edit-script" ${b?.type==='scene'?'':'disabled'}>Edit text</button></div>
     <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button><select id="scene-picker" aria-label="Choose scene">${scriptSceneOptions()}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
     <div class="script-selection"><span>Select text in the script to tag a production element.</span><div class="tag-row"><select id="tag-category" aria-label="Tag category">${project.categories.filter(c=>c.ucid>=100).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('')}</select><button id="tag-selection">＋ Tag selection</button></div></div>
-    <div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${scriptHTML(b)}</article>`}</div><div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
+    ${b?.type==='scene' && scriptPDF.document() ? scriptPDF.render() : `<div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${scriptHTML(b)}</article>`}</div>`}<div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
 }
 function scriptHTML(b) {
+  if(/\.pdf$/i.test(project._scriptFilename||'')||scriptPDF.document())return `<p class="script-pdf-fallback-note">Extracted scene text · original PDF layout unavailable here. Attach the original in Lined Script to read its pages.</p><pre class="script-transcript">${esc(b._scriptText||slug(b))}</pre>`;
   if (!b._scriptText) return `<p class="slug">${esc(slug(b))}</p><p class="action">Script text is not included in this scene. Use Edit text to add it. USS files carry breakdown data; full script text is retained in Production Desk backups.</p>`;
   let dialogue = false;
   return b._scriptText.split('\n').map((line,i)=> {
@@ -346,8 +357,8 @@ function bindContent() {
     mutateBreakdownElements(()=>{breakdown().elements=breakdown().elements.filter(x=>x!==button.dataset.removeElement);});
     if(focused)input.focus({preventScroll:true});
   });
-  $('#script-text')?.addEventListener('mouseup',()=>{const selection=window.getSelection();if(selection&&$('#script-text').contains(selection.anchorNode))selectedText=selection.toString().trim();});
-  $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutateBreakdownElements(()=>addElement(breakdown(),Number($('#tag-category').value),text));toast(`Tagged “${text}”`);});
+  $('#script-text')?.addEventListener('mouseup',()=>{rememberScriptSelection();});
+  $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutateBreakdownElements(()=>addElement(breakdown(),Number($('#tag-category').value),text));if(selectedRange?.startContainer.isConnected){const selection=getSelection();selection.removeAllRanges();selection.addRange(selectedRange);}toast(`Tagged “${text}”`);});
   $$('[data-color-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();stripColorModal(button.dataset.colorStrip);}));
   $$('[data-move-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();moveStripModal(button.dataset.moveStrip);}));
   $$('[data-strip]').forEach(strip=>{
@@ -552,6 +563,7 @@ function exportModal() {
 }
 function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
 
+const scriptPDF=createScriptPDF({esc,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
 const linedDesk=createLinedDesk({esc,id,stamp,api,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
 const shotDesk=createShotDesk({
   esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
@@ -586,7 +598,7 @@ if(isIPadApp){
   };
   new MutationObserver(updateCopy).observe($('#modal-content'),{childList:true});
   window.print=()=>nativePrint().catch(e=>toast('PDF export failed: '+e.message));
-  document.addEventListener('selectionchange',()=>{const selection=window.getSelection(),script=$('#script-text');if(script&&selection&&!selection.isCollapsed&&script.contains(selection.anchorNode)&&script.contains(selection.focusNode))selectedText=selection.toString().trim();});
+
 }
 try {workspace=await api('/api/workspace');useProject();render();saveStatus(savedLabel);await appSettings.init();document.body.dataset.appReady='true';document.body.dataset.ready='true';}
 catch(e){$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;saveStatus(isIPadApp?'Local files unavailable':'Local server unavailable');$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Production Desk, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
