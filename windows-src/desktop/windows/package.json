@@ -32,7 +32,9 @@
       "lined-regressions.cjs",
       "support-regressions.cjs",
       "workspace-layout-regressions.cjs",
-      "demo-regressions.cjs"
+      "demo-regressions.cjs",
+      "breakdown-editing-regressions.cjs",
+      "script-pdf-regressions.cjs"
     ],
     "extraResources": [
       {
