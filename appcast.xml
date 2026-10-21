@@ -1,18 +1,24 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" standalone="yes"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-  <channel>
-    <title>Production Desk</title>
-    <link>https://productiondesk.squidproductions.org/</link>
-    <language>en</language>
-    <item>
-      <title>Production Desk 1.5.10</title>
-      <pubDate>Mon, 19 Oct 2026 16:44:37 +0000</pubDate>
-      <description>&lt;h2&gt;Production Desk 1.5.10&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Load The Last Light from the sidebar to explore an editable eight-scene production with sixteen shots, two planning scenarios and three shoot days.&lt;/li&gt;&lt;li&gt;Follow the demo guide through screenplay breakdown, scheduling, shot lists, reports and an eight-page original lined script with twelve editable marks.&lt;/li&gt;&lt;li&gt;Export the matching Scenic project and shot-list CSV to compare camera setups, blocking and coverage across both apps.&lt;/li&gt;&lt;li&gt;Reopening the managed demo preserves edits. Reset affects only that demo and supports cancellation and Undo; imported copies and existing productions remain separate.&lt;/li&gt;&lt;li&gt;The fictional demo is included temporarily for beta testing and reference. Its entry point will be removed before production. Existing portable files and desktop update safeguards remain available.&lt;/li&gt;&lt;/ul&gt;
-</description>
-      <sparkle:version>31</sparkle:version>
-      <sparkle:shortVersionString>1.5.10</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.10-31.zip" length="21305724" type="application/octet-stream" sparkle:edSignature="H65bT4422wGzwBdoqsp2BXxEXELDzp5M77OcTI+4/jvRW2A7yfDBM5ndYOEJk9zGPINGVBGHIjwB2dCjvUSiCg==" />
-    </item>
-  </channel>
+    <channel>
+        <title>Production Desk</title>
+        <item>
+            <title>1.5.11</title>
+            <pubDate>Wed, 21 Oct 2026 01:31:31 -0400</pubDate>
+            <sparkle:version>33</sparkle:version>
+            <sparkle:shortVersionString>1.5.11</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[<h2>Production Desk 1.5.11</h2>
+<ul>
+<li>Main Breakdown displays original PDF pages with selectable text, preserving screenplay layout instead of inferring dialogue formatting from extraction.</li>
+<li>Tag PDF text across pages without resetting scroll, the selected scene, chosen category or text selection. Repeated actor entries keep input focus and existing drafts.</li>
+<li>Navigate scenes using their imported PDF page references; zoom and read rotated pages locally. Long scripts release offscreen page images while retaining selectable text.</li>
+<li>Missing originals fall back to unformatted extracted scene text. Image-only pages explain that text selection needs a searchable PDF; typed breakdown entries remain available. No OCR service or script upload is used.</li>
+<li>Existing breakdowns, reusable elements, schedules, shot lists and portable backups retain their data. App Store and TestFlight submissions are unchanged.</li>
+</ul>
+]]></description>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.11-33.zip" length="21313140" type="application/octet-stream" sparkle:edSignature="XkUhQ+O0ZhQej8nunwh2ZBcrkM/rppW+KD0QjzMM/uF+WSBTJ5J0UpuaQIvkDkHMA+kQkfbon2am/UmuMNBAAw=="/>
+        </item>
+    </channel>
 </rss>
