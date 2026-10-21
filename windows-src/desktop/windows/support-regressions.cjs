@@ -8,7 +8,8 @@ module.exports = async ({win, origin, dataFolder, waitFor, reload, readEmailDraf
   const checks = [];
   const before = fs.readFileSync(path.join(dataFolder, 'workspace.json'));
   await waitFor('document.querySelector("#support-notice") && !document.querySelector("#support-notice").hidden');
-  assert.equal((await (await fetch(origin+'/api/support')).json()).report.kind, 'session');
+  const startupReport=(await (await fetch(origin+'/api/support')).json()).report;
+  assert.equal(startupReport.kind, 'session', 'Unexpected startup diagnostic: '+JSON.stringify(startupReport));
   checks.push('Interrupted desktop session offers a report after launch');
   await js(`document.querySelector('#app-settings-open').click();document.querySelector('#report-bug').click();`);
   assert.equal(await js('document.querySelector("#support-email").hidden'), true);
