@@ -104,3 +104,11 @@ list or one of its shot rows focused, Up/Down selects the previous/next visible 
 in shooting order, scrolling the list only as needed. Arrow keys keep their normal
 behavior in editing fields, dropdowns and other focused controls. Filters and reordered
 shots determine the navigation order. See [local review and verification](../SHOT-LIST-REVIEW.md).
+
+## Shooting Schedule drag placement (local development)
+
+Drag a strip's content or its grab handle. The top/bottom halves of each strip insert
+before/after it, with a blue placement marker. Day headers/footers and holding-board
+headers also accept drops. Hold near the scroll-pane edge to scroll; Escape cancels.
+Click a handle for the precise Move dialog, or click strip content to open its breakdown.
+See [local review and verification](../SCHEDULE-DRAG-REVIEW.md).
