@@ -30,6 +30,7 @@
       "package.json",
       "regressions.cjs",
       "lined-regressions.cjs",
+      "lined-controls-regressions.cjs",
       "support-regressions.cjs",
       "workspace-layout-regressions.cjs",
       "demo-regressions.cjs",

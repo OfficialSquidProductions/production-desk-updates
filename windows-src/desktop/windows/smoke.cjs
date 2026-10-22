@@ -166,6 +166,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push('Native lined PDF download completes in the installed desktop app');
   checks.push(...await js('('+require('./breakdown-editing-regressions.cjs').toString()+')()'));
   checks.push(...await js('('+require('./script-pdf-regressions.cjs').toString()+')()'));
+  checks.push(...await js('('+require('./lined-controls-regressions.cjs').toString()+')()'));
   await screenshot('original-pdf-breakdown.png');
   assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};

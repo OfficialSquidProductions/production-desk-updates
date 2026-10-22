@@ -6,6 +6,7 @@ import {createShotDesk} from './shots.js';
 import {createLinedDesk,removeCoverage,clearCoverageScene} from './lined-script.js';
 import {nativeAPI, nativePrint} from './native-platform.js';
 import {resolveMacStoreExport} from './mac-store-exports.js';
+import {isEditing} from './lined-shortcuts.js';
 import {createAppSettings} from './settings.js';
 import {createElementActions} from './element-actions.js';
 const isIPadApp = !!window.webkit?.messageHandlers?.scheduler;
@@ -26,7 +27,11 @@ let history = [], future = [], revision = 0, savedRevision = 0, saving = false, 
 let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', selectedRange, toastTimer;
 let editorReady;
 // The desktop window asks for a disk flush before quitting.
-window.slateDesktop = {ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), prepareForUpdate:async()=>{
+window.slateDesktop = {undoEdit:forward=>{
+  const target=document.activeElement;
+  if(isEditing(target)){if(target?.isContentEditable||/INPUT|TEXTAREA/.test(target?.tagName))document.execCommand(forward?'redo':'undo');return;}
+  if(!document.querySelector('dialog[open]'))undo(!!forward);
+},ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), prepareForUpdate:async()=>{
   // Dialog drafts are committed only by their Save/Add action. Leave them intact.
   if(document.querySelector('dialog[open]'))return false;
   return await window.slateDesktop.flush();
@@ -85,15 +90,18 @@ async function save() {
   catch(e) { saveStatus('Save failed · click to retry'); toast(e.message); }
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
+const historyViews=new WeakMap();
+function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());return snapshot;}
 function mutate(fn, redraw = true) {
-  history.push(clone(workspace)); if (history.length > 40) history.shift(); future = [];
+  history.push(historySnapshot()); if (history.length > 40) history.shift(); future = [];
   fn(); mark(); if (redraw) render(); updateUndo();
 }
 function updateUndo() { $('#undo').disabled = !history.length; $('#redo').disabled = !future.length; }
 function undo(forward = false) {
   const source = forward ? future : history, destination = forward ? history : future;
   if (!source.length) return;
-  destination.push(clone(workspace)); workspace = source.pop(); useProject(); mark(); render();
+  destination.push(historySnapshot()); workspace = source.pop(); const state=historyViews.get(workspace); useProject(); mark();
+  if(view==='lined'&&linedDesk.refreshHistory(state))updateUndo();else render();
 }
 function normalize(p) {
   p._shots ||= []; p._shotSettings ||= {startTime:'07:00'};
@@ -331,7 +339,7 @@ function bindContent() {
     let editing=false;
     const update=()=>{
       if(!input.checkValidity())return;
-      if(!editing){history.push(clone(workspace));if(history.length>40)history.shift();future=[];editing=true;}
+      if(!editing){history.push(historySnapshot());if(history.length>40)history.shift();future=[];editing=true;}
       const b=breakdown();
       if(input.dataset.prop)setProp(b,Number(input.dataset.prop),input.value);
       else {let value=input.type==='checkbox'?input.checked:input.value;if(['pages','duration'].includes(input.dataset.field))value=Number(value)*(input.dataset.field==='duration'?60000:1);b[input.dataset.field]=value;}
@@ -386,7 +394,7 @@ function bindContent() {
       const value=key==='name'?input.value.trim():input.value||null;
       input.setCustomValidity(key==='name'&&!value?'Enter an element name.':'');
       if(!input.checkValidity()||element[key]===value)return;
-      if(!editing){history.push(clone(workspace));if(history.length>40)history.shift();future=[];editing=true;}
+      if(!editing){history.push(historySnapshot());if(history.length>40)history.shift();future=[];editing=true;}
       element[key]=value;mark();updateUndo();
     };
     input.addEventListener('input',update);
@@ -558,11 +566,11 @@ function exportModal() {
 function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
 
 const scriptPDF=createScriptPDF({esc,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
-const linedDesk=createLinedDesk({esc,id,stamp,api,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
+const linedDesk=createLinedDesk({esc,id,stamp,api,preferences:()=>appSettings.get(),project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
 const shotDesk=createShotDesk({
   esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
   mutate,render,toast,modal,confirm:confirmModal,download,
-  edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
+  edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
 });
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
@@ -579,7 +587,7 @@ $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#save-status'
 $('#save-as-open').onclick=()=>saveProjectFile('files');
 $('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():newScene();
 $('#new-open').onclick=()=>textModal('New production','Production title','Untitled production',async title=>{try{const p=await api('/api/new',{title});mutate(()=>{workspace.projects.push(p);workspace.activeProject=p.id;scenarioIndex=0;selected=undefined;view='workspace';});}catch(e){toast(e.message);}});
-document.addEventListener('keydown',e=>{const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!$('#modal').open){e.preventDefault();undo(e.shiftKey);}});
+document.addEventListener('keydown',e=>{const editing=isEditing(document.activeElement)||isEditing(e.target);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!document.querySelector('dialog[open]')&&!e.isComposing){e.preventDefault();undo(e.shiftKey);}});
 window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preventDefault();e.returnValue='Your latest change is still saving.';}});
 if(isIPadApp){
   document.body.classList.add('ipad-app');

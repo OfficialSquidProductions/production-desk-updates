@@ -1,3 +1,4 @@
+import {normalizeShotNumber,shotIdentifier,shotNumberKey} from './shot-identifiers.js';
 import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
 import {removeCoverage,coverageSummary} from './lined-script.js';
 // Local shot lists are a Production Desk extension. USS scene IDs remain the source of truth.
@@ -16,11 +17,11 @@ export function createShotDesk(c) {
   const scenes=()=>p().breakdowns.filter(b=>b.type==='scene');
   const shot=()=>p()._shots.find(s=>s.id===selected);
   const sceneOf=s=>scenes().find(b=>b.id===s.sceneId);
-  const label=s=>`${sceneOf(s)?.scene || '?'}${s.number}`;
+  const label=s=>shotIdentifier(sceneOf(s)?.scene,s.number);
   const total=s=>s.setupMinutes+s.shootMinutes;
   const active=s=>s.status!=='Omitted';
   const done=s=>s.status==='Done';
-  const numberKey=value=>value.trim().toUpperCase();
+  const numberKey=(value,sceneId)=>shotNumberKey(value,scenes().find(b=>b.id===sceneId)?.scene);
   function sync() {
     if(production!==p().id){production=p().id;selected=undefined;day='all';scene='all';status='all';search='';}
     const validDays=groups().map((g,i)=>String(i));
@@ -34,7 +35,7 @@ export function createShotDesk(c) {
   function scope(){return p()._shots.filter(s=>day==='all'||dayOf(s)===day);}
   function filtered(){return scope().filter(s=>(scene==='all'||s.sceneId===scene)&&(status==='all'||s.status===status)&&`${label(s)} ${s.description} ${s.camera} ${s.lens} ${s.notes} ${coverageSummary(p(),s.id).join(' ')} ${c.slug(sceneOf(s))}`.toLowerCase().includes(search.toLowerCase()));}
   function nextNumber(sceneId){
-    const used=new Set(p()._shots.filter(s=>s.sceneId===sceneId).map(s=>numberKey(s.number)));
+    const used=new Set(p()._shots.filter(s=>s.sceneId===sceneId).map(s=>numberKey(s.number,s.sceneId)));
     for(let n=0;n<10000;n++){let v=n+1,result='';while(v){v--;result=String.fromCharCode(65+v%26)+result;v=Math.floor(v/26);}if(!used.has(result))return result;}
     return String(p()._shots.length+1);
   }
@@ -96,9 +97,9 @@ export function createShotDesk(c) {
       const update=()=>{
         input.setCustomValidity('');
         if(!target||!input.reportValidity())return;
-        const key=input.dataset.shotField,value=input.type==='number'?(key==='actualMinutes'&&input.value===''?null:Number(input.value)):key==='number'?input.value.trim():input.value;
-        if(key==='number'&&!value){input.setCustomValidity('Enter a shot number.');input.reportValidity();return;}
-        if((key==='number'||key==='sceneId')&&p()._shots.some(s=>s.id!==target.id&&s.sceneId===(key==='sceneId'?value:target.sceneId)&&numberKey(s.number)===numberKey(key==='number'?value:target.number))){input.setCustomValidity('This scene already has that shot number.');input.reportValidity();return;}
+        const key=input.dataset.shotField,value=input.type==='number'?(key==='actualMinutes'&&input.value===''?null:Number(input.value)):key==='number'?normalizeShotNumber(input.value,sceneOf(target)?.scene):input.value;
+        if(key==='number'&&(!value||value==='.'||value.length>24)){input.setCustomValidity('Enter a shot number.');input.reportValidity();return;}
+        if((key==='number'||key==='sceneId')&&p()._shots.some(s=>s.id!==target.id&&s.sceneId===(key==='sceneId'?value:target.sceneId)&&numberKey(s.number,s.sceneId)===numberKey(key==='number'?value:target.number,key==='sceneId'?value:target.sceneId))){input.setCustomValidity('This scene already has that shot number.');input.reportValidity();return;}
         if(target[key]===value)return;
         c.edit(()=>target[key]=value,!editing);editing=true;refreshList();
       };
@@ -129,9 +130,9 @@ export function createShotDesk(c) {
     document.querySelector('#new-shot-scene').onchange=e=>document.querySelector('#new-shot-number').value=nextNumber(e.target.value);
     document.querySelector('#new-shot-save').onclick=()=>{
       const form=document.querySelector('#new-shot-form');if(!form.reportValidity())return;
-      const sceneId=document.querySelector('#new-shot-scene').value,number=document.querySelector('#new-shot-number').value.trim(),description=document.querySelector('#new-shot-description').value.trim();
-      if(!number||!description)return;
-      if(p()._shots.some(s=>s.sceneId===sceneId&&numberKey(s.number)===numberKey(number))){document.querySelector('#modal-error').textContent='This scene already has that shot number.';return;}
+      const sceneId=document.querySelector('#new-shot-scene').value,number=normalizeShotNumber(document.querySelector('#new-shot-number').value,scenes().find(b=>b.id===sceneId)?.scene),description=document.querySelector('#new-shot-description').value.trim();
+      if(!number||number==='.'||number.length>24||!description)return;
+      if(p()._shots.some(s=>s.sceneId===sceneId&&numberKey(s.number,s.sceneId)===numberKey(number,sceneId))){document.querySelector('#modal-error').textContent='This scene already has that shot number.';return;}
       const data={id:id(),created:stamp(),sceneId,number,description,size:document.querySelector('#new-shot-size').value,movement:'Static',camera:'A',lens:'',equipment:'Tripod',setupMinutes:Number(document.querySelector('#new-shot-setup').value),shootMinutes:Number(document.querySelector('#new-shot-shoot').value),actualMinutes:null,takes:0,circleTake:'',priority:'Essential',notes:'',status:'Planned'};
       insertShot(data);
     };

@@ -54,7 +54,8 @@ def validate_lining(project):
                 raise ValueError('Invalid annotation color.')
             if not number(mark.get('width'), .5, 30) or not point(mark.get('start')):
                 raise ValueError('Invalid annotation position or width.')
-            if 'labelAt' in mark and not point(mark['labelAt']):
+            if 'labelAt' in mark and not (isinstance(mark['labelAt'], list) and len(mark['labelAt']) == 2
+                    and number(mark['labelAt'][0], -.5, 1.5) and number(mark['labelAt'][1], 0, 1)):
                 raise ValueError('Invalid coverage label position.')
             if kind in ('coverage', 'arrow') and not point(mark.get('end')):
                 raise ValueError('Invalid annotation end position.')

@@ -66,3 +66,32 @@ class SettingsTests(unittest.TestCase):
         for path in ['/api/google/connect', '/api/google/disconnect',
                      '/api/google/preview', '/api/google/sync']:
             self.assertEqual(self.request(path, {})[0], 404)
+
+    def test_lined_settings_merge_persist_and_do_not_touch_workspace(self):
+        from app_preferences import DEFAULT_BINDS
+        bindings = dict(DEFAULT_BINDS, coverage='Shift+k')
+        self.assertEqual(self.request(value={'linedKeyBinds': bindings})[0], 200)
+        self.assertEqual(self.request(value={'linedLabelOpacity': .35})[0], 200)
+        self.assertEqual(self.request(value={'theme': 'dark'})[0], 200)
+        expected = {'theme':'dark', 'linedKeyBinds':bindings, 'linedLabelOpacity':.35}
+        self.assertEqual(self.request(), (200, {'preferences':expected}))
+        self.assertEqual(json.loads(self.path.read_text()), expected)
+        self.assertFalse(self.server.datafile.exists())
+
+    def test_invalid_lined_settings_are_atomic(self):
+        self.request(value={'theme':'dark', 'linedLabelOpacity':.5})
+        before = self.path.read_bytes()
+        for value in [{'linedLabelOpacity':0}, {'linedLabelOpacity':1.1},
+                      {'linedLabelOpacity':True}, {'linedLabelOpacity':'50'},
+                      {'linedLabelOpacity':float('nan')}, {'linedKeyBinds':[]},
+                      {'linedKeyBinds':{'coverage':'v'}},
+                      {'linedKeyBinds':{'coverage':'Mod+z'}},
+                      {'linedKeyBinds':{'coverage':'Mod+s'}},
+                      {'linedKeyBinds':{'coverage':'Mod+w'}},
+                      {'linedKeyBinds':{'missing':'k'}},
+                      {'theme':'light','linedKeyBinds':{'coverage':None}}]:
+            with self.subTest(value=value):
+                self.assertEqual(self.request(value=value)[0], 400)
+                self.assertEqual(self.path.read_bytes(), before)
+        self.assertEqual(self.request(value={'linedKeyBinds':{'coverage':''}})[0], 200)
+        self.assertEqual(self.request()[1]['preferences']['linedKeyBinds']['coverage'], '')

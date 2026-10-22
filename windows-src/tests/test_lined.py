@@ -168,3 +168,20 @@ class LinedScriptTests(unittest.TestCase):
         project = json.loads(raw)['project']
         self.assertTrue(project['breakdowns'])
         self.assertEqual(project['_linedScript']['activePdf'], self.document['sha256'])
+
+    def test_gutter_labels_roundtrip_and_invalid_coordinates_preserve_save(self):
+        mark={'id':'gutter','type':'coverage','page':0,'start':[.2,.2],'end':[.2,.8],
+              'shotId':self.project['_shots'][0]['id'],'style':'solid','width':2,'color':'#E60026'}
+        for x in [-.4, 1.3]:
+            mark['labelAt']=[x,.3]
+            self.document['marks']=[mark]
+            self.assertEqual(self.request('/api/workspace',self.workspace)[0],200)
+            _,raw=self.request('/api/workspace',method='GET')
+            self.assertEqual(json.loads(raw)['projects'][0]['_linedScript']['documents'][0]['marks'][0],mark)
+            restored=restore_backup_pdfs(self.server.datafile,add_backup_pdfs(self.server.datafile,copy.deepcopy(self.workspace)))
+            self.assertEqual(restored,self.workspace)
+        before=self.server.datafile.read_bytes()
+        for position in [[-.51,.3],[1.51,.3],[0,-.1],[0,1.1],[float('nan'),.2],[True,.3],[]]:
+            mark['labelAt']=position
+            self.assertEqual(self.request('/api/workspace',self.workspace)[0],400)
+            self.assertEqual(self.server.datafile.read_bytes(),before)

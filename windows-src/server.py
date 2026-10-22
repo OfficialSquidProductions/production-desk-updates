@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Production Desk: a loopback-only, dependency-free film scheduling server."""
+from app_preferences import validate_preferences
 import argparse
 import json
 import os
@@ -259,7 +260,14 @@ class Handler(SimpleHTTPRequestHandler):
         except (OSError, ValueError):
             value = {}
         theme = value.get('theme') if isinstance(value, dict) else None
-        return {'theme': theme if theme in ('light', 'dark') else 'light'}
+        output = {'theme': theme if theme in ('light', 'dark') else 'light'}
+        for key in ('linedKeyBinds', 'linedLabelOpacity'):
+            if isinstance(value, dict) and key in value:
+                try:
+                    output.update(validate_preferences({key: value[key]}))
+                except ValueError:
+                    pass
+        return output
 
     def support_report(self, value=None):
         path = self.server.datafile.parent / 'support-crash.json'
@@ -456,10 +464,11 @@ class Handler(SimpleHTTPRequestHandler):
                 self.reply(self.export_file(value.get('filename'), 'application/json', contents))
             elif path == '/api/settings':
                 value = json_object(raw)
-                if not isinstance(value, dict) or value.get('theme') not in ('light', 'dark'):
-                    raise ValueError('Choose Light or Dark appearance.')
+                changes = validate_preferences(value)
+                if not changes:
+                    raise ValueError('Choose app settings to save.')
                 with LOCK:
-                    preferences = {'theme': value['theme']}
+                    preferences = dict(self.preferences(), **changes)
                     atomic_save(self.server.datafile.parent / 'app-settings.json', preferences)
                 self.reply({'preferences': preferences})
             elif path == "/api/export":

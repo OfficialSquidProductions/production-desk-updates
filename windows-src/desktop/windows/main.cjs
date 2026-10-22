@@ -152,9 +152,7 @@ function buildMenu() {
   ]));
 }
 async function editUndo(redo) {
-  const editing = await win.webContents.executeJavaScript('/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)');
-  if (editing) win.webContents[redo ? 'redo' : 'undo']();
-  else await click(redo ? '#redo' : '#undo');
+  await win.webContents.executeJavaScript('window.slateDesktop?.undoEdit('+Boolean(redo)+')');
 }
 async function checkUpdates(manual) {
   await updates?.check(manual);

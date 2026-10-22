@@ -5,7 +5,7 @@ module.exports = async function runLinedChecks(fixture) {
   const saved=async()=>{expect(await window.slateDesktop.flush(),'Lined save failed');const w=await(await fetch('/api/workspace')).json();return w.projects.find(p=>p.id===w.activeProject);};
   const marks=async()=>((await saved())._linedScript.documents[0].marks);
   const drag=(tool,a,b)=>{
-    $(`[data-lined-tool="${tool}"]`).click();const el=$('#lined-overlay'),r=el.getBoundingClientRect();
+    $(`[data-lined-tool="${tool}"]`).click();const el=$('#lined-overlay'),r=el.parentElement.getBoundingClientRect();
     // Synthetic events exercise the same pointer handlers in WebKit and Electron.
     el.setPointerCapture=()=>{};
     const fire=(type,p)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,button:0,pointerId:7,clientX:r.left+p[0]*r.width,clientY:r.top+p[1]*r.height}));
@@ -15,10 +15,11 @@ module.exports = async function runLinedChecks(fixture) {
   const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(fixture),c=>c.charCodeAt(0))],'lined-original.pdf',{type:'application/pdf'}));
   $('#lined-file').files=transfer.files;$('#lined-file').dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>$ ('#lined-pages')?.textContent==='Page 1 of 2'&&$('#lined-status').textContent.includes('Marks save'));
-  const initialShotCount=(await saved())._shots.length;
+  let initialShotCount=(await saved())._shots.length;
   drag('coverage',[.12,.18],[.12,.58]);
-  let current=await marks();expect(current.length===1&&current[0].type==='coverage'&&!current[0].shotId,'Unlinked coverage did not save');
-  expect((await saved())._shots.length===initialShotCount,'Drawing created an unwanted shot');
+  let current=await marks();expect(current.length===1&&current[0].type==='coverage'&&current[0].shotId,'New coverage did not create a shot');
+  expect((await saved())._shots.length===initialShotCount+1,'Drawing did not create one distinct shot');
+  initialShotCount++;$('#lined-shot').value='';$('#lined-shot').dispatchEvent(new Event('change',{bubbles:true}));
   for(const [key,value] of Object.entries({number:'BETA1',description:'Lined camera setup',movement:'Push in',camera:'B',lens:'50',size:'Medium',equipment:'Dolly'})){
     $('#lined-'+key).value=value;$('#lined-'+key).dispatchEvent(new Event('input',{bubbles:true}));
   }
@@ -65,19 +66,21 @@ module.exports = async function runLinedChecks(fixture) {
   await wait(()=>$('#lined-status').textContent.includes('Marks save'));
 
   $('[data-lined-tool="select"]').click();
-  {const el=$('#lined-overlay'),r=el.getBoundingClientRect(),label=el.querySelector('rect[data-lined-handle="label"]'),b=label.getBoundingClientRect();
+  {const el=$('#lined-overlay'),r=el.parentElement.getBoundingClientRect(),label=el.querySelector('rect[data-lined-handle="label"]'),b=label.getBoundingClientRect();
    el.setPointerCapture=()=>{};
    label.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:7,clientX:b.left+5,clientY:b.top+5}));
    el.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:7,clientX:r.left+r.width*.58,clientY:r.top+r.height*.08}));
    el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:7}));}
   current=await marks();expect(current[0].labelAt?.[0]>.5&&current[0].start[0]<.13,'Moving the label changed coverage');
   for(const tool of ['pen','highlighter','arrow'])drag(tool,[.25,.5],[.45,.55]);
-  $('[data-lined-tool="text"]').click();const rect=$('#lined-overlay').getBoundingClientRect();
+  $('[data-lined-tool="text"]').click();const rect=$('#lined-overlay').parentElement.getBoundingClientRect();
   $('#lined-overlay').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,clientX:rect.left+rect.width*.48,clientY:rect.top+rect.height*.66}));
   $('#lined-text').value='Pan to Maya';$('#lined-text-save').click();
   expect((await marks()).length===5,'Drawing tools or text note failed');
   $('#lined-next').click();await wait(()=>$('#lined-pages').textContent==='Page 2 of 2');
   drag('coverage',[.15,.2],[.15,.75]);
+  expect((await marks()).filter(m=>m.type==='coverage')[1].shotId!==existing.id,'New line reused a previous shot');
+  $('#lined-shot').value=existing.id;$('#lined-shot').dispatchEvent(new Event('change',{bubbles:true}));
   $('#lined-zoom').value='1.5';$('#lined-zoom').dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>$('#lined-status').textContent.includes('Marks save')&&$('#lined-overlay')?.onpointerdown&&Math.abs($('.lined-page')?.getBoundingClientRect().width-1098)<2);
   drag('arrow',[.6,.3],[.8,.6]);
@@ -126,5 +129,5 @@ module.exports = async function runLinedChecks(fixture) {
   expect(getComputedStyle($('.lined-toolbar')).backgroundColor===getComputedStyle($('.lined-desk')).backgroundColor,'Lined toolbar did not follow dark appearance');
   expect(getComputedStyle($('.lined-page')).backgroundColor==='rgb(255, 255, 255)','Dark theme changed original PDF paper');
   document.documentElement.dataset.theme='light';
-  return ['Unlinked coverage exports to PDF','Shot CSV and print reports include coverage details','Draw-first coverage saves without creating a shot','Coverage details create or update shot-list entries without duplicates','Shot-list coverage references preserve manual notes','Unlink/link and Undo/Redo retain draft details','Original two-page PDF renders offline','Shot-linked coverage, shared camera movements and timing notes','Pen, highlighter, arrow, typed notes and movable coverage labels','Rotated/cropped page and zoom retain coordinates','Annotation Undo/Redo and disk save','Lined PDF export preserves originals and editable marks','Full backup contains the byte-identical original PDF','Maximum-length notes and wide characters fit the PDF page','PDF revisions retain independent marks during rapid switching','Shot-list movements update coverage; deletion and Undo preserve links','Light/dark appearance keeps original PDF pages legible'];
+  return ['Unlinked coverage exports to PDF','Shot CSV and print reports include coverage details','Each drawn coverage line creates a distinct shot; explicit unlinking preserves drafts','Coverage details create or update shot-list entries without duplicates','Shot-list coverage references preserve manual notes','Unlink/link and Undo/Redo retain draft details','Original two-page PDF renders offline','Shot-linked coverage, shared camera movements and timing notes','Pen, highlighter, arrow, typed notes and movable coverage labels','Rotated/cropped page and zoom retain coordinates','Annotation Undo/Redo and disk save','Lined PDF export preserves originals and editable marks','Full backup contains the byte-identical original PDF','Maximum-length notes and wide characters fit the PDF page','PDF revisions retain independent marks during rapid switching','Shot-list movements update coverage; deletion and Undo preserve links','Light/dark appearance keeps original PDF pages legible'];
 };

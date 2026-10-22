@@ -87,7 +87,7 @@ def build(args):
             if metadata.get('CFBundlePackageType') == 'APPL': metadata['LSUIElement'] = True
             plist(path, metadata)
         runtime = resources / 'runtime'; runtime.mkdir()
-        for filename in ['server.py','film.py','lined.py','project_file.py']:
+        for filename in ['server.py','film.py','lined.py','project_file.py','app_preferences.py']:
             shutil.copy2(root / filename, runtime / filename)
         shutil.copy2(root / 'desktop/store_server.py', runtime / 'store_server.py')
         shutil.copytree(root / 'web', runtime / 'web')

@@ -7,7 +7,7 @@ module.exports = async function runWorkspaceLayoutChecks() {
   const ready=()=>$('#lined-overlay')&&$('#lined-status').textContent.includes('Marks save');
   const change=(selector,value)=>{const input=$(selector);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}));};
   const drag=(tool,a,b)=>{
-    $(`[data-lined-tool="${tool}"]`).click();const overlay=$('#lined-overlay'),r=overlay.getBoundingClientRect();overlay.setPointerCapture=()=>{};
+    $(`[data-lined-tool="${tool}"]`).click();const overlay=$('#lined-overlay'),r=overlay.parentElement.getBoundingClientRect();overlay.setPointerCapture=()=>{};
     for(const [type,point] of [['pointerdown',a],['pointermove',b],['pointerup',b]])overlay.dispatchEvent(new PointerEvent(type,{bubbles:true,button:0,pointerId:7,clientX:r.left+point[0]*r.width,clientY:r.top+point[1]*r.height}));
   };
   const context=target=>{target.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:500,clientY:450}));const menu=[...document.querySelectorAll('.linked-context-menu')].find(n=>!n.hidden);expect(menu,'Delete context menu missing');menu.querySelector('button').click();};
@@ -22,7 +22,7 @@ module.exports = async function runWorkspaceLayoutChecks() {
   checks.push('Sidebar plus, save notice, bottom production settings and Settings reports match requested layout');
   $('[data-view="lined"]').click();await wait(ready);
   if(!$('#lined-continuous').checked)$('#lined-continuous').click();await wait(()=>ready()&&$('.lined-continuous'));
-  change('#lined-zoom','0.5');await wait(()=>ready()&&$('#lined-overlay').getBoundingClientRect().width<400);
+  change('#lined-zoom','0.5');await wait(()=>ready()&&$('.lined-page').getBoundingClientRect().width<400);
   const {documentLayout}=await import('/lined-script.js'),pdfjs=await import('/vendor/pdfjs/legacy/build/pdf.min.mjs');
   const project=await saved(),bytes=await(await fetch('/api/pdf/'+project._linedScript.activePdf)).arrayBuffer();
   $('[data-lined-tool="select"]').click();
@@ -39,11 +39,11 @@ module.exports = async function runWorkspaceLayoutChecks() {
   p=await saved();line=active(p).marks.find(m=>m.id===line.id);const sid=line.shotId;expect(sid,'Cross-page line did not link');
   // The linked deletion must also remove coverage from another PDF revision.
   const firstDigest=active(p).sha256,other=p._linedScript.documents.find(d=>d.sha256!==firstDigest);
-  if(other){change('#lined-document',other.sha256);await wait(ready);change('#lined-shot',sid);drag('coverage',[.2,.1],[.2,.2]);await saved();change('#lined-document',firstDigest);await wait(ready);}
+  if(other){change('#lined-document',other.sha256);await wait(ready);drag('coverage',[.2,.1],[.2,.2]);change('#lined-shot',sid);await saved();change('#lined-document',firstDigest);await wait(ready);}
   $('#lined-scroll').scrollTop=boundary*layout.height*.5-250;
   drag('pen',[.75,boundary-.04],[.8,boundary+.04]);
   p=await saved();expect(active(p).marks.at(-1).endPage===1,'Freehand note did not cross the page boundary');
-  $('[data-lined-tool="text"]').click();const overlay=$('#lined-overlay'),rect=overlay.getBoundingClientRect();overlay.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,clientX:rect.left+rect.width*.45,clientY:rect.top+rect.height*(boundary-.006)}));
+  $('[data-lined-tool="text"]').click();const overlay=$('#lined-overlay'),rect=overlay.parentElement.getBoundingClientRect();overlay.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,clientX:rect.left+rect.width*.45,clientY:rect.top+rect.height*(boundary-.006)}));
   $('#lined-text').value='Start before the cut\nContinue the move\nFinish on the next page';$('#lined-text-save').click();
   p=await saved();expect(active(p).marks.at(-1).space==='document','Typed note is not continuous');
   {const real=window.fetch,click=HTMLAnchorElement.prototype.click;window.fetch=async(url,options)=>{if(String(url)==='/api/export')window.workspaceLayoutExport=JSON.parse(options.body);return real(url,options);};HTMLAnchorElement.prototype.click=function(){if(!this.href.includes('/api/download/'))return click.call(this);};try{$('#lined-export').click();await wait(()=>$('#lined-status').textContent.includes('Lined PDF exported'));}finally{window.fetch=real;HTMLAnchorElement.prototype.click=click;}}
@@ -59,7 +59,7 @@ module.exports = async function runWorkspaceLayoutChecks() {
   $('#undo').click();context($(`[data-shot="${sid}"]`));expect(!$('#modal').open,'Shot skip preference ignored');expect(!(await saved())._shots.some(s=>s.id===sid),'Skipped shot deletion failed');$('#undo').click();await saved();
   $('#app-settings-open').click();$('#reset-delete-warnings').click();$('#modal-close').click();context($(`[data-shot="${sid}"]`));expect($('#linked-delete-skip'),'Reset did not restore confirmation');$('#modal-cancel').click();
   checks.push('Right-click linked deletion, Cancel, separate persistent skip preferences, warning reset and Undo work in both tabs and across revisions');
-  $('[data-view="lined"]').click();await wait(ready);change('#lined-shot','');drag('coverage',[.85,.1],[.85,.2]);p=await saved();const unlinked=active(p).marks.at(-1);coverageContext(unlinked.id);expect(!$('#modal').open,'Unlinked coverage unexpectedly warned');expect(!active(await saved()).marks.some(m=>m.id===unlinked.id),'Unlinked coverage was not deleted');
+  $('[data-view="lined"]').click();await wait(ready);change('#lined-shot','');drag('coverage',[.85,.1],[.85,.2]);p=await saved();const unlinked=active(p).marks.at(-1);change('#lined-shot','');coverageContext(unlinked.id);expect(!$('#modal').open,'Unlinked coverage unexpectedly warned');expect(!active(await saved()).marks.some(m=>m.id===unlinked.id),'Unlinked coverage was not deleted');
   const {PDFDocument,StandardFonts}=window.PDFLib,longPDF=await PDFDocument.create(),font=await longPDF.embedFont(StandardFonts.Courier);
   for(let i=0;i<80;i++)longPDF.addPage([612,792]).drawText('Long script page '+(i+1),{x:72,y:720,font,size:12});
   const transfer=new DataTransfer();transfer.items.add(new File([await longPDF.save()],'long-script-test.pdf',{type:'application/pdf'}));$('#lined-file').files=transfer.files;$('#lined-file').dispatchEvent(new Event('change',{bubbles:true}));

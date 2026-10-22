@@ -254,8 +254,8 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     @objc func saveProjectAs() { web.evaluateJavaScript("window.slateDesktop?.saveAs()", completionHandler: nil) }
     @objc func importProject() { web.evaluateJavaScript("window.slateDesktop?.importScript()", completionHandler: nil) }
     @objc func saveWorkspace() { web.evaluateJavaScript("window.slateDesktop?.flush().then(function(ok){if(!ok)alert('Your latest changes could not be saved. Please export a backup.');});", completionHandler: nil) }
-    @objc func undoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('undo');}else{document.getElementById('undo').click();}", completionHandler: nil) }
-    @objc func redoEdit() { web.evaluateJavaScript("if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)){document.execCommand('redo');}else{document.getElementById('redo').click();}", completionHandler: nil) }
+    @objc func undoEdit() { web.evaluateJavaScript("window.slateDesktop?.undoEdit(false)", completionHandler: nil) }
+    @objc func redoEdit() { web.evaluateJavaScript("window.slateDesktop?.undoEdit(true)", completionHandler: nil) }
     @objc func openData() { if let support = support { NSWorkspace.shared.open(support) } }
     @objc func showAbout() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Production Desk", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "A Squid Productions™ Software\nLocal film scheduling, breakdowns, and shot lists.")]) }
     func isSupportMailto(_ url: URL) -> Bool {
