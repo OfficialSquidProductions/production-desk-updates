@@ -11,15 +11,15 @@ Built by Squid Productions for real productions and shared under the [MIT licens
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.12-34.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
+| macOS | [Download for Mac](https://updates.squidproductions.org/Production-Desk-1.5.14-36.zip) | Apple Silicon (M1 or newer), macOS 12 or later. Unzip and move Production Desk.app to Applications. |
 | Windows | [Download Windows installer](https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/Production-Desk-Windows-Setup.exe) | Windows 10/11, x64. Run the single `.exe` installer; installation is for the current user. |
 
 Visit the [Production Desk website](https://productiondesk.squidproductions.org/) for the
 download page. Packaged desktop apps include their runtimes; you do not need to install
-Python or a separate browser. Production Desk 1.5.12 for Mac is signed with Developer ID
+Python or a separate browser. Production Desk 1.5.14 for Mac is signed with Developer ID
 and notarized by Apple, with a stapled ticket. Windows is unsigned and may show a SmartScreen prompt.
 
-Alternatively, download the [one-click Mac installer](https://updates.squidproductions.org/Production-Desk-Installer-1.5.12-34.zip).
+Alternatively, download the [one-click Mac installer](https://updates.squidproductions.org/Production-Desk-Installer-1.5.14-36.zip).
 
 macOS and Windows are the public desktop editions. iPhone and iPad builds are available through the existing owner-only internal TestFlight groups; iOS source is in `ios/`.
 
@@ -46,7 +46,7 @@ macOS and Windows are the public desktop editions. iPhone and iPad builds are av
    separate production and preserve your existing projects.
 3. Review the imported scene headings, cast, and page estimates in **Main breakdown**.
 4. Open **Shooting schedule**, set your production calendar, and drag scenes into shooting days.
-5. Add camera coverage in **Shot list**, then export or print your reports.
+5. Add camera coverage in **Shot list**, then arrange it in **Shot Shooting Order** and export or print your reports.
 
 Use **Export → Full Production Desk backup** regularly. Full backups preserve all productions,
 script text, shots, original PDFs, lined-script annotations, and schedules and can be transferred between Mac and Windows.

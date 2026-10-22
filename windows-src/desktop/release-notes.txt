@@ -1,13 +1,9 @@
-Production Desk 1.5.13
+Production Desk 1.5.14
 
-Deleting shots preserves your place in the Shot List, chooses a neighboring visible shot, and retains selection and scrolling through undo/redo, including filtered lists.
+Arrange shots across scenes in the new Shot Shooting Order tab. Broad strip targets, large grab handles, clear insertion feedback, edge scrolling and an exact-placement dialog make filming order easy to adjust. Escape cancels a drag; keyboard navigation and Undo/Redo retain your place.
 
-Main Breakdown opens in paginated scene/page navigation by default. Enable Continuous Scroll beside the page selector to show all pages or scenes. The preference travels with your project, and original PDF selection and tagging remain available.
+Shot List remains the canonical list. Both tabs edit the same shot details, while filming order is saved separately using shot IDs. Reordering keeps shot identifiers, lined-script links and scene shooting schedules intact. New shots append to filming order, and deleted shots are removed.
 
-Settings gives Key Binds and lined-label opacity their own properly spaced controls, including narrow windows and scaled layouts.
+Scene, day, status and search filters remain available. Filtered moves retain the relative order of hidden shots. Complete .productiondesk project files and full backups carry the arrangement, shot records, original PDFs and linked coverage between computers.
 
-Lined Script PDF exports include information boxes and connectors dragged into the page gutters. Output bounds expand only where needed; original script text, page rotation and readable labels are preserved.
-
-Portable .productiondesk Save As/import retains original script/PDF revisions, stable scene/shot IDs, schedules, elements, cast, coverage, labels, links and applicable project settings. A clean-profile handoff was verified after removing the sender's storage, followed by recipient editing, save and reopen.
-
-All previous Lined Script shortcuts, shot navigation, strip-board drag improvements, full project import and original-PDF/Main Breakdown fixes remain included. Existing projects, backups and offline operation are preserved. Expanded PDF pages may require different print paper or fit settings. Device shortcuts and appearance preferences remain local. App Store and TestFlight submissions are unchanged.
+All Production Desk 1.5.13 fixes remain included: Shot List deletion and undo/redo context, paginated Main Breakdown with optional Continuous Scroll, separated Settings controls and readable lined-script gutter exports. Existing projects, backups and offline operation are preserved. App Store and TestFlight submissions are unchanged.

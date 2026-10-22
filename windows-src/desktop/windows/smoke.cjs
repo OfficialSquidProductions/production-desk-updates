@@ -56,11 +56,11 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
 
   const original = await (await fetch(origin+'/api/workspace')).json();
   assert.ok(original.projects.length);
-  for(const view of ['workspace','schedule','shots','elements','reports']) {
+  for(const view of ['workspace','schedule','shots','shot-order','elements','reports']) {
     await js(`document.querySelector('[data-view="${view}"]').click()`);
     assert.ok(await js('document.querySelector("#content").textContent.trim().length > 20'));
   }
-  checks.push('All five shared application views render');
+  checks.push('All six shared application views render');
   checks.push(...await require('./support-regressions.cjs')({win,origin,dataFolder,waitFor,readEmailDraft,reload:async()=>{await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});await waitFor('document.querySelector("#project-picker")?.options.length > 0');}}));
   const regressionChecks = await require('./regressions.cjs')({
     js, flush, waitFor,
@@ -172,6 +172,8 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push(...await js('('+require('./project-import-regressions.cjs').toString()+')()'));
   checks.push(...await js('('+require('./viewport-followup-regressions.cjs').toString()+')()'));
   await screenshot('original-pdf-breakdown.png');
+  checks.push(...await js('('+require('./shot-order-regressions.cjs').toString()+')()'));
+  await screenshot('shot-shooting-order.png');
   assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};
 };
