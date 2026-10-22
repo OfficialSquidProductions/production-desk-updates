@@ -79,7 +79,7 @@ def main():
             env = {**os.environ, "CFFIXED_USER_HOME": str(home)}
             probe = subprocess.check_output(["swift", "-module-cache-path", str(ROOT / ".cache/swift"), "-e",
                 'import Foundation; let f=FileManager.default; print(f.homeDirectoryForCurrentUser.path); print((try f.url(for:.applicationSupportDirectory,in:.userDomainMask,appropriateFor:nil,create:false)).path)'], env=env, text=True).splitlines()
-            assert probe == [str(home), str(home / "Library/Application Support")], probe
+            assert [Path(value).resolve() for value in probe] == [home, home / "Library/Application Support"], probe
             info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
             assert info["CFBundleIdentifier"].startswith("org.squidproductions.productiondesk.update-qa.")
             assert info["CFBundleExecutable"] == "UpdateQA" and info["SUFeedURL"] == f"http://127.0.0.1:{server.server_port}/appcast.xml"
