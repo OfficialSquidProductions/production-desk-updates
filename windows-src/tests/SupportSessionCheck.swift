@@ -4,6 +4,13 @@ import WebKit
 @main
 struct SupportSessionCheck {
     static func main() throws {
+        precondition(ProductionDeskDataLocation.folder(info: [:]) == "Slate")
+        precondition(ProductionDeskDataLocation.folder(info: ["ProductionDeskBeta": true]) == "ProductionDeskBeta")
+        let preview = ProductionDeskDataLocation.folder(info: ["ProductionDeskPreview": true, "CFBundleIdentifier": "local.productiondesk.qa"])
+        precondition(preview == "ProductionDeskPreviews/preview-local.productiondesk.qa")
+        precondition(ProductionDeskDataLocation.folder(info: ["ProductionDeskPreview": true, "ProductionDeskBeta": true]) == "ProductionDeskPreviews/preview-local")
+        let unusual = ProductionDeskDataLocation.folder(info: ["ProductionDeskPreview": true, "CFBundleIdentifier": "../../private/test"])
+        precondition(unusual.hasPrefix("ProductionDeskPreviews/preview-") && !unusual.dropFirst("ProductionDeskPreviews/".count).contains("/"))
         _ = NSApplication.shared
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -28,6 +35,6 @@ struct SupportSessionCheck {
         precondition(app.isSupportMailto(URL(string:"mailto:alexanderhosier@squidproductions.org?subject=Crash&body=What%20happened%3A%20test")!))
         precondition(!app.isSupportMailto(URL(string:"mailto:someone@example.org?body=test")!))
         precondition(!app.isSupportMailto(URL(string:"mailto:alexanderhosier@squidproductions.org?bcc=someone@example.org")!))
-        print("Mac support verified: interrupted session recovery, clean exit/startup, renderer diagnostics, recipient and draft-query validation.")
+        print("Preview folder isolation verified (stable, beta, preview, precedence, safe identifier). Mac support verified: interrupted session recovery, clean exit/startup, renderer diagnostics, recipient and draft-query validation.")
     }
 }

@@ -2,7 +2,8 @@
 
 This local change builds on `e1c9b62`, preserving the completed Lined Script and Shot List
 work and the published 1.5.11 original-PDF/Main Breakdown fixes. It does not publish a
-release, alter update feeds, replace an installed app or use an existing user workspace.
+release, alter update feeds or replace an installed app. Regression checks use disposable
+data; the UI-inspection incident described below did not edit project files.
 
 ## Interaction
 
@@ -72,3 +73,25 @@ python3 -B tools/check_macos_desktop.py --app 'dist/Production Desk Schedule Pre
 Browser checks need Playwright and Chromium. Existing installations can be supplied via
 `PLAYWRIGHT_MODULE` and `BROWSER_EXECUTABLE`; `PRODUCTION_DESK_RUNTIME` and `PYTHON`
 select packaged assets and Python. Evidence is in `windows-src/build/schedule-drag-review/`.
+
+## Preview isolation follow-up
+
+A direct-app test initially missed readiness because the native app consumes its readiness
+file. Its isolated startup log confirmed successful server startup and page loading. The
+harness now also reads the app's own isolated startup log, then verifies the child command
+and data path before running checks. The corrected actual-app aggregate passed.
+
+During investigation, the UI tool automatically relaunched the preview outside the test
+home after the test-owned process had ended. It was closed without edits. The existing
+beta `workspace.json` and previous-save backup retain their original October 14 timestamps;
+the beta diagnostic log was refreshed. Its prior contents were not captured and that log
+refresh cannot be reversed from the available evidence. No private production content is
+included in this report or the test fixtures.
+
+To prevent this on direct opening, preview bundles now opt into `ProductionDeskPreview`:
+the native app routes them to their own `ProductionDeskPreviews/preview-<bundle-id>` folder
+and disables production updater/migration behavior. This takes precedence over the beta
+flag. Stable and ordinary beta folders remain unchanged. Native assertions cover stable,
+beta, preview precedence and safe folder identifiers, along with existing support behavior.
+The launcher still supplies a fresh review home, and the final preview is rebuilt with
+this additional protection. Earlier preview artifacts remain unmodified.

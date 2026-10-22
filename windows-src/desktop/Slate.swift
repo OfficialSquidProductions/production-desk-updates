@@ -1,7 +1,20 @@
 import AppKit
 import WebKit
 
+// Preview bundles never share the stable or beta data directory, even when opened directly.
+enum ProductionDeskDataLocation {
+    static func folder(info: [String: Any]) -> String {
+        if info["ProductionDeskPreview"] as? Bool == true {
+            let raw = info["CFBundleIdentifier"] as? String ?? "local"
+            let safe = String(raw.map { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "-") ? $0 : "_" }.prefix(100))
+            return "ProductionDeskPreviews/preview-" + (safe.isEmpty ? "local" : safe)
+        }
+        return info["ProductionDeskBeta"] as? Bool == true ? "ProductionDeskBeta" : "Slate"
+    }
+}
+
 final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
+    var isDevelopmentPreview: Bool { Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool == true || Bundle.main.object(forInfoDictionaryKey: "ProductionDeskPreview") as? Bool == true }
     var window: NSWindow!
     var web: WKWebView!
     var server: Process?
@@ -65,7 +78,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         main.addItem(appItem)
         let menu = NSMenu(title: "Production Desk")
         menu.addItem(withTitle: "About Production Desk", action: #selector(showAbout), keyEquivalent: "")
-        if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true { updates.addMenuItems(to: menu) }
+        if !isDevelopmentPreview { updates.addMenuItems(to: menu) }
         menu.addItem(withTitle: "Open Data Folder", action: #selector(openData), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Hide Production Desk", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
@@ -100,12 +113,12 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         let fm = FileManager.default
         let resources = Bundle.main.resourceURL!
         let runtime = resources.appendingPathComponent("runtime")
-        support = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool == true ? "ProductionDeskBeta" : "Slate", isDirectory: true)
+        support = try fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(ProductionDeskDataLocation.folder(info: Bundle.main.infoDictionary ?? [:]), isDirectory: true)
         try fm.createDirectory(at: support, withIntermediateDirectories: true)
         prepareSupportSession()
         let workspace = support.appendingPathComponent("workspace.json")
         // Migrate the original local workspace once; it is never embedded in the DMG.
-        if Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true, !fm.fileExists(atPath: workspace.path), let source = try? String(contentsOf: resources.appendingPathComponent("migration-source.txt"), encoding: .utf8) {
+        if !isDevelopmentPreview, !fm.fileExists(atPath: workspace.path), let source = try? String(contentsOf: resources.appendingPathComponent("migration-source.txt"), encoding: .utf8) {
             let original = URL(fileURLWithPath: source.trimmingCharacters(in: .whitespacesAndNewlines))
             if fm.fileExists(atPath: original.path) {
                 let data = try Data(contentsOf: original)
@@ -157,7 +170,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if webView.url?.scheme == "http", webView.url?.host == "127.0.0.1", webView.url?.port == localOrigin?.port,
-           Bundle.main.object(forInfoDictionaryKey: "ProductionDeskBeta") as? Bool != true {
+           !isDevelopmentPreview {
             webView.callAsyncJavaScript("return await (window.slateDesktop?.ready ?? false);", arguments: [:], in: nil, in: .page) { [weak self] result in
                 if case .success(let ready) = result, ready as? Bool == true { self?.updates.start() }
             }
