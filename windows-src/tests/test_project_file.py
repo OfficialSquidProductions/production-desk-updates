@@ -101,3 +101,75 @@ class ProjectFileAPITests(unittest.TestCase):
         status,result=self.request('/api/import',raw,filename='Original.fountain')
         self.assertEqual(status,200,result)
         self.assertEqual(json.loads(result)['project']['_sourceScript'],{'filename':'Original.fountain','text':raw.decode()})
+
+class CompleteImportTests(unittest.TestCase):
+    setUp=ProjectFileTests.setUp
+    tearDown=ProjectFileTests.tearDown
+    def test_import_does_not_mutate_the_input_envelope(self):
+        original=copy.deepcopy(self.value)
+        import_project(self.datafile,self.value)
+        self.assertEqual(self.value,original)
+
+    def test_all_extensions_multiple_pdf_revisions_and_disk_reopen(self):
+        import base64, hashlib
+        from server import atomic_save, json_object
+        project=self.value['workspace']['projects'][0]
+        project['_extension']={'id':'arbitrary-extension-id','sceneId':project['breakdowns'][0]['id'],'literal':project['_shots'][0]['id'],'asset':'data:image/png;base64,aGVsbG8='}
+        project['_shotSettings']['additionalSetting']={'preserve':True}
+        old=project['_linedScript']['documents'][0]
+        raw=base64.b64decode(self.value['workspace']['_pdfDocuments'][old['sha256']])+b'\n% Second synthetic revision\n'
+        digest=hashlib.sha256(raw).hexdigest()
+        document=copy.deepcopy(old);document['sha256']=digest;document['filename']='Revision two.pdf'
+        for mark in document['marks']:mark['id']='revision-'+mark['id']
+        project['_linedScript']['documents'].append(document)
+        project['_linedScript']['activePdf']=digest
+        self.value['workspace']['_pdfDocuments'][digest]=base64.b64encode(raw).decode()
+        expected=copy.deepcopy(self.value)
+        workspace=import_project(self.datafile,self.value)
+        atomic_save(self.datafile,workspace)
+        self.assertEqual(self.datafile.with_suffix('.previous.json').read_bytes(),self.before)
+        reopened=json_object(self.datafile.read_bytes())
+        self.assertEqual(json.loads(export_project(self.datafile,reopened)),expected)
+        self.assertEqual(pdf_path(self.datafile,digest).read_bytes(),raw)
+
+    def test_duplicate_ids_and_dangling_relationships_rejected(self):
+        for kind in ['category','shot','annotation','scene','linked-element','calendar','board']:
+            value=copy.deepcopy(self.value);p=value['workspace']['projects'][0]
+            if kind=='category':p['categories'][1]['id']=p['categories'][0]['id']
+            if kind=='shot':p['_shots'].append(copy.deepcopy(p['_shots'][0]))
+            if kind=='annotation':p['_linedScript']['documents'][0]['marks'].append(copy.deepcopy(p['_linedScript']['documents'][0]['marks'][0]))
+            if kind=='scene':p['_shots'][0]['sceneId']='missing'
+            if kind=='linked-element':p['elements'][0]['linkedElements']=['missing']
+            if kind=='calendar':p['stripboards'][0]['calendar']='missing'
+            if kind=='board':p['stripboards'][0]['boards'][0]['breakdownIds'].append('missing')
+            with self.subTest(kind=kind):
+                with self.assertRaises(ValueError):import_project(self.datafile,value)
+                self.assertEqual(self.datafile.read_bytes(),self.before)
+                self.assertFalse((self.datafile.parent/'pdfs').exists())
+
+    def test_valid_empty_production_and_older_breakdown_only_project(self):
+        from film import empty_project
+        from project_file import FORMAT
+        p=empty_project('Empty production')
+        envelope={'format':FORMAT,'formatVersion':1,'workspace':{'version':1,'activeProject':p['id'],'projects':[p],'_pdfDocuments':{}}}
+        self.assertEqual(json.loads(export_project(self.datafile,import_project(self.datafile,envelope))),envelope)
+        p['stripboards']=[];p.pop('calendars')
+        restored=import_project(self.datafile,envelope)['projects'][0]
+        self.assertTrue(restored['stripboards']);self.assertTrue(restored['calendars'])
+
+    def test_large_project_and_data_size_limit(self):
+        from project_file import validate_workspace
+        p=self.value['workspace']['projects'][0];seed=p['_shots'][0]
+        p['_shots'].extend(dict(seed,id='large-shot-'+str(n),number='QA'+str(n)) for n in range(5000))
+        workspace=import_project(self.datafile,self.value)
+        self.assertEqual(json.loads(export_project(self.datafile,workspace))['workspace']['projects'][0]['_shots'],p['_shots'])
+        p['_oversized']='x'*(40*1024*1024)
+        with self.assertRaisesRegex(ValueError,'40 MB'):validate_workspace(self.value['workspace'])
+        self.assertEqual(self.datafile.read_bytes(),self.before)
+
+class ImportJSONIntegrityTests(unittest.TestCase):
+    def test_duplicate_json_fields_and_invalid_numbers_are_not_silently_discarded(self):
+        from server import json_object
+        for raw in [b'{"workspace":{},"workspace":{}}',b'{"project":{"id":"one","id":"two"}}',b'{"value":NaN}',b'{"value":Infinity}',b'']:
+            with self.subTest(raw=raw):
+                with self.assertRaises(ValueError):json_object(raw)

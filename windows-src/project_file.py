@@ -44,7 +44,7 @@ def import_project(datafile, value):
         raise ValueError('This is not a Production Desk project file.')
     if type(value.get('formatVersion')) is not int or value['formatVersion'] != VERSION:
         raise ValueError('This Production Desk project version is not supported. Update Production Desk to open it.')
-    workspace = validate_workspace(value.get('workspace'))
+    workspace = validate_workspace(copy.deepcopy(value.get('workspace')))
     if len(workspace['projects']) != 1:
         raise ValueError('A project file must contain one production.')
     documents = workspace.get('_pdfDocuments')

@@ -31,8 +31,15 @@ MAX_BODY = 40 * 1024 * 1024
 
 
 def json_object(raw):
+    def distinct_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('This file contains duplicate JSON fields: ' + key[:80])
+            result[key] = value
+        return result
     try:
-        value = json.loads(raw, parse_constant=lambda value: (_ for _ in ()).throw(ValueError('Invalid JSON number.')))
+        value = json.loads(raw, object_pairs_hook=distinct_keys, parse_constant=lambda value: (_ for _ in ()).throw(ValueError('Invalid JSON number.')))
     except (json.JSONDecodeError, RecursionError):
         raise ValueError('This file is corrupt or is not valid supported JSON.') from None
     if not isinstance(value, dict):
@@ -492,14 +499,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.reply(self.export_file(filename, mime, contents))
             elif path == "/api/workspace":
                 value = json_object(raw)
-                if not isinstance(value, dict) or not isinstance(value.get("projects"), list):
-                    raise ValueError("Invalid workspace.")
-                ids = []
-                for p in value["projects"]:
-                    prepare_project(p)
-                    ids.append(p["id"])
-                if len(set(ids)) != len(ids) or value.get("activeProject") not in ids:
-                    raise ValueError("Invalid active project or duplicate project IDs.")
+                validate_workspace(value)
                 with LOCK:
                     atomic_save(self.server.datafile, value)
                 self.reply({"saved": True})

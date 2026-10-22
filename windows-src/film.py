@@ -183,6 +183,10 @@ def validate_uss(project):
     for e in project["elements"]:
         if e.get("category") not in cats or not isinstance(e.get("name"), str):
             raise ValueError("Element has an invalid category or name.")
+    for e in project["elements"]:
+        linked = e.get('linkedElements', [])
+        if not isinstance(linked, list) or any(not isinstance(x, str) or x not in elements for x in linked):
+            raise ValueError('Element references an unknown linked element.')
     for b in project["breakdowns"]:
         if b.get("type") not in ("scene", "banner") or not isinstance(b.get("elements"), list):
             raise ValueError("Invalid breakdown type or elements.")

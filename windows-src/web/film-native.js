@@ -78,6 +78,7 @@ export function validateUSS(p) {
   const cats=new Set(p.categories.map(c=>c.id)),elements=new Set(p.elements.map(e=>e.id)),breakdowns=new Set(p.breakdowns.map(b=>b.id)),calendars=new Set(p.calendars.map(c=>c.id));
   for(const c of p.categories)if(!Number.isInteger(c.ucid)||typeof c.name!=='string')fail('Categories require a name and integer ucid.');
   for(const e of p.elements)if(!cats.has(e.category)||typeof e.name!=='string')fail('Element has an invalid category or name.');
+  for(const e of p.elements){const linked=e.linkedElements??[];if(!Array.isArray(linked)||linked.some(id=>typeof id!=='string'||!elements.has(id)))fail('Element references an unknown linked element.');}
   for(const b of p.breakdowns){
     if(!['scene','banner'].includes(b.type)||!Array.isArray(b.elements))fail('Invalid breakdown type or elements.');
     if(b.elements.some(e=>!elements.has(e)))fail('Breakdown references an unknown element.');
@@ -112,7 +113,8 @@ export function validateUSS(p) {
   return p;
 }
 export function validateWorkspace(value){
-  if(!value||!Array.isArray(value.projects)||!value.projects.length)throw Error('Invalid workspace.');
+  if(!value||value.version!==1)throw Error('Unsupported or invalid Production Desk workspace version.');
+  if(!Array.isArray(value.projects)||!value.projects.length)throw Error('Invalid workspace.');
   value.projects.forEach(validateUSS);const ids=value.projects.map(p=>p.id);
   if(new Set(ids).size!==ids.length||!ids.includes(value.activeProject))throw Error('Invalid active project or duplicate project IDs.');
   return value;

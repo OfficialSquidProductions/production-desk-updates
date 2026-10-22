@@ -32,7 +32,7 @@ window.slateDesktop = {undoEdit:forward=>{
   const target=document.activeElement;
   if(isEditing(target)){if(target?.isContentEditable||/INPUT|TEXTAREA/.test(target?.tagName))document.execCommand(forward?'redo':'undo');return;}
   if(!document.querySelector('dialog[open]'))undo(!!forward);
-},ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), prepareForUpdate:async()=>{
+},ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:file=>importProjectFile(file), print:()=>action('print'), prepareForUpdate:async()=>{
   // Dialog drafts are committed only by their Save/Add action. Leave them intact.
   if(document.querySelector('dialog[open]'))return false;
   return await window.slateDesktop.flush();
@@ -435,24 +435,53 @@ function textModal(title,label,initial,callback) {
   $('#modal-ok').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
 }
 function confirmModal(title,message,callback) { modal(title,`<p>${esc(message)}</p>`,'<button id="modal-cancel">Cancel</button><button id="modal-ok" class="danger">Delete</button>');$('#modal-ok').onclick=()=>{callback();$('#modal').close();}; }
+let importSession;
 function importModal() {
-  modal('Bring your story in',`<p>Import creates a separate production, keeping your existing work. All parsing happens on this computer.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles.&#10;&#10;MAYA&#10;We're going to be late."></textarea><p class="tiny">Scene lengths and cast detection should be reviewed after import. Production Desk files and older JSON backups open as separate productions. Duplicate names are labeled as imported copies.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  if(document.querySelector('dialog[open]')){toast('Save or cancel the open dialog before importing.');return;}
+  modal('Import a production or script',`<p>Import adds a separate production and keeps your existing work. Production Desk files restore the complete production, including original PDFs, scripts, shots, schedules, elements and lined script.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles."></textarea><p class="tiny">All parsing happens on this computer. Older JSON backups and USS schedules are also supported. Duplicate names receive an imported copy suffix. Script imports need a review of scene lengths and cast.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  const session={cancelled:false,committing:false,busy:false};importSession=session;
+  const dialog=$('#modal');
+  const cancel=()=>{if(!session.committing)session.cancelled=true;};
+  dialog.onclose=()=>{if(!dialog.open)cancel();};
+  for(const control of [$('#modal-close'),$('#modal-cancel')])control.onclick=()=>{if(!session.committing){cancel();dialog.close();}};
+  dialog.oncancel=event=>{if(session.committing)event.preventDefault();else cancel();};
   $('#import-submit').onclick=async()=>{
-    const button=$('#import-submit'), file=$('#import-file').files[0], text=$('#paste-script').value;
+    const file=$('#import-file').files[0],text=$('#paste-script').value;
     if(!file&&!text.trim()){ $('#modal-error').textContent='Choose a file or paste script text.';return; }
-    button.disabled=true;button.textContent=file?.name.toLowerCase().endsWith('.pdf')?'Reading PDF locally…':'Importing…';
-    try {
-      const result=await api('/api/import',file || text,{'X-Filename':encodeURIComponent(file?.name || 'Pasted script.txt')});
-      receiveImport(result);
-      $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');
-    }catch(e){$('#modal-error').textContent=e.message;button.disabled=false;button.textContent='Import locally';}
+    try{await importProjectFile(file,text,session);}catch(e){if(!session.cancelled)$('#modal-error').textContent=e.message;}
   };
 }
-function receiveImport(result) {
-  const incoming=result.workspace?.projects||[result.project];
-  if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
-  const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
-  mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
+async function importProjectFile(file,text='',session) {
+  if(!session){
+    if(document.querySelector('dialog[open]')&&!$('#import-submit'))throw Error('Save or cancel the open dialog before importing.');
+    if(!$('#modal').open)importModal();
+    session=importSession;
+  }
+  if(session.busy)return false;
+  session.busy=true;
+  const button=$('#import-submit');button.disabled=true;button.textContent='Saving current work…';
+  try{
+    document.activeElement?.blur?.();
+    if(!await window.slateDesktop.flush())throw Error('Your current work could not be saved. Retry saving before importing. Your production is unchanged.');
+    if(session.cancelled||!$('#modal').open||importSession!==session)return false;
+    button.textContent='Reading import…';
+    const result=await api('/api/import',file||text,{'X-Filename':encodeURIComponent(file?.name||'Pasted script.txt')});
+    if(session.cancelled||!$('#modal').open||importSession!==session)return false;
+    const incoming=result.workspace?.projects||[result.project];
+    if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
+    const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
+    // Cancellation is available throughout parsing. During the final atomic disk
+    // save, keep the dialog open so a cancellation cannot race a committed import.
+    session.committing=true;button.textContent='Saving imported production…';
+    for(const control of $$('#modal button,#modal input,#modal textarea'))control.disabled=true;
+    await api('/api/workspace',merged.workspace);
+    mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
+    clearTimeout(saveTimer);savedRevision=revision;saveStatus(savedLabel);
+    $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');return true;
+  }finally{
+    session.busy=false;session.committing=false;
+    if(!session.cancelled&&$('#modal').open){for(const control of $$('#modal button,#modal input,#modal textarea'))control.disabled=false;button.textContent='Import locally';}
+  }
 }
 async function saveProjectFile(destination='files') {
   document.activeElement?.blur?.();
@@ -583,6 +612,7 @@ $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[da
 $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.value;scenarioIndex=0;selected=undefined;search='';});};
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#save-status').onclick=()=>save();
 $('#save-as-open').onclick=()=>saveProjectFile('files');
+$('#import-open').onclick=()=>importModal();
 $('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():newScene();
 $('#new-open').onclick=()=>textModal('New production','Production title','Untitled production',async title=>{try{const p=await api('/api/new',{title});mutate(()=>{workspace.projects.push(p);workspace.activeProject=p.id;scenarioIndex=0;selected=undefined;view='workspace';});}catch(e){toast(e.message);}});
 document.addEventListener('keydown',e=>{const editing=isEditing(document.activeElement)||isEditing(e.target);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!document.querySelector('dialog[open]')&&!e.isComposing){e.preventDefault();undo(e.shiftKey);}});
