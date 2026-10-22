@@ -25,3 +25,13 @@ Tested commit: `6185691ab1dc9224badb6f195b15b8b1fdb81df2` on `release/1.5.12-loc
 Evidence: ignored `windows-src/build/combined-release-review/summary.json`, `artifact.json`, `actual-app-result.json`, storage preflight reports, live-feed/version-gate reports and full test/build logs.
 
 Not run: Windows packaged/installed QA (no Wine/VM/runtime locally), the pinned NSIS updater suite (dependencies absent), the one Windows PDF test, and public signed-archive/notarization checks (no public archive prepared). Public distribution is now explicitly approved. A newer-version push to `main` activates the existing Windows workflow; its packaged/installed gates must pass on the exact source commit. Mac publication additionally requires Developer ID signing, notarization/stapling and verified public downloads/updater offer.
+
+## Public release verification in progress
+
+Final source is `7d9472b9494cd1385eff0c8fd210dd3396ff92d8`. Exact-commit Windows CI run [39724379126](https://github.com/OfficialSquidProductions/production-desk-updates/actions/runs/39724379126) passed: 93 backend tests, 20 helper tests, 14 real NSIS updater tests and 83 native smoke checks each on packaged, installed and reinstalled copies. Windows 1.5.12 build 39 is public; the downloaded EXE, checksums, blockmap and update metadata match the successful CI artifact. The Windows release channel remains the latest GitHub release.
+
+CI caught and resolved a path-separator assumption in the preview test and missing optional screenplay-font handling on clean Windows installations. The corrected fallback passes the complete browser suite with all optional fonts unavailable; the prior implementation fails that same scenario. The final source retains all original-PDF/Main Breakdown fixes.
+
+Mac 1.5.12 (34) app and sealed installer use the existing Developer ID identity, are Apple-notarized and stapled, and pass strict code-sign, Gatekeeper and distribution checks. All 247 runtime source files match final source. The final notarized app passed 56 native aggregate checks plus native save/import/reload checks. Installer scratch tests passed fresh install/update, project preservation, unrelated/symlink destination and invalid-payload rejection. No user installation was replaced; all 1,231 protected installed-app and real project/log/backup files remain unchanged.
+
+The verified Mac archive, installer, notes, checksums and appcast are staged in this publication commit. Fresh public-download and prior-version updater-offer checks follow deployment; do not interpret staging as completion of those checks. App Store/TestFlight submissions remain unchanged.

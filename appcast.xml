@@ -3,22 +3,23 @@
     <channel>
         <title>Production Desk</title>
         <item>
-            <title>1.5.11</title>
-            <pubDate>Wed, 21 Oct 2026 01:31:31 -0400</pubDate>
-            <sparkle:version>33</sparkle:version>
-            <sparkle:shortVersionString>1.5.11</sparkle:shortVersionString>
+            <title>1.5.12</title>
+            <pubDate>Thu, 22 Oct 2026 00:53:20 -0400</pubDate>
+            <sparkle:version>34</sparkle:version>
+            <sparkle:shortVersionString>1.5.12</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Production Desk 1.5.11</h2>
+            <description><![CDATA[<h2>Production Desk 1.5.12</h2>
 <ul>
-<li>Main Breakdown displays original PDF pages with selectable text, preserving screenplay layout instead of inferring dialogue formatting from extraction.</li>
-<li>Tag PDF text across pages without resetting scroll, the selected scene, chosen category or text selection. Repeated actor entries keep input focus and existing drafts.</li>
-<li>Navigate scenes using their imported PDF page references; zoom and read rotated pages locally. Long scripts release offscreen page images while retaining selectable text.</li>
-<li>Missing originals fall back to unformatted extracted scene text. Image-only pages explain that text selection needs a searchable PDF; typed breakdown entries remain available. No OCR service or script upload is used.</li>
-<li>Existing breakdowns, reusable elements, schedules, shot lists and portable backups retain their data. App Store and TestFlight submissions are unchanged.</li>
+<li>Lined Script gains configurable keyboard shortcuts in Settings, stable undo/redo scrolling, natural scene/shot numbering, clear line-to-label connectors, gutter positioning and adjustable label opacity.</li>
+<li>New coverage lines create distinct shots. Search and autocomplete existing shot links, renumber shots with collision handling, and keep deleted shots out of link choices.</li>
+<li>Navigate the Shot List with Up/Down arrows while retaining your place. Clicking shots preserves scroll, and editing controls keep their own arrow-key behavior.</li>
+<li>Shooting Schedule strips have larger grab areas and drop targets, visible placement feedback, edge autoscroll and safe cancellation. Scene editing and color controls remain available.</li>
+<li>Import beside Save As restores complete Production Desk projects, original scripts/PDFs, shots, schedules, elements/cast, annotations, labels, links and project settings. Internal IDs survive duplicate imports. Pending edits save first; failed or cancelled imports preserve current work.</li>
+<li>The original-PDF Main Breakdown fixes from 1.5.11 remain included. Existing projects, undo/redo, portable backups and offline operation are preserved. App Store and TestFlight submissions are unchanged.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.11-33.zip" length="21313140" type="application/octet-stream" sparkle:edSignature="XkUhQ+O0ZhQej8nunwh2ZBcrkM/rppW+KD0QjzMM/uF+WSBTJ5J0UpuaQIvkDkHMA+kQkfbon2am/UmuMNBAAw=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.12-34.zip" length="21330812" type="application/octet-stream" sparkle:edSignature="Hfiz16x5Zc6JHGTeK/EstUv10NmT6JNO4Ms8EAzpc2LqpuFCQkKk++399oD0j59LfW8AHcwRs+4qB0XUXPWaCQ=="/>
         </item>
     </channel>
 </rss>
