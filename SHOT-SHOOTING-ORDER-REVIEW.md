@@ -30,3 +30,25 @@ The builder requires committed clean sources and stamps the exact commit. The pr
 Evidence is under ignored `windows-src/build/shot-order-review/`. Final packaged checks and exact implementation commit will be recorded after the build. Windows/Electron installer runtime, touch and iOS execution are outside this Mac verification. No publication or new release is authorized or performed.
 
 The real-browser keyboard check permits the minimal scroll needed to reveal an adjacent row. The first packaged run exposed an overly strict test assertion (a valid 9-pixel reveal was rejected); the test now checks the selected row's actual visibility and bounds the scroll to one adjacent row. The implementation's navigation behavior was unchanged. An initial sandbox-only build could not convert icons; the isolated build completed with approved execution outside that restriction.
+
+## Final packaged Mac verification
+
+Exact tested source: `8cf1b78c82b3563068c13ee8a8ec1464de701635` (implementation `7bba85a0607d83ae997537075b124ec2f2613a14`).
+
+Artifact: `windows-src/dist/Production Desk Shot Order Preview.app`.
+Use **Start Packaged Shot Order Preview.command** for a fresh preflight-checked review home. This is an ad-hoc signed local Apple Silicon preview, not a new public release or notarized distribution.
+
+Passed:
+
+- 95 backend tests on source and bundled Python/packaged modules: 94 passed, one existing Windows pypdf dependency skip.
+- 27 focused Node checks, including order reconciliation/validation, existing scene move planning, PDF gutter exports, platform behavior and support errors.
+- Existing browser aggregate: 68 checks, zero page errors.
+- New source and final packaged browser aggregate: 468 shots, broad content/handle dragging, before/after placement, edge autoscroll and feedback, Escape/tiny-motion/keyboard access, cross-scene and filtered ordering, hidden-order integrity, both-view editing/addition/deletion, scenario switching, IDs/coverage, Undo/Redo, reload and restart. Zero page errors.
+- Actual Save As `.productiondesk` transfer: sender storage removed before clean-profile recipient import; every production field, filming order, shot ID, scene schedule, linked annotation and original PDF byte preserved. Recipient continued editing and survived reload/backend restart.
+- Native WebKit: 63 named regression checks plus native focused-save/import/reload checks passed against the packaged runtime. The same aggregate passed through the actual compiled AppKit app's server after verifying its child command used bundled Python and the preflight-approved temporary workspace path.
+- Preflight checked direct-launch and disposable-home data/log/backup/PDF routing before app launch. Native assertions passed for stable/beta/preview precedence and safe folder names. Signature verification passed deep/strict. The runtime manifest records 249 byte-identical source files and the newly compiled PDF helper.
+- Actual-app testing fingerprinted all existing stable/beta data files (including logs/backups) and installed app components before and after: content hashes and modification times were unchanged. The earlier `lined-script-dev` worktree remains clean on its original branch.
+
+Evidence in `windows-src/build/shot-order-review/`: `summary.json`, `build.log`, `signature.log`, `packaged-runtime-sha256.json`, `browser-source.json`, `browser-packaged.json`, `browser-regressions.log`, `native-packaged.log`, `actual-app-result.json`, `actual-app-webkit.log`, `direct-launch-preflight.json`, `preview-isolation-test.log`, `python-source.log`, `python-packaged.log`, `node-tests.log`, `sender.productiondesk`, `shot-shooting-order.png`, `drag-feedback.png`. The supporting actual-app harness is `check_actual_app.py` in that evidence folder.
+
+No implementation blocker remains. Windows/Electron execution and installer verification were not performed; the optional desktop updater Node suite also requires an unavailable `electron-updater` dependency. iOS/touch execution and physical native menu interaction were not tested. No installed-app replacement, real-project edits, public publication, feed changes, release-version bump, notarization or new signing credentials were performed.
