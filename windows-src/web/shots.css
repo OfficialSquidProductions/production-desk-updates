@@ -13,3 +13,11 @@
 .shot-metrics,.shot-row{background:#fff}.shot-row.selected{background:#fff0f4}.shot-row:hover{background:#fff7f9}.shot-description{color:#30232c}.shot-specs,.shot-day,.shot-row-time span,.shot-editor-note,.shot-editor-empty p,.shot-empty p{color:#6a5461}.shot-state{background:#fff;color:#6a4e5d}.shot-state.done{background:#fff0f4;color:#991434;border-color:#d8a5b5}.shot-state.ready{color:#991434}.shot-state.rolling,.shot-row.done .shot-check{background:#E60026;color:white}.shot-check{color:#bd0028}.shot-toolbar input,.shot-toolbar select{color:#30232c}.shot-progress,.shot-progress::-webkit-progress-bar{background:#f5dde5}.shot-metrics strong small,.shot-metrics span{color:#6a5461}
 
 .shot-row-main:focus-visible{outline:2px solid #0879ed;outline-offset:4px}#shot-list:focus-visible{outline:2px solid #0879ed;outline-offset:-2px}
+
+/* Shot-level stripboard; scene days are references and never move here. */
+.shot-order-board{padding:12px;background:var(--bg);min-height:295px;max-height:none}
+.shot-order-strip{margin:0 0 8px;border:1px solid var(--line);border-left:5px solid #97acc6;border-radius:4px;padding:12px;gap:12px;cursor:grab;user-select:none}
+.shot-order-strip.selected{border-left-color:#E60026;box-shadow:none}
+.shot-order-strip .shot-grip{display:grid;place-items:center;min-width:38px;min-height:44px;padding:4px;background:transparent;border:1px solid var(--line);touch-action:none}
+.shot-order-strip .shot-row-main{cursor:grab}.shot-order-strip .shot-row-top strong{font-size:17px}
+.shot-scene-reference{font-size:10px;color:var(--muted);line-height:1.5}

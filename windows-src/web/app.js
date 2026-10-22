@@ -1,3 +1,4 @@
+import {reconcileShotShootingOrder} from './shot-shooting-order.js';
 import {createStripDrag} from './strip-drag.js';
 import {createScriptPDF} from './script-pdf.js';
 import {createDemoControls} from './demo/demo-controls.js';
@@ -82,7 +83,7 @@ function saveStatus(text) {
   $('#sidebar-save-text').textContent=text===savedLabel ? (isIPadApp?'Saved on your device':'Saved on your computer') : text.replace(/^✓ /,'');
   $('.sidebar-save').dataset.state=text===savedLabel?'saved':text.startsWith('Save failed')?'error':'pending';
 }
-function mark() { revision++; saveStatus('Saving to disk…'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+function mark() { reconcileShotShootingOrder(project); revision++; saveStatus('Saving to disk…'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
 async function save() {
   if (saving || savedRevision === revision) return;
   saving = true;
@@ -92,7 +93,7 @@ async function save() {
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
 const historyViews=new WeakMap();
-function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());if(view==='shots')historyViews.set(snapshot,shotDesk.captureState());return snapshot;}
+function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());if(view==='shots')historyViews.set(snapshot,shotDesk.captureState());if(view==='shot-order')historyViews.set(snapshot,shotOrderDesk.captureState());return snapshot;}
 function mutate(fn, redraw = true) {
   history.push(historySnapshot()); if (history.length > 40) history.shift(); future = [];
   fn(); mark(); if (redraw) render(); updateUndo();
@@ -102,10 +103,10 @@ function undo(forward = false) {
   const source = forward ? future : history, destination = forward ? history : future;
   if (!source.length) return;
   destination.push(historySnapshot()); workspace = source.pop(); const state=historyViews.get(workspace); useProject(); mark();
-  if((view==='lined'&&linedDesk.refreshHistory(state))||(view==='shots'&&shotDesk.refreshHistory(state)))updateUndo();else render();
+  if((view==='lined'&&linedDesk.refreshHistory(state))||(view==='shots'&&shotDesk.refreshHistory(state))||(view==='shot-order'&&shotOrderDesk.refreshHistory(state)))updateUndo();else render();
 }
 function normalize(p) {
-  p._shots ||= []; p._shotSettings ||= {startTime:'07:00'};
+  p._shots ||= []; reconcileShotShootingOrder(p); p._shotSettings ||= {startTime:'07:00'};
   p.categories ||= []; p.elements ||= []; p.breakdowns ||= []; p.calendars ||= []; p.stripboards ||= [];
   for (const key of ['author','company','description','episode','episodeName','project','schedColor','schedDate','scriptColor','scriptDate','season']) p[key] ??= null;
   for (const e of p.elements) {
@@ -152,23 +153,23 @@ function allScheduled() { return activeBoard()?.breakdownIds.flat() || []; }
 
 function render() {
   selectedText = ''; selectedRange=undefined; // Selections belong only to the displayed script.
-  scriptPDF.stop();stripDrag.stop();
+  scriptPDF.stop();stripDrag.stop();shotOrderDesk.stop();
   elementActions.close();
   useProject();
-  document.body.classList.toggle('view-shots',view==='shots');
+  document.body.classList.toggle('view-shots',['shots','shot-order'].includes(view));
   document.body.classList.toggle('view-lined',view==='lined');
   $('#project-picker').innerHTML = workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===project.id?'selected':''}>${esc(p.project || p.name)}</option>`).join('');
   $('#project-title').textContent = project.project || project.name;
   $('#breadcrumb').textContent = project.project || project.name;
   $('#project-eyebrow').textContent = project._demo ? 'SAMPLE PRODUCTION · EXPLORE THE WORKSPACE' : 'PRODUCTION WORKSPACE';
-  const subtitles = {lined:'Your original pages. Every angle, movement, and mark.',workspace:'From the page to the production. One scene at a time.',schedule:'Build your shooting days. Keep the whole story in view.',elements:'Every person, place, and thing your production needs.',reports:'A clear picture of the days ahead.',shots:'Scene by scene. Setup by setup. Every shot accounted for.'};
+  const subtitles = {'shot-order':'Arrange shots across scenes in the order you plan to film.',lined:'Your original pages. Every angle, movement, and mark.',workspace:'From the page to the production. One scene at a time.',schedule:'Build your shooting days. Keep the whole story in view.',elements:'Every person, place, and thing your production needs.',reports:'A clear picture of the days ahead.',shots:'Scene by scene. Setup by setup. Every shot accounted for.'};
   $('#page-subtitle').textContent = subtitles[view];
   $$('#navigation button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   const scenes = sceneList(), t = totals(scenes.map(b=>b.id)), scheduled = allScheduled().filter(x=>breakdown(x)?.type==='scene').length;
   const dayCount = scheduleGroups().filter(Array.isArray).length;
   $('#summary').innerHTML = `<div class="summary-stat"><strong>${scenes.length}</strong><span>scenes</span></div><div class="summary-stat"><strong>${pages(t.pages)}</strong><span>pages</span></div><div class="summary-stat"><strong>${dayCount}</strong><span>shoot days</span></div><div class="summary-stat"><strong>${scenes.length-scheduled}</strong><span>unscheduled</span></div><div class="summary-note"><span>●</span> Local files · USS 1.0.0</div>`;
-  $('#add-scene').textContent=['shots','lined'].includes(view)?'＋ New shot':'＋ New scene';
-  $('#content').innerHTML = view === 'lined' ? linedDesk.render() : view === 'shots' ? shotDesk.render() : view === 'workspace' ? workspaceView() : view === 'schedule' ? scheduleView() : view === 'elements' ? elementsView() : reportsView();
+  $('#add-scene').textContent=['shots','shot-order','lined'].includes(view)?'＋ New shot':'＋ New scene';
+  $('#content').innerHTML = view === 'lined' ? linedDesk.render() : view === 'shots' ? shotDesk.render() : view === 'shot-order' ? shotOrderDesk.render() : view === 'workspace' ? workspaceView() : view === 'schedule' ? scheduleView() : view === 'elements' ? elementsView() : reportsView();
   bindContent(); scriptPDF.bind(); applyStripColors(); updateUndo();
 }
 function emptyPanel(message) { return `<div class="empty-state"><h3>A story starts here.</h3>${message}<br><button class="primary" data-action="import">Import your script</button></div>`; }
@@ -333,6 +334,7 @@ function moveScene(bid, zone, index, position) {
 function bindContent() {
   if($('#breakdown-continuous'))$('#breakdown-continuous').onchange=e=>setBreakdownContinuous(e.target.checked);
   if(view==='shots')shotDesk.bind();
+  if(view==='shot-order')shotOrderDesk.bind();
   if(view==='lined')linedDesk.bind();
   $$('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));
   $('#scene-picker')?.addEventListener('change',e=>{selected=e.target.value;render();});
@@ -371,6 +373,7 @@ function bindContent() {
   });
   $('#script-text')?.addEventListener('mouseup',()=>{rememberScriptSelection();});
   $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutateBreakdownElements(()=>addElement(breakdown(),Number($('#tag-category').value),text));if(selectedRange?.startContainer.isConnected){const selection=getSelection();selection.removeAllRanges();selection.addRange(selectedRange);}toast(`Tagged “${text}”`);});
+  if(view!=='shot-order'){
   $$('[data-color-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();stripColorModal(button.dataset.colorStrip);}));
   $$('[data-move-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();if(!stripDrag.consumeClick(button.dataset.moveStrip,e))moveStripModal(button.dataset.moveStrip);}));
   $$('[data-strip]').forEach(strip=>{
@@ -378,6 +381,7 @@ function bindContent() {
     strip.addEventListener('keydown',e=>{if(e.target.closest('[data-color-strip],[data-move-strip]'))return;if(e.key==='Enter'){selected=strip.dataset.strip;view='workspace';render();}});
   });
   stripDrag.bind($('#content'));
+  }
   $$('[data-remove-day]').forEach(button=>button.addEventListener('click',()=>mutate(()=>{const group=activeBoard().breakdownIds.splice(Number(button.dataset.removeDay),1)[0];boneyard().breakdownIds.push(...group);}))); 
   $$('[data-sort-day]').forEach(button=>button.addEventListener('click',()=>mutate(()=>activeBoard().breakdownIds[Number(button.dataset.sortDay)].sort((a,b)=>slug(breakdown(a)).localeCompare(slug(breakdown(b)),undefined,{numeric:true})))));
   $('#element-search')?.addEventListener('input',e=>{elementSearch=e.target.value;const caret=e.target.selectionStart;render();$('#element-search').focus();$('#element-search').setSelectionRange(caret,caret);});
@@ -422,7 +426,7 @@ function action(name) {
   if(name==='edit-script')scriptEditModal();
   if(name==='extra-element'){const ucid=Number($('#extra-category').value);if(!ucid)return;const c=category(ucid);textModal('Add '+c.name,'Element name','',value=>mutateBreakdownElements(()=>addElement(breakdown(),ucid,value)));}
   if(name==='new-element')newElementModal();
-  if(name==='print'&&view==='shots')return shotDesk.print();
+  if(name==='print'&&['shots','shot-order'].includes(view))return (view==='shot-order'?shotOrderDesk:shotDesk).print();
   if(name==='print'){ $('#print-area').innerHTML=`<h1>${esc(project.project || project.name)}</h1><p>${esc(activeScenario().name)} · ${report==='dood'?'Cast workdays':report==='breakdowns'?'Scene breakdowns':'One-line shooting schedule'}</p>${reportHTML()}`;applyStripColors($('#print-area'));window.print(); }
 }
 
@@ -585,10 +589,10 @@ function exportModal() {
   $('#export-uss').onclick=()=>{const clean=value=>Array.isArray(value)?value.map(clean):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[k,clean(v)])):value;const output=clean(project);output.source='Production Desk — Local Film Scheduler';download(filename+'.uss',JSON.stringify({universalScheduleStandard:output},null,2));toast('USS file exported.');};
   $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});if(result.cancelled)return;if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
   $('#export-csv').onclick=()=>{const rows=[['Day','Date','Scene','INT/EXT','Set','Day/Night','Synopsis','Pages','Minutes','Cast','Location']];let day=0;const ds=dates(scheduleGroups().filter(Array.isArray).length);for(const g of scheduleGroups()){if(Array.isArray(g))day++;for(const bid of Array.isArray(g)?g:[g]){const b=breakdown(bid);if(!b)continue;rows.push([day||'',day?ds[day-1]:'',b.scene,prop(b,1),b.type==='banner'?b.bannerText:prop(b,0),prop(b,2),b.description,b.pages,(b.duration||0)/60000,prop(b,100),prop(b,6)]);}}const safe=v=>{const s=String(v??'');return /^[=+@\-\t\r]/.test(s)?"'"+s:s;};download(filename+'-schedule.csv',rows.map(row=>row.map(v=>'"'+safe(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');};
-  $('#export-shots').onclick=()=>shotDesk.csv();
+  $('#export-shots').onclick=()=>(view==='shot-order'?shotOrderDesk:shotDesk).csv();
   $('#export-print').onclick=()=>{report='oneline';$('#modal').close();action('print');};
 }
-function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on the top or bottom half of a strip to insert before or after it. The blue marker previews placement; Escape cancels. Click a grab handle for precise placement options. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
+function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on the top or bottom half of a strip to insert before or after it. The blue marker previews placement; Escape cancels. Click a grab handle for precise placement options. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Arrange filming order.</strong> Open Shot Shooting Order to arrange the same shots across scenes. Drag the upper or lower half of a strip, or click its grab handle for exact placement. New shots append to this independent production-wide order. Scene shooting days remain visible as reference.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
 
 const stripDrag=createStripDrag({project:()=>project,scenario:activeScenario,label:bid=>{const b=breakdown(bid);return b?.type==='banner'?'banner '+b.bannerText:'scene '+(b?.scene||'?');},commit:(bid,boards)=>{
   const positions=$$('.board-scroll').map(node=>[node.scrollTop,node.scrollLeft]),page=document.scrollingElement,top=page.scrollTop,left=page.scrollLeft;
@@ -598,11 +602,13 @@ const stripDrag=createStripDrag({project:()=>project,scenario:activeScenario,lab
 }});
 const scriptPDF=createScriptPDF({esc,continuous:breakdownContinuous,modeControl:breakdownModeControl,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
 const linedDesk=createLinedDesk({esc,id,stamp,api,preferences:()=>appSettings.get(),project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
-const shotDesk=createShotDesk({
-  esc,id,stamp,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='shots',slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
+const shotContext={
+  esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
   mutate,render,toast,modal,confirm:confirmModal,download,
   edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
-});
+};
+const shotDesk=createShotDesk({...shotContext,isActive:()=>view==='shots'});
+const shotOrderDesk=createShotDesk({...shotContext,orderMode:true,isActive:()=>view==='shot-order'});
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
 $('#app-settings-open').onclick=()=>appSettings.open();
@@ -617,7 +623,7 @@ $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.v
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#save-status').onclick=()=>save();
 $('#save-as-open').onclick=()=>saveProjectFile('files');
 $('#import-open').onclick=()=>importModal();
-$('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():newScene();
+$('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():view==='shot-order'?shotOrderDesk.add():newScene();
 $('#new-open').onclick=()=>textModal('New production','Production title','Untitled production',async title=>{try{const p=await api('/api/new',{title});mutate(()=>{workspace.projects.push(p);workspace.activeProject=p.id;scenarioIndex=0;selected=undefined;view='workspace';});}catch(e){toast(e.message);}});
 document.addEventListener('keydown',e=>{const editing=isEditing(document.activeElement)||isEditing(e.target);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!document.querySelector('dialog[open]')&&!e.isComposing){e.preventDefault();undo(e.shiftKey);}});
 window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preventDefault();e.returnValue='Your latest change is still saving.';}});

@@ -266,6 +266,11 @@ def validate_uss(project):
                 continue
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0 or value > maximum or value != int(value):
                 raise ValueError('Shot ' + key + ' must be a whole number from 0 through ' + str(maximum) + '.')
+    order = project.get('_shotShootingOrder', [])
+    # Older clients may add/delete shots without maintaining this optional ID list.
+    # Resolve stale/missing references in the editor; never duplicate shot records.
+    if not isinstance(order, list) or any(not isinstance(x, str) or not x for x in order) or len(order) != len(set(order)):
+        raise ValueError('Shot shooting order must be an array of unique shot IDs.')
     settings = project.get('_shotSettings', {'startTime': '07:00'})
     if not isinstance(settings, dict) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', str(settings.get('startTime', ''))):
         raise ValueError('Shot start time must use HH:MM.')

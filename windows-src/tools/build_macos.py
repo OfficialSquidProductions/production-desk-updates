@@ -18,12 +18,17 @@ def run(*args):
     print("Running " + str(args[0]), flush=True)
     subprocess.run([str(x) for x in args], check=True)
 
-def build(dmg=True, share=True, update_release=False, release_notes=None):
+def build(dmg=True, share=True, update_release=False, release_notes=None, preview=False):
     config = release_config()
     sparkle = sparkle_distribution(config)
     dist = ROOT / "dist"
     dist.mkdir(exist_ok=True)
-    app = dist / ("Production Desk Beta.app" if config.get("channel") == "beta" else "Production Desk.app")
+    if preview and (dmg or share or update_release):
+        raise ValueError("Preview builds must use --app-only --no-share and cannot prepare updates.")
+    source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip() if preview else None
+    if preview and subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT, text=True).strip():
+        raise ValueError("Commit preview sources first so the packaged commit is exact.")
+    app = dist / ("Production Desk Shot Order Preview.app" if preview else "Production Desk Beta.app" if config.get("channel") == "beta" else "Production Desk.app")
     # Only replace generated build outputs; never touch the user's workspace.
     if app.exists(): shutil.rmtree(app)
     contents = app / "Contents"
@@ -53,6 +58,14 @@ def build(dmg=True, share=True, update_release=False, release_notes=None):
     shutil.copy2(ROOT / "README.md", resources / "README.md")
     with open(contents / "Info.plist", "wb") as file:
         plistlib.dump({"CFBundleExecutable":"ProductionDesk", "CFBundleIdentifier":"local.slate.filmscheduler.beta" if config.get("channel") == "beta" else "local.slate.filmscheduler", "CFBundleName":app.stem, "CFBundleDisplayName":app.stem, "ProductionDeskBeta":config.get("channel") == "beta", "CFBundlePackageType":"APPL", "CFBundleShortVersionString":config["version"], "CFBundleVersion":config["build"], "CFBundleIconFile":"ProductionDesk.icns", "LSMinimumSystemVersion":"12.0", "NSHighResolutionCapable":True, "NSPrincipalClass":"NSApplication", "NSAppTransportSecurity":{"NSAllowsLocalNetworking":True}, "NSHumanReadableCopyright":"Production Desk — Local Film Scheduler. Bundled Python and Sparkle are covered by their included licenses.", **updater_plist(config)}, file)
+    if preview:
+        info_path=contents / "Info.plist"
+        info=plistlib.loads(info_path.read_bytes())
+        info.update(CFBundleIdentifier="local.productiondesk.shot-order-preview", ProductionDeskPreview=True,
+                    ProductionDeskSourceCommit=source_commit, SUEnableAutomaticChecks=False,
+                    SUAutomaticallyUpdate=False, SUAllowsAutomaticUpdates=False)
+        info.pop("SUFeedURL",None)
+        info_path.write_bytes(plistlib.dumps(info))
     run("codesign", "--force", "--deep", "--sign", "-", "--timestamp=none", app)
     run("codesign", "--verify", "--deep", "--strict", app)
     python = frameworks / "Python3.framework/Versions/3.9/bin/python3.9"
@@ -180,6 +193,7 @@ if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--app-only", action="store_true")
     parser.add_argument("--no-share", action="store_true", help="Do not create duplicate share installers")
+    parser.add_argument("--preview", action="store_true", help="Build the isolated local Shot Order preview with updates and migration disabled")
     parser.add_argument("--share-from", type=Path, help="Package an existing Mac app without rebuilding it")
     parser.add_argument("--update-release", action="store_true", help="Also prepare a signed app archive and appcast in dist/updates (requires update signing key in Keychain)")
     parser.add_argument("--release-notes", type=Path, help="HTML release notes to embed in the update feed")
@@ -187,4 +201,4 @@ if __name__ == "__main__":
     if args.share_from:
         build_share_package(ROOT / "dist", args.share_from)
     else:
-        build(not args.app_only, not args.no_share, args.update_release, args.release_notes)
+        build(not args.app_only, not args.no_share, args.update_release, args.release_notes, args.preview)

@@ -16,8 +16,8 @@ export function planStripMove(scenario,bid,{zone,index=0,position}={}){
 
 export function createStripDrag(c){
   let session,root,lastPoint,frame,suppressed;
-  const marker=document.createElement('div');marker.className='strip-drop-marker';marker.hidden=true;marker.innerHTML='<span></span>';document.body.append(marker);
-  const status=document.createElement('div');status.id='strip-drag-status';status.className='strip-drag-status';status.hidden=true;status.setAttribute('role','status');status.setAttribute('aria-live','polite');document.body.append(status);
+  const marker=document.querySelector('.strip-drop-marker')||document.createElement('div');marker.className='strip-drop-marker';marker.hidden=true;marker.innerHTML='<span></span>';document.body.append(marker);
+  const status=document.querySelector('#strip-drag-status')||document.createElement('div');status.id='strip-drag-status';status.className='strip-drag-status';status.hidden=true;status.setAttribute('role','status');status.setAttribute('aria-live','polite');document.body.append(status);
   const layout=()=>JSON.stringify(c.scenario().boards.map(b=>b.breakdownIds));
   const valid=()=>session&&c.project()===session.project&&c.scenario()===session.scenario&&layout()===session.layout;
   const clearTarget=()=>{root?.querySelectorAll('.strip-drop-target').forEach(node=>node.classList.remove('strip-drop-target'));marker.hidden=true;};
@@ -28,6 +28,7 @@ export function createStripDrag(c){
   function consumeClick(bid,event){return event.detail!==0&&suppressed?.id===bid&&performance.now()<suppressed.until;}
   function destination(target,y){
     if(!target?.closest||!root?.contains(target))return null;
+    if(c.destination)return c.destination(target,y,root);
     const strip=target.closest('[data-strip]');
     if(strip){const bounds=strip.getBoundingClientRect(),after=y>=bounds.top+bounds.height/2;return {zone:strip.dataset.origin,index:Number(strip.dataset.index),position:Number(strip.dataset.position??strip.dataset.index)+(after?1:0),anchor:strip,after,container:strip.closest('[data-zone]')};}
     const heading=target.closest('[data-holding-index]');
@@ -41,6 +42,7 @@ export function createStripDrag(c){
     return {zone:container.dataset.zone,index:Number(container.dataset.index),position:next?children.indexOf(next):children.length,anchor,after:!next,container};
   }
   function describe(d){
+    if(c.describe)return c.describe(d);
     const scenario=c.scenario(),groups=d.zone==='day'?scenario.boards[0].breakdownIds[d.index]:d.zone==='board'?scenario.boards[d.index].breakdownIds.flat():scenario.boards[0].breakdownIds;
     const place=d.zone==='day'?'Day '+scenario.boards[0].breakdownIds.slice(0,d.index+1).filter(Array.isArray).length:d.zone==='board'?(d.index===1?'Unscheduled':scenario.boards[d.index].name):'Between shooting days';
     const next=groups[d.position];
@@ -75,7 +77,7 @@ export function createStripDrag(c){
     root.ondragstart=event=>{
       const strip=event.target.closest('[data-strip]');if(!strip)return;
       if(document.querySelector('dialog[open]')||!event.dataTransfer||event.target.closest('input,textarea,select,a,[data-color-strip]')||event.target.closest('button:not([data-move-strip])')){event.preventDefault();return;}
-      const bid=strip.dataset.strip;if(!c.project().breakdowns.some(b=>b.id===bid)){event.preventDefault();return;}
+      const bid=strip.dataset.strip;if(!(c.hasItem?c.hasItem(bid):c.project().breakdowns.some(b=>b.id===bid))){event.preventDefault();return;}
       stop();session={bid,source:strip,project:c.project(),scenario:c.scenario(),layout:layout()};
       event.dataTransfer.setData('text/plain',bid);event.dataTransfer.effectAllowed='move';
       try{const r=strip.getBoundingClientRect();event.dataTransfer.setDragImage(strip,Math.max(0,event.clientX-r.left),Math.max(0,event.clientY-r.top));}catch{}
