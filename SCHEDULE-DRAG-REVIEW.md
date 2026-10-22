@@ -51,8 +51,7 @@ A source must occur exactly once. No-op placements preserve redo history.
 - The optional `--baseline-board e1c9b62` browser comparison detects the previous UI's
   missing large grab handle. Its expected failure is distinct from current passing checks.
 
-Packaged verification and the exact tested implementation commit are recorded below after
-building the separate preview. Windows runtime/installer testing remains unavailable locally.
+Packaged verification and the exact tested implementation commit are recorded below. Windows runtime/installer testing remains unavailable locally.
 
 ## Review and repeat
 
@@ -95,3 +94,47 @@ flag. Stable and ordinary beta folders remain unchanged. Native assertions cover
 beta, preview precedence and safe folder identifiers, along with existing support behavior.
 The launcher still supplies a fresh review home, and the final preview is rebuilt with
 this additional protection. Earlier preview artifacts remain unmodified.
+
+## Final packaged Mac verification
+
+Drag implementation: `e38d5811367d63b8ae8c0e7d57d8c84d3041a0fa`.
+Final tested build, including direct-launch preview isolation:
+`a74827b5bb38a6c079f1474f0b81c9b7c336415e`.
+
+Artifact: `windows-src/dist/Production Desk Schedule Preview.app`.
+Use **Start Packaged Schedule Preview.command** for a fresh temporary review home.
+The app is locally ad-hoc signed, has a unique preview identifier, enables the dedicated
+preview namespace, disables updater startup and migration, and has no live feed URL.
+Opening this final preview directly also stays separate from stable and beta projects.
+Earlier Lined Script and Shot List preview artifacts/launchers remain unchanged. The
+first e38d581 Schedule preview is archived separately with its evidence.
+
+Passed on the final artifact:
+
+- Offline build, bundled Python startup and deep/strict code-signature verification.
+- All 248 bundled runtime files matched the recorded SHA-256 manifest.
+- Packaged browser aggregate: 56 checks, zero page errors, including real strip-content
+  and handle dragging, live insertion markers during autoscroll, Escape cancellation,
+  tiny-motion clicks, exact-placement dialog access and save/reopen integrity.
+- Native WebKit aggregate against packaged Python/server/assets: 49 named checks, plus
+  native save/import/reload checks. The same aggregate passed through the actual compiled
+  AppKit preview's server after verifying its isolated preview-directory command line.
+- Packaged Python suite: 81 total, 80 passed, 1 Windows dependency skip.
+- Native data-folder isolation and existing support behavior assertions passed. Stable
+  and ordinary beta path behavior is unchanged; previews have a separate safe directory.
+- During the final isolated run, installed-app and all existing stable/beta data-file
+  fingerprints and modification times were unchanged. This does not erase the earlier
+  diagnostic-log refresh described above; no project files were edited in that incident.
+
+No implementation blocker remains. Windows/Electron runtime/installer execution is not
+available locally, and the Windows PDF dependency is missing. Native physical OS menu
+clicks and touch/iOS execution were not automated. No publication, installed-app replacement,
+feed activation, new signing credentials or notarization was performed.
+
+Evidence under `windows-src/build/schedule-drag-review/`: `summary.json`, `build.log`,
+`signature.log`, `packaged-runtime-sha256.json`, `browser-packaged.json`,
+`native-packaged.log`, `python-packaged.log`, `actual-app-result.json`,
+`actual-app-webkit.log`, `preview-isolation-test.log`, `node-tests.log`,
+`baseline-e1c9b62.log`, `beta-inspection-incident.json`. The earlier startup race is
+recorded in `readiness-race-failure.log` and `startup-desktop.log`. Drag feedback image:
+`windows-src/build/schedule-drag-feedback.png`.
