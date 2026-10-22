@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise real Sparkle against local fixtures, with no live feeds or installers."""
 import base64
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import plistlib
 from pathlib import Path
@@ -70,10 +71,24 @@ def main():
             folder.mkdir(parents=True, exist_ok=True)
             app = build_fixture(folder, f"http://127.0.0.1:{server.server_port}/appcast.xml", sparkle, config)
             binary = app / "Contents/MacOS/UpdateQA"
+            # This QA app only talks to the loopback fixture and has no project
+            # backend. Keep Sparkle preferences/caches/logs in a disposable home,
+            # and verify Foundation's actual routing before any fixture launch.
+            home = (folder / "disposable-home").resolve()
+            home.mkdir()
+            env = {**os.environ, "CFFIXED_USER_HOME": str(home)}
+            probe = subprocess.check_output(["swift", "-module-cache-path", str(ROOT / ".cache/swift"), "-e",
+                'import Foundation; let f=FileManager.default; print(f.homeDirectoryForCurrentUser.path); print((try f.url(for:.applicationSupportDirectory,in:.userDomainMask,appropriateFor:nil,create:false)).path)'], env=env, text=True).splitlines()
+            assert probe == [str(home), str(home / "Library/Application Support")], probe
+            info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+            assert info["CFBundleIdentifier"].startswith("org.squidproductions.productiondesk.update-qa.")
+            assert info["CFBundleExecutable"] == "UpdateQA" and info["SUFeedURL"] == f"http://127.0.0.1:{server.server_port}/appcast.xml"
+            assert not (app / "Contents/Resources/runtime").exists()
+            print("Before fixture launch: dedicated home, preferences/cache/log routing, unique QA identity and loopback-only feed verified; no workspace, PDF or backup backend", flush=True)
             for mode in ["equal", "older", "newer", "newer", "incompatible", "offline", "malformed", "opt-out"]:
                 Feed.mode = mode
                 Feed.requests.clear()
-                subprocess.run([str(binary), mode], check=True, timeout=45)
+                subprocess.run([str(binary), mode], env=env, check=True, timeout=45)
                 expected = 0 if mode == "opt-out" else 3 if mode == "newer" else 1
                 if mode == "offline":
                     # NSURLSession may retry an abruptly closed connection.
