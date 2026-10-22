@@ -1,3 +1,4 @@
+import {primitivesForPage,annotationBounds,expandPageBounds} from './lined-export.js';
 import {normalizeShotNumber,shotIdentifier,shotNumberKey} from './shot-identifiers.js';
 import {LINED_ACTIONS,DEFAULT_BINDS,eventBinding,isEditing} from './lined-shortcuts.js';
 import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
@@ -42,21 +43,30 @@ function wrap(text,columns){
   }
   return output;
 }
-export function markPrimitives(mark,width,height,shotLabel,movement,{gutters=0,opacity=.94}={}){
+export function markPrimitives(mark,width,height,shotLabel,movement,{gutters=0,opacity=.94,fitHeight=true}={}){
   const pos=p=>[p[0]*width,p[1]*height], result=[];
   const path=(points,alpha=1)=>result.push({kind:'path',points,color:mark.color,width:mark.width,alpha});
   const text=(content,anchor)=>{
     const margin=mark.type==='coverage'?gutters:0;
+    const tallGutter=!fitHeight&&margin>0&&(anchor[0]<0||anchor[0]>=width);
     const boxSpace=margin&&(anchor[0]<0||anchor[0]>=width)?Math.min(width,margin):width;
     const maxColumns=Math.max(1,Math.floor((boxSpace-22)/11));
     let columns=Math.min(36,maxColumns),lines=wrap(content,columns);
+    // Use the available gutter width before growing a long exported label.
+    if(tallGutter&&lines.length*15+10>height-8){
+      for(let wider=columns+1;wider<=Math.floor((boxSpace-22)/3);wider++){
+        const candidate=wrap(content,wider);
+        if(Math.max(...candidate.map(textWidth),1)+14>boxSpace-8)break;
+        columns=wider;lines=candidate;
+      }
+    }
     // Widen long notes before scaling them, keeping every word on the page.
-    while(lines.length*15+10>height-8&&columns<maxColumns){columns=Math.min(maxColumns,columns+8);lines=wrap(content,columns);}
-    if(lines.length*15+10>height-8)lines=wrap(String(content||'').replace(/\s+/g,' '),maxColumns);
+    while(!tallGutter&&lines.length*15+10>height-8&&columns<maxColumns){columns=Math.min(maxColumns,columns+8);lines=wrap(content,columns);}
+    if(!tallGutter&&lines.length*15+10>height-8)lines=wrap(String(content||'').replace(/\s+/g,' '),maxColumns);
     const naturalWidth=Math.max(...lines.map(textWidth),1)+14,naturalHeight=lines.length*15+10;
-    const scale=Math.max(.001,Math.min(1,(width-8)/naturalWidth,(height-8)/naturalHeight));
+    const scale=Math.max(.001,Math.min(1,(width-8)/naturalWidth,(tallGutter?1:(height-8)/naturalHeight)));
     const boxWidth=naturalWidth*scale,boxHeight=naturalHeight*scale;
-    result.push({kind:'text',lines,x:clamp(anchor[0],4-margin,Math.max(4,width+margin-boxWidth-4)),y:clamp(anchor[1],4,Math.max(4,height-boxHeight-4)),boxWidth,boxHeight,opacity,color:mark.color,fontSize:11*scale,padding:7*scale,baseline:16*scale,lineHeight:15*scale});
+    result.push({kind:'text',lines,x:clamp(anchor[0],4-margin,Math.max(4,width+margin-boxWidth-4)),y:clamp(anchor[1],4,Math.max(4,height-(tallGutter?0:boxHeight)-4)),boxWidth,boxHeight,opacity,color:mark.color,fontSize:11*scale,padding:7*scale,baseline:16*scale,lineHeight:15*scale});
   };
   if(mark.type==='coverage'){
     const a=pos(mark.start),b=pos(mark.end),top=Math.min(a[1],b[1]),bottom=Math.max(a[1],b[1]);
@@ -458,15 +468,16 @@ export function createLinedDesk(c){
       const {pdf:file,bytes}=await load(current.sha256),{PDFDocument,degrees}=window.PDFLib;
       const output=await PDFDocument.load(bytes.slice(),{updateMetadata:false});
       const exportLayout=await documentLayout(file);
+      const all=current.marks.flatMap(m=>{const shot=project._shots.find(s=>s.id===m.shotId);return documentPrimitives(m,exportLayout,coverageLabel(m,project),m.type==='coverage'?(shot?.movement||m.draft?.movement):'',{gutters:GUTTER,opacity:preferences().linedLabelOpacity,fitHeight:false}).map(item=>({...item,sourcePage:m.space==='document'?null:m.page}));});
       for(let index=0;index<file.numPages;index++){
-        const marks=current.marks.filter(m=>m.space==='document'||m.page===index);if(!marks.length)continue;
-        const source=await file.getPage(index+1),view=source.getViewport({scale:1});
-        const canvas=document.createElement('canvas');canvas.width=Math.ceil(view.width*2);canvas.height=Math.ceil(view.height*2);
-        const context=canvas.getContext('2d');context.scale(2,2);
-        for(const m of marks){const s=project._shots.find(s=>s.id===m.shotId);const item=exportLayout.pages[index];paint(context,translatePrimitives(documentPrimitives(m,exportLayout,coverageLabel(m,project),m.type==='coverage'?(s?.movement||m.draft?.movement):'',{opacity:preferences().linedLabelOpacity}),-item.left,-item.top));}
-        const image=await output.embedPng(canvas.toDataURL('image/png'));
-        const bottomLeft=view.convertToPdfPoint(0,view.height),bottomRight=view.convertToPdfPoint(view.width,view.height),topLeft=view.convertToPdfPoint(0,0);
-        output.getPage(index).drawImage(image,{x:bottomLeft[0],y:bottomLeft[1],width:Math.hypot(bottomRight[0]-bottomLeft[0],bottomRight[1]-bottomLeft[1]),height:Math.hypot(topLeft[0]-bottomLeft[0],topLeft[1]-bottomLeft[1]),rotate:degrees(source.rotate)});
+        const primitives=primitivesForPage(all,exportLayout,index);if(!primitives.length)continue;
+        const source=await file.getPage(index+1),view=source.getViewport({scale:1}),bounds=annotationBounds(primitives,view.width,view.height);
+        const canvas=document.createElement('canvas');canvas.width=Math.ceil(bounds.width*2);canvas.height=Math.ceil(bounds.height*2);
+        const context=canvas.getContext('2d');context.scale(2,2);context.translate(-bounds.left,-bounds.top);paint(context,primitives);
+        const image=await output.embedPng(canvas.toDataURL('image/png')),page=output.getPage(index);
+        expandPageBounds(page,output.context,view,bounds);
+        const bottomLeft=view.convertToPdfPoint(bounds.left,bounds.bottom),bottomRight=view.convertToPdfPoint(bounds.right,bounds.bottom),topLeft=view.convertToPdfPoint(bounds.left,bounds.top);
+        page.drawImage(image,{x:bottomLeft[0],y:bottomLeft[1],width:Math.hypot(bottomRight[0]-bottomLeft[0],bottomRight[1]-bottomLeft[1]),height:Math.hypot(topLeft[0]-bottomLeft[0],topLeft[1]-bottomLeft[1]),rotate:degrees(source.rotate)});
       }
       if(current.marks.some(m=>m.page>=file.numPages||m.endPage>=file.numPages))throw Error('An annotation refers to a page outside this PDF.');
       const raw=await output.save();let binary='';for(let i=0;i<raw.length;i+=8192)binary+=String.fromCharCode(...raw.subarray(i,i+8192));

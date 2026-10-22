@@ -50,8 +50,8 @@ export function createAppSettings({api,modal,toast,isIPad}) {
     const deletion=document.createElement('section');deletion.className='settings-section';
     deletion.innerHTML='<h3>Deletion warnings</h3><p>Show confirmations again when deleting linked shots and coverage lines.</p><button id="reset-delete-warnings">Reset deletion warnings</button>';
     $('#app-settings').append(deletion);
-    const lined=document.createElement('section');lined.className='settings-section';
-    lined.innerHTML='<h3>Lined Script</h3><button id="lined-key-binds">Key Binds</button><label class="field" for="lined-label-opacity">Information box opacity <output id="lined-opacity-value"></output></label><input id="lined-label-opacity" type="range" min="15" max="100" step="1"><p>Drag boxes into either page gutter. A connector identifies the owning coverage line. Exports keep gutter boxes inside the original PDF page.</p>';
+    const lined=document.createElement('section');lined.className='settings-section lined-settings';
+    lined.innerHTML='<h3>Lined Script</h3><div class="settings-actions"><button id="lined-key-binds">Key Binds</button></div><div class="lined-opacity-control"><label class="field" for="lined-label-opacity">Information box opacity <output id="lined-opacity-value"></output></label><input id="lined-label-opacity" type="range" min="15" max="100" step="1"></div><p>Drag boxes into either page gutter. A connector identifies the owning coverage line. Lined PDF exports include gutter boxes and expand only pages that need extra room.</p>';
     $('#app-settings').append(lined);$('#lined-key-binds').onclick=keyBinds;
     const opacity=$('#lined-label-opacity'),output=$('#lined-opacity-value');
     opacity.value=Math.round(get().linedLabelOpacity*100);output.textContent=opacity.value+'%';

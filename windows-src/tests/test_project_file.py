@@ -173,3 +173,20 @@ class ImportJSONIntegrityTests(unittest.TestCase):
         for raw in [b'{"workspace":{},"workspace":{}}',b'{"project":{"id":"one","id":"two"}}',b'{"value":NaN}',b'{"value":Infinity}',b'']:
             with self.subTest(raw=raw):
                 with self.assertRaises(ValueError):json_object(raw)
+
+class BreakdownViewCompatibilityTests(unittest.TestCase):
+    setUp=ProjectFileTests.setUp
+    tearDown=ProjectFileTests.tearDown
+    def test_view_mode_and_unknown_project_settings_survive_portable_round_trip(self):
+        p=self.value['workspace']['projects'][0]
+        p['_breakdownSettings']={'continuousScroll':True,'futureSetting':{'preserved':[None,'café']}}
+        expected=copy.deepcopy(self.value)
+        self.assertEqual(json.loads(export_project(self.datafile,import_project(self.datafile,self.value))),expected)
+    def test_missing_view_mode_is_not_added_to_older_projects(self):
+        p=import_project(self.datafile,self.value)['projects'][0]
+        self.assertNotIn('_breakdownSettings',p)
+    def test_invalid_viewing_settings_are_rejected_without_changing_disk(self):
+        for settings in ['continuous',[],{'continuousScroll':'true'},{'continuousScroll':1}]:
+            value=copy.deepcopy(self.value);value['workspace']['projects'][0]['_breakdownSettings']=settings
+            with self.subTest(settings=settings),self.assertRaisesRegex(ValueError,'viewing settings'):import_project(self.datafile,value)
+            self.assertEqual(self.datafile.read_bytes(),self.before)

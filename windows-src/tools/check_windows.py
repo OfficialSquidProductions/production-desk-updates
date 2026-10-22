@@ -49,12 +49,17 @@ def main():
             assert len(continuous.pages) == len(original.pages)
             for before, after in zip(original.pages, continuous.pages):
                 assert before.extract_text() == after.extract_text()
-                assert before.mediabox == after.mediabox and before.cropbox == after.cropbox
+                assert after.mediabox.left <= before.mediabox.left and after.mediabox.bottom <= before.mediabox.bottom
+                assert after.mediabox.right >= before.mediabox.right and after.mediabox.top >= before.mediabox.top
+                assert after.cropbox.left <= before.cropbox.left and after.cropbox.bottom <= before.cropbox.bottom
+                assert after.cropbox.right >= before.cropbox.right and after.cropbox.top >= before.cropbox.top
                 assert before.rotation == after.rotation and len(after.images) == 1
             assert len(exported.pages) == len(original.pages) == 2
             for before, after in zip(original.pages, exported.pages):
                 assert before.extract_text() == after.extract_text()
-                assert before.cropbox == after.cropbox and before.rotation == after.rotation
+                assert after.cropbox.left <= before.cropbox.left and after.cropbox.bottom <= before.cropbox.bottom
+                assert after.cropbox.right >= before.cropbox.right and after.cropbox.top >= before.cropbox.top
+                assert before.rotation == after.rotation
                 assert len(after.images) == 1
 
         if completed.returncode or not report.get('passed'):

@@ -34,6 +34,7 @@
       "shot-navigation-regressions.cjs",
       "schedule-drag-regressions.cjs",
       "project-import-regressions.cjs",
+      "viewport-followup-regressions.cjs",
       "support-regressions.cjs",
       "workspace-layout-regressions.cjs",
       "demo-regressions.cjs",

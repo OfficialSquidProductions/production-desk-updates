@@ -14,3 +14,5 @@
 .script-pdf-text .markedContent{display:contents}.script-pdf-text ::selection{color:transparent;background:rgba(0,100,255,.3)}.script-pdf-text br::selection{background:transparent}
 .script-pdf-text[data-main-rotation="90"]{transform:rotate(90deg) translateY(-100%)}.script-pdf-text[data-main-rotation="180"]{transform:rotate(180deg) translate(-100%,-100%)}.script-pdf-text[data-main-rotation="270"]{transform:rotate(270deg) translateX(-100%)}
 @media(max-width:1200px){.workspace .script-pdf-scroll{height:460px}}@media(max-width:760px){.workspace .script-pdf-scroll{height:400px}}
+
+.breakdown-continuous-choice{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap}.breakdown-continuous-choice input{width:auto;margin:0}.script-pdf-toolbar .breakdown-continuous-choice input{width:auto}.script-pdf-page[hidden]{display:none}.script-scene+.script-scene{border-top:1px solid var(--line);margin-top:30px;padding-top:24px}

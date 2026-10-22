@@ -18,6 +18,7 @@ module.exports = async function runScriptPDFChecks() {
   $('[data-view="workspace"]').click();window.slateDesktop.importScript();
   const transfer=new DataTransfer();transfer.items.add(new File([bytes],'Original-screenplay-regression.pdf',{type:'application/pdf'}));$('#import-file').files=transfer.files;$('#import-submit').click();
   await wait(()=>!$('#modal').open);expect($('#script-text').classList.contains('script-pdf-pages'),'Original PDF not displayed; inferred dialogue: '+[...document.querySelectorAll('#script-text .dialogue')].map(e=>e.textContent).join(' | '));await wait(()=>$('#script-text')?.dataset.ready==='true');
+  expect(!$('#breakdown-continuous').checked,'Older projects should default to scene/page navigation');$('#breakdown-continuous').click();await wait(()=>$('#script-text')?.dataset.ready==='true');
   const root=$('#script-text'),scroll=$('.script-pdf-scroll'),first=$('[data-page="1"]'),second=$('[data-page="2"]');
   await wait(()=>first.querySelector('canvas').dataset.ready==='true');
   const rangeFor=(page,value)=>{
@@ -101,6 +102,7 @@ module.exports = async function runScriptPDFChecks() {
   for(let i=0;i<60;i++)longPDF.addPage([612,792]).drawText('Original long script page '+(i+1),{x:72,y:720,font:longFont,size:12});
   $('[data-view="lined"]').click();const longTransfer=new DataTransfer();longTransfer.items.add(new File([await longPDF.save()],'Long-original-test.pdf',{type:'application/pdf'}));$('#lined-file').files=longTransfer.files;$('#lined-file').dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>$('#lined-status')?.textContent.includes('Marks save'));$('[data-view="workspace"]').click();await wait(()=>$('#script-text')?.dataset.ready==='true');
+  if(!$('#breakdown-continuous').checked){$('#breakdown-continuous').click();await wait(()=>$('#script-text')?.dataset.ready==='true');}
   const sheets=[...document.querySelectorAll('.script-pdf-page')];expect(sheets.length===60,'Long original lost pages');
   $('.script-pdf-scroll').scrollTop=1e9;await wait(()=>sheets.at(-1).querySelector('canvas').dataset.ready==='true'&&sheets[0].querySelector('canvas').width===1);
   expect(sheets.filter(p=>p.querySelector('canvas').width>1).length<8,'Long original retains too many bitmaps');

@@ -104,12 +104,23 @@ export function createShotDesk(c) {
     if(previous!==selected)refreshEditor();
     const heading=document.querySelector('#shot-detail-label');if(heading&&shot())heading.textContent=label(shot());bindRows();
   }
-  function keepView(fn){
-    const positions=['#shot-list','.shot-editor-scroll'].map(selector=>[selector,document.querySelector(selector)?.scrollTop||0]);
-    const page=document.scrollingElement,top=page.scrollTop,left=page.scrollLeft;fn();
-    for(const [selector,value] of positions){const element=document.querySelector(selector);if(element)element.scrollTop=value;}
-    page.scrollTop=top;page.scrollLeft=left;
+  function captureState(){return {kind:'shots',production:p().id,selected,index:filtered().findIndex(s=>s.id===selected),top:document.querySelector('#shot-list')?.scrollTop||0,left:document.querySelector('#shot-list')?.scrollLeft||0,editorTop:document.querySelector('.shot-editor-scroll')?.scrollTop||0,pageTop:document.scrollingElement.scrollTop,pageLeft:document.scrollingElement.scrollLeft,focusInList:!!document.activeElement?.closest?.('#shot-list')};}
+  function restoreView(state){
+    const list=document.querySelector('#shot-list'),editor=document.querySelector('.shot-editor-scroll');
+    if(list){list.scrollTop=state.top;list.scrollLeft=state.left;}if(editor)editor.scrollTop=state.editorTop;
+    document.scrollingElement.scrollTop=state.pageTop;document.scrollingElement.scrollLeft=state.pageLeft;
   }
+  function refreshHistory(previous){
+    if(production!==p().id||!document.querySelector('#shot-list'))return false;
+    const current=captureState(),visible=filtered();
+    const prior=previous?.kind==='shots'&&previous.production===p().id?previous:undefined;
+    selected=visible.find(s=>s.id===prior?.selected)?.id||visible.find(s=>s.id===selected)?.id||visible[Math.max(0,Math.min(current.index,visible.length-1))]?.id;
+    refreshList();refreshEditor();restoreView(current);
+    if(prior&&Math.abs(prior.top-current.top)<=document.querySelector('#shot-list').clientHeight){const row=document.querySelector('#shot-list .selected');if(row)revealRow(row);}
+    if(current.focusInList)document.querySelector('#shot-list .selected [data-shot-select]')?.focus({preventScroll:true});
+    return true;
+  }
+  function keepView(fn){const state=captureState();fn();restoreView(state);}
   function moveBefore(moving,target){if(moving===target)return;keepView(()=>c.mutate(()=>{const list=p()._shots,s=list.find(s=>s.id===moving);if(!s)return;list.splice(list.indexOf(s),1);list.splice(list.findIndex(s=>s.id===target),0,s);}));}
   function bindRows(){
     document.querySelectorAll('[data-shot-select]').forEach(b=>b.onclick=()=>selectShot(b.dataset.shotSelect));
@@ -184,7 +195,15 @@ export function createShotDesk(c) {
   function print(){const times=timings();document.querySelector('#print-area').innerHTML=`<h1>${esc(p().project||p().name)} · Shot list</h1><p>${esc(c.scenarioName())} · ${day==='all'?'All days':day==='unscheduled'?'Unscheduled':'Day '+(Number(day)+1)} · ${filtered().length} shots</p><table><thead><tr><th>Day / Time</th><th>Shot</th><th>Description</th><th>Camera setup</th><th>Est. / Actual</th><th>Status / Takes</th><th>Notes</th></tr></thead><tbody>${filtered().map(s=>`<tr><td>${esc(dayName(s))}<br>${esc(times.get(s.id))}</td><td>${esc(label(s))}</td><td>${esc(s.description)}</td><td>${esc([s.size,s.camera&&'Cam '+s.camera,s.lens&&s.lens+'mm',s.movement,s.equipment].filter(Boolean).join(' · '))}</td><td>${total(s)} / ${s.actualMinutes??'—'} min</td><td>${esc(s.status)} · ${s.takes}${s.circleTake?' · circle '+esc(s.circleTake):''}</td><td>${esc([s.notes,...coverageSummary(p(),s.id)].filter(Boolean).join(' · '))}</td></tr>`).join('')}</tbody></table>`;window.print();}
   function deleteShot(sid){
     const project=p(),s=project._shots.find(s=>s.id===sid);if(!s)return;
-    const remove=()=>{if(p()!==project||!project._shots.includes(s))return;c.mutate(()=>{removeCoverage(project,[s.id]);project._shots=project._shots.filter(x=>x.id!==s.id);if(selected===sid)selected=undefined;});};
+    const remove=()=>{
+      if(p()!==project||!project._shots.includes(s))return;
+      const state=captureState(),visible=filtered(),index=visible.indexOf(s),neighbor=visible[index+1]||visible[index-1];
+      c.mutate(()=>{removeCoverage(project,[s.id]);project._shots=project._shots.filter(x=>x.id!==s.id);if(selected===sid)selected=neighbor?.id;},false);
+      refreshList();refreshEditor();restoreView(state);
+      // The generic confirmation closes after this callback; focus the surviving
+      // row only after it closes, without scrolling either pane or the page.
+      queueMicrotask(()=>{if(p()===project&&c.isActive()){document.querySelector('#shot-list .selected [data-shot-select]')?.focus({preventScroll:true});restoreView(state);}});
+    };
     if(coverageSummary(project,sid).length)confirmLinkedDelete(c,'shots','Delete shot '+esc(label(s))+'?', 'This shot is linked to Lined script. Deleting it removes the shot and all of its linked coverage lines, including lines in other PDF revisions.',remove);
     else c.confirm('Delete shot '+esc(label(s))+'?','You can undo this change.',remove);
   }
@@ -208,5 +227,5 @@ export function createShotDesk(c) {
     const next=index<0?(step>0?0:list.length-1):Math.max(0,Math.min(list.length-1,index+step));
     event.preventDefault();selectShot(list[next].id,true);
   });
-  return {render,bind,add,csv,print};
+  return {render,bind,add,csv,print,captureState,refreshHistory};
 }

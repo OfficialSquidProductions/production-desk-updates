@@ -269,6 +269,9 @@ def validate_uss(project):
     settings = project.get('_shotSettings', {'startTime': '07:00'})
     if not isinstance(settings, dict) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', str(settings.get('startTime', ''))):
         raise ValueError('Shot start time must use HH:MM.')
+    viewing = project.get('_breakdownSettings')
+    if viewing is not None and (not isinstance(viewing, dict) or ('continuousScroll' in viewing and type(viewing['continuousScroll']) is not bool)):
+        raise ValueError('Invalid breakdown viewing settings: Continuous Scroll must be true or false.')
     validate_lining(project)
     return project
 

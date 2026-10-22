@@ -92,7 +92,7 @@ async function save() {
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
 const historyViews=new WeakMap();
-function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());return snapshot;}
+function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());if(view==='shots')historyViews.set(snapshot,shotDesk.captureState());return snapshot;}
 function mutate(fn, redraw = true) {
   history.push(historySnapshot()); if (history.length > 40) history.shift(); future = [];
   fn(); mark(); if (redraw) render(); updateUndo();
@@ -102,7 +102,7 @@ function undo(forward = false) {
   const source = forward ? future : history, destination = forward ? history : future;
   if (!source.length) return;
   destination.push(historySnapshot()); workspace = source.pop(); const state=historyViews.get(workspace); useProject(); mark();
-  if(view==='lined'&&linedDesk.refreshHistory(state))updateUndo();else render();
+  if((view==='lined'&&linedDesk.refreshHistory(state))||(view==='shots'&&shotDesk.refreshHistory(state)))updateUndo();else render();
 }
 function normalize(p) {
   p._shots ||= []; p._shotSettings ||= {startTime:'07:00'};
@@ -175,12 +175,15 @@ function emptyPanel(message) { return `<div class="empty-state"><h3>A story star
 function workspaceView() {
   return `<div class="workspace">${scriptPanel()}${breakdownPanel()}</div>`;
 }
+const breakdownContinuous=()=>project._breakdownSettings?.continuousScroll===true;
+const breakdownModeControl=()=>`<label class="breakdown-continuous-choice"><input id="breakdown-continuous" type="checkbox" ${breakdownContinuous()?'checked':''}>Continuous Scroll</label>`;
+function setBreakdownContinuous(value){mutate(()=>{project._breakdownSettings={...project._breakdownSettings,continuousScroll:value};});}
 function scriptPanel() {
   const b = breakdown(), filtered = sceneList().filter(s=>`${s.scene} ${slug(s)} ${s.description}`.toLowerCase().includes(search.toLowerCase()));
   return `<section class="panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▤</span>Script <span class="count">${sceneList().length} scenes</span></div><button class="text-button" data-action="import">Import script</button><button class="text-button" data-action="edit-script" ${b?.type==='scene'?'':'disabled'}>Edit text</button></div>
-    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button><select id="scene-picker" aria-label="Choose scene">${filtered.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('')}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
+    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button>${!scriptPDF.document()?breakdownModeControl():''}<select id="scene-picker" aria-label="Choose scene">${filtered.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('')}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
     <div class="script-selection"><span>Select text in the script to tag a production element.</span><div class="tag-row"><select id="tag-category" aria-label="Tag category">${project.categories.filter(c=>c.ucid>=100).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('')}</select><button id="tag-selection">＋ Tag selection</button></div></div>
-    ${b?.type==='scene' && scriptPDF.document() ? scriptPDF.render() : `<div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${scriptHTML(b)}</article>`}</div>`}<div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
+    ${b?.type==='scene' && scriptPDF.document() ? scriptPDF.render() : `<div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${breakdownContinuous()?sceneList().map(scene=>`<section class="script-scene" data-script-scene="${esc(scene.id)}">${scriptHTML(scene)}</section>`).join(''):scriptHTML(b)}</article>`}</div>`}<div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
 }
 function scriptHTML(b) {
   if(/\.pdf$/i.test(project._scriptFilename||'')||scriptPDF.document())return `<p class="script-pdf-fallback-note">Extracted scene text · original PDF layout unavailable here. Attach the original in Lined Script to read its pages.</p><pre class="script-transcript">${esc(b._scriptText||slug(b))}</pre>`;
@@ -328,6 +331,7 @@ function moveScene(bid, zone, index, position) {
   target.splice(Math.max(0,at),0,bid);
 }
 function bindContent() {
+  if($('#breakdown-continuous'))$('#breakdown-continuous').onchange=e=>setBreakdownContinuous(e.target.checked);
   if(view==='shots')shotDesk.bind();
   if(view==='lined')linedDesk.bind();
   $$('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));
@@ -592,7 +596,7 @@ const stripDrag=createStripDrag({project:()=>project,scenario:activeScenario,lab
   $$('.board-scroll').forEach((node,i)=>{if(positions[i]){node.scrollTop=positions[i][0];node.scrollLeft=positions[i][1];}});page.scrollTop=top;page.scrollLeft=left;
   $$('[data-strip]').find(node=>node.dataset.strip===bid)?.focus({preventScroll:true});toast('Strip moved. Undo restores its previous position.');
 }});
-const scriptPDF=createScriptPDF({esc,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
+const scriptPDF=createScriptPDF({esc,continuous:breakdownContinuous,modeControl:breakdownModeControl,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
 const linedDesk=createLinedDesk({esc,id,stamp,api,preferences:()=>appSettings.get(),project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
 const shotDesk=createShotDesk({
   esc,id,stamp,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='shots',slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,

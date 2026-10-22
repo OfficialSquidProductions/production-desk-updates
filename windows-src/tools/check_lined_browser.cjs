@@ -136,6 +136,7 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   await page.reload();await page.evaluate(()=>window.slateDesktop.ready);
   assert.deepEqual(await page.evaluate(async()=>await(await fetch('/api/workspace')).json()),importSaved);
   checks.push('Complete imported large project survives page reopen with all assets and references');
+  checks.push(...await page.evaluate('('+require('../desktop/windows/viewport-followup-regressions.cjs').toString()+')()'));
   assert.deepEqual(errors,[]);checks.push('Real keyboard focus, Cmd/Ctrl undo/redo, browser resize, save/reopen and key-bind persistence');
   console.log(JSON.stringify({checks,pageErrors:errors},null,2));
 }catch(error){console.error(error.stack);process.exitCode=1;}

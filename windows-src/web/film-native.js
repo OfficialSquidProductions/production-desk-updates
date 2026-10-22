@@ -110,6 +110,7 @@ export function validateUSS(p) {
     for(const [key,max] of [['setupMinutes',1440],['shootMinutes',1440],['actualMinutes',10080],['takes',10000]]){if(key==='actualMinutes'&&shot[key]===null)continue;if(!Number.isInteger(shot[key])||shot[key]<0||shot[key]>max)fail('Shot '+key+' must be a whole number from 0 through '+max+'.');}
   }
   const settings=p._shotSettings??{startTime:'07:00'};if(!object(settings)||typeof settings.startTime!=='string'||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(settings.startTime))fail('Shot start time must use HH:MM.');
+  const viewing=p._breakdownSettings;if(viewing!=null&&(!object(viewing)||('continuousScroll' in viewing&&typeof viewing.continuousScroll!=='boolean')))fail('Invalid breakdown viewing settings: Continuous Scroll must be true or false.');
   return p;
 }
 export function validateWorkspace(value){

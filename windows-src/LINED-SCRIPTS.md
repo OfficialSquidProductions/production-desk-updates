@@ -25,8 +25,7 @@ notes are independent of shots.
 
 Original PDFs are immutable files under `pdfs/<sha256>.pdf` in the normal application data folder.
 Full JSON backups preserve PDFs and editable annotations. PDF exports retain original
-page text, graphics and dimensions and add flattened annotation overlays. Gutter boxes
-are placed inside the PDF page on export; editable gutter positions remain saved. USS and CSV exclude lined-script data.
+page text and graphics and add flattened annotation overlays. Pages without gutter content retain their original dimensions. Off-page boxes and connectors expand only the output pages that need room; editable gutter positions remain saved. USS and CSV exclude lined-script data.
 
 Mac data: `~/Library/Application Support/Slate/`. Windows data: `%APPDATA%/production-desk/`.
 
@@ -44,3 +43,9 @@ Tests use synthetic productions and an original PDF with rotated/cropped pages.
 `node tools/check_lined_browser.cjs --all` runs the optional browser aggregate with
 Playwright and Chromium, including real keyboard/mouse checks. See
 [local review and test coverage](../LINED-SCRIPT-REVIEW.md).
+
+## Gutter export and portable editing
+
+Lined PDF export now includes off-page information boxes and their colored connectors. Only pages with off-page content expand; original script text stays at its original PDF coordinates/size and rotation. Long gutter labels use available gutter width and additional page height to retain readable type instead of shrinking to fit the old paper. Original PDF assets and stored mark positions are unchanged. Exported PDFs may therefore have mixed page sizes; print at actual size or choose an appropriate paper/fit setting.
+
+Use **Save As…** to transfer an editable `.productiondesk` production. It embeds every referenced original PDF revision, source script, scene/shot/schedule/element data and annotation model, including normalized gutter positions and stable links. Lined PDF is the presentation export. Main Breakdown viewing mode is a production preference and travels with the file. Device appearance, opacity and key binds stay local. Older productions without the new view preference default to scene/page navigation and acquire no setting until the user changes it. Shared original PDF pages remain whole; selecting a scene opens its referenced page, with page controls available for multi-page scenes.
