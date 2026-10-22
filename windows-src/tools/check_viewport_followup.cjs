@@ -6,7 +6,7 @@ const output=path.join(root,'build/viewport-followup-review'),temp=fs.mkdtempSyn
 const processes=[];let browser;
 async function start(name){
  const folder=path.join(temp,name);fs.mkdirSync(folder,{recursive:true});const ready=path.join(folder,'ready.json');if(fs.existsSync(ready))fs.unlinkSync(ready);const log=fs.openSync(path.join(folder,'server.log'),'a');
- const child=spawn(process.env.PYTHON||'python3',['-B',path.join(runtime,'server.py'),'--port','0','--data',path.join(folder,'workspace.json'),'--ready-file',ready],{stdio:['ignore',log,log]});processes.push(child);fs.closeSync(log);
+ const child=spawn(process.env.PYTHON||'python3',['-B',path.join(runtime,'server.py'),'--port','0','--data',path.join(folder,'workspace.json'),'--ready-file',ready,'--parent-pid',String(process.pid)],{stdio:['ignore',log,log]});processes.push(child);fs.closeSync(log);
  for(let i=0;i<300&&!fs.existsSync(ready);i++){if(child.exitCode!==null)throw Error('Disposable backend exited');await new Promise(r=>setTimeout(r,30));}
  assert.ok(fs.existsSync(ready),'Disposable backend did not start');return {child,folder,url:JSON.parse(fs.readFileSync(ready)).url};
 }

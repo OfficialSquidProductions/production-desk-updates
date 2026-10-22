@@ -10,4 +10,20 @@ The published baseline reproduced deletion from scrollTop 40586 to 0, four conti
 
 Use [Start Packaged Viewport Export Preview.command](Start%20Packaged%20Viewport%20Export%20Preview.command) after the local preview build. Before launching it, the launcher validates preview identity, disabled updates and dedicated Foundation storage for workspace, settings, PDFs, logs and backups. No computer-use relaunch is required.
 
-Final tested commit, packaged checks and evidence will be recorded after verification. Evidence stays under ignored `windows-src/build/viewport-followup-review/`. Windows application/iOS/device execution is not claimed by local Mac testing.
+Tested implementation commit: `fa05a909bd6951975da91cd9b9d4a5f5eec476fe`.
+
+Preview: `windows-src/dist/Production Desk Viewport Export Preview.app`, unique bundle ID `local.productiondesk.viewport-preview.fa05a90`. It is locally ad-hoc signed, with updates disabled and the feed URL removed. All 248 bundled runtime source files match the tested checkout. Direct-launch namespace and temporary Foundation home/workspace/PDF/settings/log/backup routing were checked before launch; the actual native app used its bundled Python and isolated workspace.
+
+Passed:
+
+- Backend aggregate: 92 passed, 1 Windows-only PDF dependency skip (93 total).
+- Node helper/geometry tests: 24 passed.
+- Packaged browser aggregate: 68 checks, zero page errors, including all previous Lined Script/Shot List/Schedule/Import/Main Breakdown regressions.
+- Native Mac WebKit: 60 named checks plus native save/import/reload checks, against the actual packaged app's server. A Safari-incompatible text-reading helper in the new test was replaced by the same `getReader()` stream path already used by production.
+- Independent-profile handoff suite: all 6 groups passed against the packaged runtime. Real Save As contains all project fields, both original PDF revisions, raw source script, stable IDs/links, labels/positions, scenes, shots, schedules, elements and the Breakdown view preference. Sender storage was removed before recipient import. Recipient shot editing, actual label dragging at 150% PDF zoom, save/reopen and backend restart passed; every original asset remained byte-identical. No sender storage path occurs in the portable file.
+- Settings geometry passed at 560/720/1024/1660px and 150% scaling. Screenshots and exported PDF raster were inspected. Colored label/connector ink exists beyond both original paper edges; rotated/cropped originals retain native text coordinates. Very long gutter notes remain readable in expanded output bounds. A page with no gutter content keeps its original dimensions.
+- All four reported problems reproduced against the untouched published source baseline. All 1,233 protected installed-app and real project/log/backup files retained their hashes and modification times.
+
+Evidence: ignored `windows-src/build/viewport-followup-review/summary.json`, `artifact.json`, `baseline-reproductions.json`, `handoff-result.json`, `actual-app-result.json`, storage preflight reports, full logs, Settings screenshots, `gutter-export.pdf` and `gutter-export.png`. QA data is fictional and isolated.
+
+Compatibility limits: no Windows application, iOS/device or Intel Mac execution in this follow-up. Windows checks were updated but not run remotely because no new release/push is authorized. Portable format v1 is unchanged; older apps retain their earlier viewing/export behavior and need this new build for the new controls. Device opacity/key binds remain local. Whole original PDF pages are retained, so a shared page can show adjacent scene text; scene navigation jumps to its page reference and manual page controls handle multi-page scenes. Expanded PDFs may require different print paper/fit settings. No remaining local blocker, public release, feed change, notarization or installed-app replacement.
