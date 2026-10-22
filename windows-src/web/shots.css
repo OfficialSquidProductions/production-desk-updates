@@ -11,3 +11,5 @@
 @media(max-width:760px){.view-shots .page-heading{padding:18px 16px}.view-shots .page-heading h1{font-size:22px}.shot-metrics{padding:15px;gap:18px 10px}.shot-toolbar{gap:10px}.shot-layout{grid-template-columns:1fr}.shot-editor-scroll{height:auto;max-height:650px}.shot-list{height:380px}}
 
 .shot-metrics,.shot-row{background:#fff}.shot-row.selected{background:#fff0f4}.shot-row:hover{background:#fff7f9}.shot-description{color:#30232c}.shot-specs,.shot-day,.shot-row-time span,.shot-editor-note,.shot-editor-empty p,.shot-empty p{color:#6a5461}.shot-state{background:#fff;color:#6a4e5d}.shot-state.done{background:#fff0f4;color:#991434;border-color:#d8a5b5}.shot-state.ready{color:#991434}.shot-state.rolling,.shot-row.done .shot-check{background:#E60026;color:white}.shot-check{color:#bd0028}.shot-toolbar input,.shot-toolbar select{color:#30232c}.shot-progress,.shot-progress::-webkit-progress-bar{background:#f5dde5}.shot-metrics strong small,.shot-metrics span{color:#6a5461}
+
+.shot-row-main:focus-visible{outline:2px solid #0879ed;outline-offset:4px}#shot-list:focus-visible{outline:2px solid #0879ed;outline-offset:-2px}

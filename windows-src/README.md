@@ -96,3 +96,11 @@ This working copy adds **Save As…** for one complete `.productiondesk` project
 
 Load Demo beside the production selector opens the Scenic-matched Last Cue sample.
 See [content, coverage, safe reset and removal](DEMO-CONTENT.md).
+
+## Shot List navigation (local development)
+
+Click a shot to change its details while keeping your position in the list. With the
+list or one of its shot rows focused, Up/Down selects the previous/next visible shot
+in shooting order, scrolling the list only as needed. Arrow keys keep their normal
+behavior in editing fields, dropdowns and other focused controls. Filters and reordered
+shots determine the navigation order. See [local review and verification](../SHOT-LIST-REVIEW.md).

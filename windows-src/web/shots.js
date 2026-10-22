@@ -1,3 +1,4 @@
+import {isEditing} from './lined-shortcuts.js';
 import {normalizeShotNumber,shotIdentifier,shotNumberKey} from './shot-identifiers.js';
 import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
 import {removeCoverage,coverageSummary} from './lined-script.js';
@@ -56,7 +57,7 @@ export function createShotDesk(c) {
   function sceneOptions(value){return scenes().map(b=>`<option value="${esc(b.id)}" ${b.id===value?'selected':''}>${esc(b.scene)} · ${esc(c.slug(b))}</option>`).join('');}
   function rows(){
     const times=timings(),list=filtered();
-    return list.length?list.map(s=>`<article class="shot-row ${s.id===selected?'selected':''} ${s.status.toLowerCase()}" draggable="true" data-shot="${esc(s.id)}"><span class="shot-grip" aria-hidden="true">⠿</span><button class="shot-row-main" data-shot-select="${esc(s.id)}" aria-label="Select shot ${esc(label(s))}"><span class="shot-row-top"><strong>${esc(label(s))}</strong><span class="shot-state ${s.status.toLowerCase()}">${esc(s.status)}</span><span class="shot-day">${esc(dayName(s))}</span></span><span class="shot-description">${esc(s.description || 'Untitled shot')}</span><span class="shot-specs">${esc([s.size,s.camera&&'Camera '+s.camera,s.lens&&s.lens+' mm',s.movement].filter(Boolean).join(' · '))}</span></button><div class="shot-row-time"><strong>${esc(times.get(s.id))}</strong><span>${total(s)} min</span></div><button class="shot-check" data-shot-done="${esc(s.id)}" aria-label="${done(s)?'Reopen':'Complete'} shot ${esc(label(s))}" ${s.status==='Omitted'?'disabled':''}>${done(s)?'✓':'○'}</button></article>`).join(''):`<div class="shot-empty"><span class="empty-frame">＋</span><h2>${p()._shots.length?'No shots match this view':'Build your coverage'}</h2><p>${p()._shots.length?'Try a different day, scene, or status.':'Start with a scene, then add your camera setups, coverage, and time estimates.'}</p><button class="primary" data-shot-action="new">＋ Add a shot</button></div>`;
+    return list.length?list.map(s=>`<article class="shot-row ${s.id===selected?'selected':''} ${s.status.toLowerCase()}" draggable="true" data-shot="${esc(s.id)}"><span class="shot-grip" aria-hidden="true">⠿</span><button class="shot-row-main" data-shot-select="${esc(s.id)}" aria-pressed="${s.id===selected}" tabindex="${s.id===selected?0:-1}" aria-label="Select shot ${esc(label(s))}"><span class="shot-row-top"><strong>${esc(label(s))}</strong><span class="shot-state ${s.status.toLowerCase()}">${esc(s.status)}</span><span class="shot-day">${esc(dayName(s))}</span></span><span class="shot-description">${esc(s.description || 'Untitled shot')}</span><span class="shot-specs">${esc([s.size,s.camera&&'Camera '+s.camera,s.lens&&s.lens+' mm',s.movement].filter(Boolean).join(' · '))}</span></button><div class="shot-row-time"><strong>${esc(times.get(s.id))}</strong><span>${total(s)} min</span></div><button class="shot-check" data-shot-done="${esc(s.id)}" aria-label="${done(s)?'Reopen':'Complete'} shot ${esc(label(s))}" ${s.status==='Omitted'?'disabled':''}>${done(s)?'✓':'○'}</button></article>`).join(''):`<div class="shot-empty"><span class="empty-frame">＋</span><h2>${p()._shots.length?'No shots match this view':'Build your coverage'}</h2><p>${p()._shots.length?'Try a different day, scene, or status.':'Start with a scene, then add your camera setups, coverage, and time estimates.'}</p><button class="primary" data-shot-action="new">＋ Add a shot</button></div>`;
   }
   function editField(label,key,value,type='text',wide=false,extra='') {return `<label class="field ${wide?'wide':''}">${label}<input data-shot-field="${key}" type="${type}" value="${esc(value)}" ${extra}></label>`;}
   function suggestions(label,key,value,values){return editField(label,key,value,'text',false,`list="shot-${key}-options"`)+`<datalist id="shot-${key}-options">${values.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;}
@@ -69,12 +70,49 @@ export function createShotDesk(c) {
     return `<div class="shot-detail-heading"><div><div class="eyebrow">SHOT DETAILS</div><h2 id="shot-detail-label">${esc(label(s))}</h2></div><div class="shot-order"><button data-shot-action="up" aria-label="Move shot up" title="Move up">↑</button><button data-shot-action="down" aria-label="Move shot down" title="Move down">↓</button></div></div><div class="shot-editor-scroll"><div class="form-grid"><label class="field wide">Scene<select data-shot-field="sceneId">${sceneOptions(s.sceneId)}</select></label>${editField('Shot number / suffix','number',s.number,'text',false,'required maxlength="24"')}<label class="field">Status<select data-shot-field="status">${selectOptions(statuses,s.status)}</select></label><label class="field wide">Shot description<textarea data-shot-field="description" rows="3">${esc(s.description)}</textarea></label>${suggestions('Shot size','size',s.size,sizes)}${suggestions('Movement','movement',s.movement,movements)}${editField('Camera','camera',s.camera)}${editField('Lens (mm)','lens',s.lens)}${editField('Equipment / support','equipment',s.equipment,'text',true)}${editField('Setup (minutes)','setupMinutes',s.setupMinutes,'number',false,'min="0" max="1440" step="1"')}${editField('Shoot (minutes)','shootMinutes',s.shootMinutes,'number',false,'min="0" max="1440" step="1"')}${editField('Actual total (minutes)','actualMinutes',s.actualMinutes,'number',false,'min="0" max="10080" step="1"')}${editField('Takes','takes',s.takes,'number',false,'min="0" max="10000" step="1"')}<label class="field">Priority<select data-shot-field="priority">${selectOptions(['Essential','Preferred','Optional'],s.priority)}</select></label>${editField('Circle take','circleTake',s.circleTake)}<label class="field wide">Notes<textarea data-shot-field="notes" rows="3">${esc(s.notes)}</textarea></label></div>${coverageNotes(s)}<div class="shot-editor-actions"><button data-shot-action="take">＋ Take</button><button data-shot-action="duplicate">Duplicate</button><button class="danger" data-shot-action="delete">Delete</button></div><p class="shot-editor-note">Details save as you type. Actual time is entered manually and includes setup. Omitted shots are excluded from estimates.</p></div>`;
   }
   function render(){sync();const ds=c.dates(groups().length);
-    return `<div class="shot-page-heading"><div><div class="eyebrow">CAMERA DEPARTMENT</div><h2>Shot list</h2><p>Plan the coverage. Keep the day moving.</p></div><div class="shot-heading-tools"><button data-shot-action="csv">Export shots</button><button data-shot-action="print">Print / PDF</button></div></div><div id="shot-metrics">${metrics()}</div><div class="shot-toolbar">${c.scenarioSelect()}<label>Shoot day<select id="shot-day"><option value="all" ${day==='all'?'selected':''}>All days</option>${groups().map((g,i)=>`<option value="${i}" ${day===String(i)?'selected':''}>Day ${i+1} · ${esc(c.dateLabel(ds[i]))}</option>`).join('')}<option value="unscheduled" ${day==='unscheduled'?'selected':''}>Unscheduled</option></select></label><label>Scene<select id="shot-scene"><option value="all">All scenes</option>${sceneOptions(scene)}</select></label><label>Status<select id="shot-status"><option value="all">All statuses</option>${selectOptions(statuses,status)}</select></label><label class="shot-start">Start time<input type="time" id="shot-start" value="${esc(p()._shotSettings.startTime)}" ${day==='all'?'disabled':''}></label></div><div class="shot-layout"><section class="panel shot-list-panel"><div class="panel-header"><div class="panel-title">Shooting order <span class="count" id="shot-count">${filtered().length} shots</span></div><span class="tiny">DRAG TO REORDER</span></div><div class="shot-search-wrap"><input id="shot-search" type="search" aria-label="Search shots" placeholder="Search shots, cameras, notes…" value="${esc(search)}"></div><div class="shot-list" id="shot-list">${rows()}</div><div class="panel-footer">${day==='all'?'All days show cumulative minute offsets. Select one day for clock times.':'Times follow the day’s full shot order, including shots hidden by filters.'}</div></section><section class="panel shot-editor" id="shot-editor">${editor()}</section></div>`;
+    return `<div class="shot-page-heading"><div><div class="eyebrow">CAMERA DEPARTMENT</div><h2>Shot list</h2><p>Plan the coverage. Keep the day moving.</p></div><div class="shot-heading-tools"><button data-shot-action="csv">Export shots</button><button data-shot-action="print">Print / PDF</button></div></div><div id="shot-metrics">${metrics()}</div><div class="shot-toolbar">${c.scenarioSelect()}<label>Shoot day<select id="shot-day"><option value="all" ${day==='all'?'selected':''}>All days</option>${groups().map((g,i)=>`<option value="${i}" ${day===String(i)?'selected':''}>Day ${i+1} · ${esc(c.dateLabel(ds[i]))}</option>`).join('')}<option value="unscheduled" ${day==='unscheduled'?'selected':''}>Unscheduled</option></select></label><label>Scene<select id="shot-scene"><option value="all">All scenes</option>${sceneOptions(scene)}</select></label><label>Status<select id="shot-status"><option value="all">All statuses</option>${selectOptions(statuses,status)}</select></label><label class="shot-start">Start time<input type="time" id="shot-start" value="${esc(p()._shotSettings.startTime)}" ${day==='all'?'disabled':''}></label></div><div class="shot-layout"><section class="panel shot-list-panel"><div class="panel-header"><div class="panel-title">Shooting order <span class="count" id="shot-count">${filtered().length} shots</span></div><span class="tiny">↑ ↓ SELECT · DRAG TO REORDER</span></div><div class="shot-search-wrap"><input id="shot-search" type="search" aria-label="Search shots" placeholder="Search shots, cameras, notes…" value="${esc(search)}"></div><div class="shot-list" id="shot-list" tabindex="0" role="region" aria-label="Shots in shooting order. Up and Down select a shot.">${rows()}</div><div class="panel-footer">${day==='all'?'All days show cumulative minute offsets. Select one day for clock times.':'Times follow the day’s full shot order, including shots hidden by filters.'}</div></section><section class="panel shot-editor" id="shot-editor">${editor()}</section></div>`;
   }
-  function refreshList(){document.querySelector('#shot-metrics').innerHTML=metrics();document.querySelector('#shot-list').innerHTML=rows();document.querySelector('#shot-count').textContent=`${filtered().length} shots`;const heading=document.querySelector('#shot-detail-label');if(heading&&shot())heading.textContent=label(shot());bindRows();}
-  function moveBefore(moving,target){if(moving===target)return;c.mutate(()=>{const list=p()._shots,s=list.find(s=>s.id===moving);if(!s)return;list.splice(list.indexOf(s),1);list.splice(list.findIndex(s=>s.id===target),0,s);});}
+  function refreshEditor(){
+    const top=document.querySelector('.shot-editor-scroll')?.scrollTop||0;
+    document.querySelector('#shot-editor').innerHTML=editor();bindEditor();
+    const scroll=document.querySelector('.shot-editor-scroll');if(scroll)scroll.scrollTop=top;
+  }
+  function updateSelection(){
+    document.querySelectorAll('#shot-list [data-shot]').forEach(row=>{
+      const active=row.dataset.shot===selected;row.classList.toggle('selected',active);
+      const button=row.querySelector('[data-shot-select]');button.setAttribute('aria-pressed',String(active));button.tabIndex=active?0:-1;
+    });
+  }
+  function revealRow(row){
+    const list=document.querySelector('#shot-list'),bounds=list.getBoundingClientRect(),box=row.getBoundingClientRect();
+    const top=bounds.top+list.clientTop,bottom=top+list.clientHeight;
+    // Touch only this scroll pane; scrolling ancestors would move the whole workspace.
+    if(box.height>list.clientHeight){if(box.top<top||box.top>=bottom)list.scrollTop+=box.top-top;}
+    else if(box.top<top)list.scrollTop+=box.top-top;
+    else if(box.bottom>bottom)list.scrollTop+=box.bottom-bottom;
+  }
+  function selectShot(sid,keyboard=false){
+    if(!filtered().some(s=>s.id===sid))return;
+    if(selected!==sid){selected=sid;updateSelection();refreshEditor();}
+    if(keyboard){const button=[...document.querySelectorAll('#shot-list [data-shot-select]')].find(b=>b.dataset.shotSelect===sid);if(button){button.focus({preventScroll:true});revealRow(button.closest('[data-shot]'));}}
+  }
+  function refreshList(){
+    const list=document.querySelector('#shot-list'),top=list.scrollTop,left=list.scrollLeft,previous=selected;
+    if(!filtered().some(s=>s.id===selected))selected=filtered()[0]?.id;
+    document.querySelector('#shot-metrics').innerHTML=metrics();list.innerHTML=rows();list.scrollTop=top;list.scrollLeft=left;
+    document.querySelector('#shot-count').textContent=`${filtered().length} shots`;
+    if(previous!==selected)refreshEditor();
+    const heading=document.querySelector('#shot-detail-label');if(heading&&shot())heading.textContent=label(shot());bindRows();
+  }
+  function keepView(fn){
+    const positions=['#shot-list','.shot-editor-scroll'].map(selector=>[selector,document.querySelector(selector)?.scrollTop||0]);
+    const page=document.scrollingElement,top=page.scrollTop,left=page.scrollLeft;fn();
+    for(const [selector,value] of positions){const element=document.querySelector(selector);if(element)element.scrollTop=value;}
+    page.scrollTop=top;page.scrollLeft=left;
+  }
+  function moveBefore(moving,target){if(moving===target)return;keepView(()=>c.mutate(()=>{const list=p()._shots,s=list.find(s=>s.id===moving);if(!s)return;list.splice(list.indexOf(s),1);list.splice(list.findIndex(s=>s.id===target),0,s);}));}
   function bindRows(){
-    document.querySelectorAll('[data-shot-select]').forEach(b=>b.onclick=()=>{selected=b.dataset.shotSelect;c.render();});
+    document.querySelectorAll('[data-shot-select]').forEach(b=>b.onclick=()=>selectShot(b.dataset.shotSelect));
     document.querySelectorAll('[data-shot-done]').forEach(b=>b.onclick=()=>c.mutate(()=>{const s=p()._shots.find(s=>s.id===b.dataset.shotDone);s.status=done(s)?'Planned':'Done';}));
     document.querySelectorAll('[data-shot]').forEach(row=>{
       row.oncontextmenu=e=>{const sid=row.dataset.shot;deleteMenu.open(e,()=>deleteShot(sid));};
@@ -92,6 +130,10 @@ export function createShotDesk(c) {
     document.querySelector('#shot-search').oninput=e=>{search=e.target.value;refreshList();};
     document.querySelector('#shot-start').onchange=e=>{if(e.target.checkValidity()&&e.target.value)c.mutate(()=>p()._shotSettings.startTime=e.target.value);};
     document.querySelectorAll('[data-shot-action]').forEach(b=>b.onclick=()=>action(b.dataset.shotAction));
+    bindEditor();
+  }
+  function bindEditor(){
+    document.querySelectorAll('#shot-editor [data-shot-action]').forEach(b=>b.onclick=()=>action(b.dataset.shotAction));
     document.querySelectorAll('[data-shot-field]').forEach(input=>{
       let editing=false;const target=shot();
       const update=()=>{
@@ -152,7 +194,19 @@ export function createShotDesk(c) {
     if(name==='take')c.mutate(()=>s.takes=Math.min(10000,s.takes+1));
     if(name==='duplicate')insertShot({...structuredClone(s),id:id(),created:stamp(),number:nextNumber(s.sceneId),status:'Planned',actualMinutes:null,takes:0,circleTake:''},s);
     if(name==='delete')deleteShot(s.id);
-    if(name==='up'||name==='down'){const visible=filtered(),i=visible.indexOf(s),neighbor=visible[i+(name==='up'?-1:1)];if(neighbor)c.mutate(()=>{const list=p()._shots,a=list.indexOf(s),b=list.indexOf(neighbor);[list[a],list[b]]=[list[b],list[a]];});}
+    if(name==='up'||name==='down'){const visible=filtered(),i=visible.indexOf(s),neighbor=visible[i+(name==='up'?-1:1)];if(neighbor)keepView(()=>c.mutate(()=>{const list=p()._shots,a=list.indexOf(s),b=list.indexOf(neighbor);[list[a],list[b]]=[list[b],list[a]];}));}
   }
+  function focusedControl(target){
+    if(isEditing(target))return true;
+    const control=target?.closest?.('button,a[href],summary,[role="button"],[role="slider"],[role="spinbutton"],[role="listbox"],[role="menu"],[role="menuitem"],[role="tab"],[role="tree"],[role="grid"],[tabindex]');
+    return control&&!control.matches('[data-shot-select],#shot-list');
+  }
+  document.addEventListener('keydown',event=>{
+    if(!c.isActive()||event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||dragging||document.querySelector('dialog[open]')||!['ArrowUp','ArrowDown'].includes(event.key)||focusedControl(document.activeElement)||focusedControl(event.target))return;
+    const list=filtered();if(!list.length)return;
+    const index=list.findIndex(s=>s.id===selected),step=event.key==='ArrowDown'?1:-1;
+    const next=index<0?(step>0?0:list.length-1):Math.max(0,Math.min(list.length-1,index+step));
+    event.preventDefault();selectShot(list[next].id,true);
+  });
   return {render,bind,add,csv,print};
 }

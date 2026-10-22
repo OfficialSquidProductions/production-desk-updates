@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run browser modules on a disposable workspace; no installed app or production data.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const {spawn}=require('node:child_process');
+const {spawn,execFileSync}=require('node:child_process');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'pd-lined-')),ready=path.join(temp,'ready.json');
 const runtime=process.env.PRODUCTION_DESK_RUNTIME?path.resolve(process.env.PRODUCTION_DESK_RUNTIME):root;
@@ -14,6 +14,12 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
   const page=await browser.newPage({viewport:{width:1660,height:1080}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
+  const baseline=process.argv.indexOf('--baseline-shots');
+  if(baseline>=0){
+    const reference=process.argv[baseline+1];if(!reference)throw Error('Pass a commit after --baseline-shots');
+    const original=execFileSync('git',['show',reference+':windows-src/web/shots.js'],{cwd:root,encoding:'utf8'});
+    await page.route('**/shots.js',route=>route.fulfill({contentType:'text/javascript',body:original}));
+  }
   await page.goto(JSON.parse(fs.readFileSync(ready)).url);await page.evaluate(()=>window.slateDesktop.ready);
   const checks=[],fixture=fs.readFileSync(path.join(root,'tests/lined-script.pdf')).toString('base64');
   if(process.argv.includes('--all')){
@@ -59,6 +65,32 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   const reopened=await page.evaluate(async()=>await(await fetch('/api/workspace')).json());assert.deepEqual(reopened,saved);
   await page.click('#app-settings-open');await page.click('#lined-key-binds');
   assert.equal(await page.locator('[data-lined-binding="coverage"]').inputValue(),'k');
+  await page.click('#modal-close');
+  checks.push(...await page.evaluate('('+require('../desktop/windows/shot-navigation-regressions.cjs').toString()+')()'));
+  // Exercise actual pointer focus and browser key defaults in a deep shot list.
+  const shotRows=page.locator('#shot-list [data-shot-select]');
+  await page.locator('#shot-list').evaluate(list=>{const row=list.querySelectorAll('[data-shot]')[300];list.scrollTop+=row.getBoundingClientRect().top-list.getBoundingClientRect().top-40;});
+  const clickTop=await page.locator('#shot-list').evaluate(e=>e.scrollTop);
+  await shotRows.nth(300).click();assert.equal(await page.locator('#shot-list').evaluate(e=>e.scrollTop),clickTop);
+  await shotRows.nth(301).click();assert.equal(await page.locator('#shot-list').evaluate(e=>e.scrollTop),clickTop);
+  for(let i=0;i<24;i++)await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator('#shot-list .selected').getAttribute('data-shot'),await shotRows.nth(325).getAttribute('data-shot-select'));
+  const active=await page.locator('#shot-list .selected').getAttribute('data-shot');
+  await page.locator('[data-shot-field="notes"]').fill('Real keyboard navigation notes\nSecond review line');
+  await page.locator('[data-shot-field="notes"]').press('ArrowUp');assert.equal(await page.locator('#shot-list .selected').getAttribute('data-shot'),active);
+  const minutes=page.locator('[data-shot-field="setupMinutes"]'),prior=Number(await minutes.inputValue());await minutes.press('ArrowUp');
+  assert.equal(Number(await minutes.inputValue()),prior+1);assert.equal(await page.locator('#shot-list .selected').getAttribute('data-shot'),active);
+  await page.evaluate(()=>window.slateDesktop.flush());
+  const shotSaved=await page.evaluate(async()=>await(await fetch('/api/workspace')).json());
+  await page.locator('#shot-list .selected [data-shot-select]').focus();await page.screenshot({path:path.join(root,'build/shot-navigation.png'),fullPage:true});
+  await page.reload();await page.evaluate(()=>window.slateDesktop.ready);await page.click('[data-view="shots"]');
+  assert.deepEqual(await page.evaluate(async()=>await(await fetch('/api/workspace')).json()),shotSaved);
+  await page.locator('#shot-list').evaluate(list=>{const row=list.querySelectorAll('[data-shot]')[325];list.scrollTop+=row.getBoundingClientRect().top-list.getBoundingClientRect().top-40;});
+  await shotRows.nth(325).click();assert.equal(await page.locator('[data-shot-field="notes"]').inputValue(),'Real keyboard navigation notes\nSecond review line');
+  const reopenedTop=await page.locator('#shot-list').evaluate(e=>e.scrollTop);await page.keyboard.press('ArrowUp');
+  assert.equal(await page.locator('#shot-list .selected').getAttribute('data-shot'),await shotRows.nth(324).getAttribute('data-shot-select'));
+  assert.ok(await page.locator('#shot-list').evaluate(e=>e.scrollTop)>20000);assert.ok(reopenedTop>20000);
+  checks.push('Real mouse selection and 24 successive keyboard moves stay deep in the list; textarea arrows and numeric steppers edit without switching shots; saved edits/order survive page reload and navigation resumes');
   assert.deepEqual(errors,[]);checks.push('Real keyboard focus, Cmd/Ctrl undo/redo, browser resize, save/reopen and key-bind persistence');
   console.log(JSON.stringify({checks,pageErrors:errors},null,2));
 }catch(error){console.error(error.stack);process.exitCode=1;}

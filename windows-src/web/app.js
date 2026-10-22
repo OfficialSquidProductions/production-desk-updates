@@ -568,7 +568,7 @@ function helpModal() {modal('Your local production desk',`<ol class="help-steps"
 const scriptPDF=createScriptPDF({esc,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
 const linedDesk=createLinedDesk({esc,id,stamp,api,preferences:()=>appSettings.get(),project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
 const shotDesk=createShotDesk({
-  esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
+  esc,id,stamp,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='shots',slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
   mutate,render,toast,modal,confirm:confirmModal,download,
   edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
 });
