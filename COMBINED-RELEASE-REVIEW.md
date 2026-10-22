@@ -9,3 +9,19 @@ GitHub read-only inspection: `main` is `fda5fc347dc406b4fec0c9d90ff304de660b2e52
 Use [Start Packaged Combined Release Preview.command](Start%20Packaged%20Combined%20Release%20Preview.command) for disposable local QA. It verifies disabled updates and dedicated storage paths before launch. Installed Production Desk and real user data must remain unchanged.
 
 Final test evidence is recorded after local checks under ignored `windows-src/build/combined-release-review/`. App Store/TestFlight changes and installed-app replacement remain out of scope. Windows packaged execution requires an available Windows environment; signed/notarized public distribution is a separate pending gate.
+
+## Verified candidate
+
+Tested commit: `6185691ab1dc9224badb6f195b15b8b1fdb81df2` on `release/1.5.12-local-review`. App: `windows-src/dist/Production Desk Combined Release Preview.app` (1.5.12, build 34), unique preview identity `local.productiondesk.combined-preview.6185691`; feed removed and updater checks disabled. Ad-hoc signature verified. All 247 bundled runtime source files match the checkout; the native executable and generated PDF helper hashes are recorded.
+
+- Full Python aggregate: 89 passed, 1 Windows-only PDF dependency test skipped (90 total).
+- Node helper aggregate: 20 passed. The Windows workflow now includes the Schedule helper tests.
+- Browser aggregates: 64 source and 64 packaged-runtime checks, zero page errors. These include all completed editing changes, complete Save As/import round trips, asset bytes and references, undo/redo, malformed/older/large files, delayed cancellation, save failures and reopening.
+- Native Mac WebKit: 56 named aggregate checks plus native save/import/reload checks passed against the actual AppKit-launched preview's bundled server.
+- Real native updater save gate passed. All 8 local Sparkle scenarios passed: equal, older, newer (twice), incompatible, offline, malformed and opt-out. The fixture always chooses Later and forbids download/install. Dedicated storage was checked before launch. A macOS `/var` path alias false positive was corrected to compare canonical paths; the initial preflight stopped before launching the fixture.
+- Read-only Windows version gate confirms 1.5.12 is newer than latest 1.5.11. Read-only live Mac appcast inspection confirms build 33 remains current, below proposed 34. GitHub `main` remains `fda5fc3` after testing.
+- The preview's direct-launch and disposable-home paths were checked before launch. Installed app and every existing stable/beta workspace, PDF, setting, diagnostic log and backup retained identical hashes/mtimes. No installed app replacement, App Store/TestFlight action, public artifact, remote push or feed change occurred.
+
+Evidence: ignored `windows-src/build/combined-release-review/summary.json`, `artifact.json`, `actual-app-result.json`, storage preflight reports, live-feed/version-gate reports and full test/build logs.
+
+Not run: Windows packaged/installed QA (no Wine/VM/runtime locally), the pinned NSIS updater suite (dependencies absent), the one Windows PDF test, and public signed-archive/notarization checks (no public archive prepared). Public distribution remains held for explicit approval after the earlier denied handoff. A newer-version push to `main` would activate the existing Windows publication workflow; do not do that while the hold remains.
