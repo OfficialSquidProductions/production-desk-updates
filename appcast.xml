@@ -3,22 +3,20 @@
     <channel>
         <title>Production Desk</title>
         <item>
-            <title>1.5.13</title>
-            <pubDate>Thu, 22 Oct 2026 02:29:03 -0400</pubDate>
-            <sparkle:version>35</sparkle:version>
-            <sparkle:shortVersionString>1.5.13</sparkle:shortVersionString>
+            <title>1.5.14</title>
+            <pubDate>Thu, 22 Oct 2026 19:38:39 -0400</pubDate>
+            <sparkle:version>36</sparkle:version>
+            <sparkle:shortVersionString>1.5.14</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<!doctype html><html><head><meta charset="utf-8"><title>Production Desk 1.5.13</title></head><body><h1>Production Desk 1.5.13</h1>
-<p>Deleting shots preserves your place in the Shot List, chooses a neighboring visible shot, and retains selection and scrolling through undo/redo, including filtered lists.</p>
-<p>Main Breakdown opens in paginated scene/page navigation by default. Enable Continuous Scroll beside the page selector to show all pages or scenes. The preference travels with your project, and original PDF selection and tagging remain available.</p>
-<p>Settings gives Key Binds and lined-label opacity their own properly spaced controls, including narrow windows and scaled layouts.</p>
-<p>Lined Script PDF exports include information boxes and connectors dragged into the page gutters. Output bounds expand only where needed; original script text, page rotation and readable labels are preserved.</p>
-<p>Portable .productiondesk Save As/import retains original script/PDF revisions, stable scene/shot IDs, schedules, elements, cast, coverage, labels, links and applicable project settings. A clean-profile handoff was verified after removing the sender&#x27;s storage, followed by recipient editing, save and reopen.</p>
-<p>All previous Lined Script shortcuts, shot navigation, strip-board drag improvements, full project import and original-PDF/Main Breakdown fixes remain included. Existing projects, backups and offline operation are preserved. Expanded PDF pages may require different print paper or fit settings. Device shortcuts and appearance preferences remain local. App Store and TestFlight submissions are unchanged.</p>
+            <description><![CDATA[<!doctype html><html><head><meta charset="utf-8"><title>Production Desk 1.5.14</title></head><body><h1>Production Desk 1.5.14</h1>
+<p>Arrange shots across scenes in the new Shot Shooting Order tab. Broad strip targets, large grab handles, clear insertion feedback, edge scrolling and an exact-placement dialog make filming order easy to adjust. Escape cancels a drag; keyboard navigation and Undo/Redo retain your place.</p>
+<p>Shot List remains the canonical list. Both tabs edit the same shot details, while filming order is saved separately using shot IDs. Reordering keeps shot identifiers, lined-script links and scene shooting schedules intact. New shots append to filming order, and deleted shots are removed.</p>
+<p>Scene, day, status and search filters remain available. Filtered moves retain the relative order of hidden shots. Complete .productiondesk project files and full backups carry the arrangement, shot records, original PDFs and linked coverage between computers.</p>
+<p>All Production Desk 1.5.13 fixes remain included: Shot List deletion and undo/redo context, paginated Main Breakdown with optional Continuous Scroll, separated Settings controls and readable lined-script gutter exports. Existing projects, backups and offline operation are preserved. App Store and TestFlight submissions are unchanged.</p>
 </body></html>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.13-35.zip" length="21334530" type="application/octet-stream" sparkle:edSignature="UP47ai4hL43A/ffp0hW+/Ib36lTipoZ67YqnCKT+zL6Iv3fbmXPhqqHZPaNCQjRik7zJjkP1o/eAGDis3dvgBw=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.14-36.zip" length="21338429" type="application/octet-stream" sparkle:edSignature="wb+G/beC59aaFIWyCfymz329G40I0WjK/Zzy26IvTMxkkP7iOgc7+zR4SkkyRiiUlaQoN+QUjMTV1KrVAwDcAw=="/>
         </item>
     </channel>
 </rss>
