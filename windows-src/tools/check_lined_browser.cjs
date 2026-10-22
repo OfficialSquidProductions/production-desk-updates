@@ -25,7 +25,7 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   if(process.argv.includes('--all')){
     checks.push(...await require('../desktop/windows/regressions.cjs')({
       js:source=>page.evaluate(source),flush:()=>page.evaluate(()=>window.slateDesktop.flush()),
-      waitFor:source=>page.waitForFunction(source),
+      waitFor:async source=>{const deadline=Date.now()+15000;while(!await page.evaluate(source)){if(Date.now()>deadline)throw Error('UI timed out: '+source);await new Promise(r=>setTimeout(r,30));}},
       readWorkspace:()=>page.evaluate(async()=>await(await fetch('/api/workspace')).json()),
       post:async(route,body,headers={})=>{
         const value=await page.evaluate(async({route,body,headers})=>{const response=await fetch(route,{method:'POST',headers:{'X-Slate-Local':'1',...headers},body});return {status:response.status,body:await response.json()};},{route,body,headers});

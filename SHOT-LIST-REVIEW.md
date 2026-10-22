@@ -40,8 +40,7 @@ All fixtures are synthetic and all app data is disposable.
 - The optional `--baseline-shots 32d24c8` browser run checks the previous Shot List module
   against these assertions. Its expected failure is recorded alongside the passing results.
 
-Packaged verification and the exact tested implementation commit are recorded below
-once the separate preview is built. Windows runtime/installer testing is unavailable
+Packaged verification and the exact tested implementation commit are recorded below. Windows runtime/installer testing is unavailable
 on this Mac; no VM, Wine or current Electron runtime is installed. No release is authorized.
 
 ## Review and repeat
@@ -64,3 +63,48 @@ Playwright and Chromium are needed for the optional browser checks. Existing loc
 installations can be supplied using `PLAYWRIGHT_MODULE` and `BROWSER_EXECUTABLE`.
 `PRODUCTION_DESK_RUNTIME` and `PYTHON` select a packaged server/web/Python runtime.
 Evidence is under ignored `windows-src/build/shot-navigation-review/`.
+
+## Separate packaged Mac preview: verified
+
+Implementation commit: `61b3c0b53c369db47b829dde50344e18d000b87f`.
+The preview's native executable and Python/web runtime were built from this commit.
+Later changes record results and make the browser test polling compatible with CSP;
+no runtime code or security settings changed after the tested implementation commit.
+
+Artifact: `windows-src/dist/Production Desk Shot List Preview.app`.
+It is ad-hoc signed, has its own preview bundle identifier, has update startup disabled,
+and has no live feed URL. The existing Lined Script preview is preserved separately.
+Use **Start Packaged Shot List Preview.command** for an isolated review home.
+
+Passed:
+
+- Offline app build, bundled runtime startup and deep/strict code-signature verification.
+- All 247 bundled runtime files matched the recorded SHA-256 manifest.
+- Full packaged browser aggregate: 51 checks, zero page errors. Real mouse and keyboard
+  tests cover deep shot selection, 24 consecutive arrow moves, textarea/numeric editing,
+  save/reopen, and the previous Lined Script/PDF/Main Breakdown workflows.
+- Native WebKit aggregate against bundled Python/server/assets: 45 named checks plus
+  native save/import/reload checks.
+- Actual compiled AppKit app startup used a separately proved temporary home and
+  Application Support directory. Its child used the bundled Python and isolated
+  workspace; the same 45-check native aggregate passed through that app's own server.
+- Full packaged Python suite: 81 total, 80 passed, 1 Windows dependency skip.
+- The previous `32d24c8` Shot List module failed the new regression as expected:
+  **Selecting a shot rebuilt the list**. This is distinct from the passing current runs.
+- Existing installed-app fingerprints and every existing Slate data-file fingerprint
+  and modification time stayed unchanged. Only test-owned processes were stopped.
+
+The browser comparison initially hit a harness-only CSP string-evaluation restriction.
+Polling now uses the existing browser evaluation API, and the comparison reaches the
+intended regression. CSP and application security settings remain unchanged.
+
+Windows remains an untested runtime/installer platform for this patch. The one Python
+skip needs Windows' `pypdf` dependency. Native bridge behavior is covered, while physical
+OS menu clicks were not automated. No release, feed change, installation or notarization
+was performed, and no new signing credentials were used. No implementation blocker remains.
+
+Evidence: `windows-src/build/shot-navigation-review/summary.json`,
+`browser-source.json`, `native-source.log`, `python-source.log`, `baseline-32d24c8.log`,
+`build.log`, `signature.log`, `packaged-runtime-sha256.json`, `browser-packaged.json`,
+`native-packaged.log`, `python-packaged.log`, `actual-app-result.json`,
+`actual-app-webkit.log`. Screenshot: `windows-src/build/shot-navigation.png`.
