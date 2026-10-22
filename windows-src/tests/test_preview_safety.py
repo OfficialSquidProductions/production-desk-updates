@@ -21,7 +21,7 @@ class PreviewSafetyTests(unittest.TestCase):
     def probe(self):return patch.object(module.subprocess,'check_output',return_value=str(self.home)+'\n'+str(self.home/'Library/Application Support')+'\n')
     def test_all_storage_and_backups_use_preview_namespace_before_launch(self):
         with self.probe():result=module.preflight(self.app,self.home)
-        self.assertTrue(result['support'].endswith('ProductionDeskPreviews/preview-local.productiondesk.import-preview.test'))
+        self.assertEqual(Path(result['support']).parts[-2:],('ProductionDeskPreviews','preview-local.productiondesk.import-preview.test'))
         self.assertTrue(all(Path(result['support'])==Path(p).parent for p in result['storage'].values()))
         self.assertIn('workspace.previous.json',result['storage']);self.assertIn('desktop.log',result['storage']);self.assertIn('pdfs',result['storage'])
     def test_no_preview_flag_or_enabled_feed_fails_closed(self):
