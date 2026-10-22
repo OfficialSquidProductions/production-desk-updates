@@ -13,6 +13,7 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   if(!fs.existsSync(ready))throw Error('Local server failed: '+log);
   browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
   const page=await browser.newPage({viewport:{width:1660,height:1080}}),errors=[];
+  if(process.argv.includes('--missing-fonts'))await page.route('**/fonts/*',route=>route.fulfill({status:404,body:'Optional local font unavailable'}));
   page.on('pageerror',e=>errors.push(e.message));
   const baseline=process.argv.indexOf('--baseline-shots');
   if(baseline>=0){

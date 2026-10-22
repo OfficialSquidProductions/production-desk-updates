@@ -410,7 +410,9 @@ export function createLinedDesk(c){
       const {PDFDocument,StandardFonts}=window.PDFLib,pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Courier);
       const text=project.breakdowns.filter(b=>b.type==='scene').map(b=>b._scriptText||'').filter(Boolean).join('\n\n');
       if(!text.trim())throw Error('Import a script or enter scene text first.');
-      await document.fonts.load('12px "SP Script"');
+      // Optional screenplay fonts may be absent on a clean Windows install.
+      // The canvas already has system monospace fallbacks for those machines.
+      try{await document.fonts.load('12px "SP Script"');}catch{}
       const canvas=document.createElement('canvas');canvas.width=936;canvas.height=32;
       const context=canvas.getContext('2d');context.scale(2,2);context.font='12px "SP Script", "Courier New", monospace';
       const rows=[];

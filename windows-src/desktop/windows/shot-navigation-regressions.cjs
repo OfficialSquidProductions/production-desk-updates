@@ -61,7 +61,7 @@ module.exports = async function runShotNavigationChecks(){
   // Lined Script can deliberately bind an arrow without capturing Shot List navigation.
   $('#app-settings-open').click();$('#lined-key-binds').click();const binding=$('[data-lined-binding="coverage"]');binding.focus();key('ArrowDown');$('#lined-save-binds').click();await wait(()=>!!$('#app-settings'));$('#modal-close').click();
   position(350);choose(350);focus();key('ArrowDown');expect(selected()===rows()[351].dataset.shot,'Lined Script arrow binding interfered with Shot List');
-  $('[data-view="lined"]').click();$('#lined-from-text').click();await wait(()=>!!$('#lined-overlay')?.onpointerdown);$('[data-lined-tool="select"]').click();document.activeElement?.blur();key('ArrowDown');expect($('[data-lined-tool="coverage"]').getAttribute('aria-pressed')==='true','Lined Script configured arrow stopped working');
+  $('[data-view="lined"]').click();$('#lined-from-text').click();await wait(()=>!!$('#lined-overlay')?.onpointerdown);expect((await saved())._linedScript.documents.length===1,'Script-text PDF was not retained');$('[data-lined-tool="select"]').click();document.activeElement?.blur();key('ArrowDown');expect($('[data-lined-tool="coverage"]').getAttribute('aria-pressed')==='true','Lined Script configured arrow stopped working');
   $('[data-view="shots"]').click();position(350);choose(350);focus();key('ArrowDown');expect(selected()===rows()[351].dataset.shot,'Tab switch duplicated key handlers or lost navigation');
   const state=await saved();expect(state._shots.find(s=>s.id===edited).notes==='Navigation notes survive reopen','Editing was lost during navigation/filtering');
   window.shotNavigationQA={editedShotId:edited,notes:'Navigation notes survive reopen'};
