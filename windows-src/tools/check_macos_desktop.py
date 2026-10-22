@@ -14,8 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", action="store_true", help="Check this checkout with the current Python, without building or signing an app")
+    parser.add_argument("--app", type=Path, help="Check this disposable packaged app instead of dist/Production Desk.app")
     args = parser.parse_args()
     app = ROOT / ('dist/Production Desk Beta.app' if json.loads((ROOT / 'desktop/release.json').read_text()).get('channel') == 'beta' else 'dist/Production Desk.app')
+    if args.app:
+        if args.source:
+            parser.error('--source and --app are mutually exclusive')
+        app = args.app.resolve()
     python = app / 'Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9'
     runtime = app / 'Contents/Resources/runtime'
     if args.source:

@@ -4,7 +4,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {spawn}=require('node:child_process');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'pd-lined-')),ready=path.join(temp,'ready.json');
-const server=spawn(process.env.PYTHON||'python3',['-B',path.join(root,'server.py'),'--port','0','--data',path.join(temp,'workspace.json'),'--ready-file',ready]);
+const runtime=process.env.PRODUCTION_DESK_RUNTIME?path.resolve(process.env.PRODUCTION_DESK_RUNTIME):root;
+const server=spawn(process.env.PYTHON||'python3',['-B',path.join(runtime,'server.py'),'--port','0','--data',path.join(temp,'workspace.json'),'--ready-file',ready]);
 fs.mkdirSync(path.join(root,'build'),{recursive:true});
 let browser,log='';server.stderr.on('data',v=>log+=v);
 (async()=>{try{

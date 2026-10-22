@@ -58,8 +58,9 @@ All QA uses synthetic temporary workspaces, never the installed app's data.
 - Swift type-check: `desktop/Slate.swift` and `desktop/Updates.swift` passed against the
   existing verified local Sparkle framework. JavaScript syntax and `git diff --check` pass.
 
-Not run: a new packaged Mac build, actual Windows/Electron installer execution,
-Windows PDF extraction, iOS tests, release/signing/publication/App Store workflows.
+Not run: actual Windows/Electron installer execution, Windows PDF extraction,
+iOS tests, notarization/publication/App Store workflows. Packaged Mac verification
+is now complete as described below (ad-hoc signing only).
 The native harness verifies the menu bridge behavior; it does not simulate an OS menu click.
 No current test failures or permission blockers remain.
 
@@ -82,3 +83,54 @@ node --test tests/mac-store-exports.cjs tests/platform-branding.cjs tests/suppor
 The optional browser harness uses Playwright and Chromium. `PLAYWRIGHT_MODULE` and
 `BROWSER_EXECUTABLE` can point to existing local installations; `PYTHON` overrides Python.
 Screenshots/PDF evidence is generated under ignored `windows-src/build/`.
+
+## Packaged Mac verification completed
+
+Implementation tested: `866c68b2f47aa0fa2065dd3b88f2906e8a7f2a3c`.
+The app's native executable and Python/web runtime were built from that commit.
+Subsequent tracked changes add only test-target selection, this report and the safe launcher.
+
+Artifact: `windows-src/dist/Production Desk Lined Script Preview.app`.
+It is an Apple Silicon, locally ad-hoc-signed app, not a notarized release. Its bundle
+metadata supplies a unique preview identifier, marks it as a beta to skip update startup
+and migration, disables automatic updates, removes the live feed URL, and records the
+implementation commit. Runtime assets match the committed source; SHA-256 evidence is
+under `windows-src/build/packaged-lined-review/`.
+
+Use **Start Packaged Lined Script Preview.command** from this checkout to launch it.
+That launcher supplies a fresh isolated home under ignored `windows-src/build/` and
+prints its data location. Review data stays there after quitting. Import copies only.
+Use this launcher for isolation instead of opening the app bundle directly.
+
+Passed against the packaged runtime:
+
+- Offline build, bundled standard-library startup, and `codesign --verify --deep --strict`.
+- Full Python suite with bundled Python/backend: 81 total, 80 passed, 1 Windows dependency skip.
+- Browser aggregate with bundled Python/server/web assets: 46 checks, zero page errors,
+  including real keyboard/mouse behavior and the 1.5.11 PDF/Main Breakdown regressions.
+- Native WebKit aggregate against bundled Python/backend: 41 named checks plus native
+  save/import/reload checks.
+- Actual compiled AppKit app launch: Foundation home and Application Support isolation
+  were proved before launch. Its child used the bundled Python and temporary workspace.
+  The same native aggregate passed against that actual app's server. The test stopped only
+  its own processes. Installed app and every existing Slate file retained their original
+  fingerprints and modification times.
+
+No Windows VM, Wine or current Windows/Electron runtime/dependencies were available.
+The old Windows installer on disk was not installed or executed on macOS. Windows remains
+an explicitly untested runtime/installer platform for this patch. The native harness
+checks the menu bridge behavior, not physical OS menu clicks. Nothing was published,
+notarized with new credentials, installed over the working app, or enabled in an update feed.
+
+Repeat packaged checks from `windows-src` after building the preview:
+
+```sh
+python3 -B tools/check_macos_desktop.py --app 'dist/Production Desk Lined Script Preview.app'
+PRODUCTION_DESK_RUNTIME="$PWD/dist/Production Desk Lined Script Preview.app/Contents/Resources/runtime" \
+PYTHON="$PWD/dist/Production Desk Lined Script Preview.app/Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9" \
+node tools/check_lined_browser.cjs --all
+```
+
+Evidence: `build/packaged-lined-review/summary.json`, `build.log`, `signature.log`,
+`packaged-runtime-sha256.json`, `native-packaged.log`, `actual-app-result.json`,
+`actual-app-webkit.log`, `browser-packaged.json`, and `python-packaged.log`.
