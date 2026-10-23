@@ -182,7 +182,7 @@ def build(args):
         options = {'method':'app-store-connect','destination':'export','signingStyle':'manual',
                    'teamID':TEAM,'signingCertificate':identity,'installerSigningCertificate':args.installer_identity,
                    'provisioningProfiles':{args.bundle_id:profile['Name']},'manageAppVersionAndBuildNumber':False,
-                   'testFlightInternalTestingOnly':True,'uploadSymbols':True}
+                   'testFlightInternalTestingOnly':args.testflight_internal_only,'uploadSymbols':True}
         plist(out / 'ExportOptions-export.plist', options)
         options['destination'] = 'upload'
         plist(out / 'ExportOptions-upload.plist', options)
@@ -195,6 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--bundle-id',required=True)
     parser.add_argument('--build')
+    parser.add_argument('--testflight-internal-only', action='store_true', help='Restrict the upload to internal TestFlight; omit for an App Store candidate')
     parser.add_argument('--identity',default='-',help='Existing identity; default ad-hoc is local verification only')
     parser.add_argument('--local-development',action='store_true',help='Use an existing development identity for local sandbox checks only')
     parser.add_argument('--profile',type=Path,help='Existing downloaded Mac TestFlight distribution profile')

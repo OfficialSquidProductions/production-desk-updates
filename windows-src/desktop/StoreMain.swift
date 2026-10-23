@@ -5,6 +5,18 @@ import AppKit
 @main
 struct StoreMain {
     static func main() {
+        // Read-only preflight: isolated QA must establish Foundation's storage
+        // routing before starting the UI or creating a workspace.
+        if CommandLine.arguments.contains("--store-storage-check") {
+            let fm = FileManager.default
+            let support = try! fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+                .appendingPathComponent(ProductionDeskDataLocation.folder(info: Bundle.main.infoDictionary ?? [:]))
+            let value = ["home": fm.homeDirectoryForCurrentUser.path, "support": support.path,
+                         "workspace": support.appendingPathComponent("workspace.json").path,
+                         "temporary": NSTemporaryDirectory()]
+            print(String(data: try! JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]), encoding: .utf8)!)
+            return
+        }
         if CommandLine.arguments.contains("--store-runtime-check") {
             do {
                 let process = Process()

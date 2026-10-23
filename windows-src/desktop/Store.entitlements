@@ -4,6 +4,9 @@
   <key>com.apple.security.app-sandbox</key><true/>
   <key>com.apple.security.files.user-selected.read-write</key><true/>
   <key>com.apple.security.network.client</key><true/>
+  <!-- Required by the sandbox-inheriting Python backend: TCP 127.0.0.1:0.
+       WKWebView loads the editor and calls local import/save/export APIs.
+       See MAC-APP-STORE-REVIEW.md; removing this prevents backend startup. -->
   <key>com.apple.security.network.server</key><true/>
   <key>com.apple.security.print</key><true/>
 </dict></plist>
