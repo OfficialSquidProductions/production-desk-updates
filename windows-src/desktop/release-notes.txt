@@ -1,7 +1,7 @@
-Production Desk 1.5.15 for Windows
+Production Desk 1.5.15 (45) for Mac
 
-Brings Windows up to the latest Mac editor behavior. Removed the separate Shot Shooting Order tab. The regular Shot List remains available for shot editing, reordering, filters, estimates, export and printing. Existing saved filming-order data remains unchanged in portable project files and backups for compatibility.
+Fixes an intermittent disabled Check for Updates command when the editor becomes ready after the native startup callback. The updater now recognizes delayed readiness and recovers from startup errors. Check for Updates can initialize or retry the updater, with protection against overlapping checks and repeated clicks.
 
-Includes the latest tested breakdown, original-script PDF, lined-script gutter export, schedule drag, Shot List and portable project fixes. Existing projects and offline operation are preserved.
+Automatic-check preferences, signed download validation and save-before-install remain in effect. Existing breakdowns, scripts/PDFs, lined annotations, Shot List, schedules, portable projects and offline operation are preserved.
 
-Windows 10/11 x64. Complete offline installer. This Windows build is unsigned and may show a SmartScreen prompt. Windows 1.5.14 and earlier can receive this update through Check for Updates. Mac downloads and the Mac update feed remain at 1.5.14 (37).
+Standalone Mac update only. Developer ID signed and Apple-notarized. Windows remains 1.5.15 (44); iPhone, iPad, Mac App Store and TestFlight submissions are unchanged.
