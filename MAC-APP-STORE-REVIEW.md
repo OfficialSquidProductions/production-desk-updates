@@ -1,6 +1,6 @@
 # Production Desk Mac App Store correction — 2026-10-23
 
-Worktree: `mac-store-review-dev`, branch `fix/mac-store-network-review`, based on `80ac6bb`. Runtime source at that commit is identical to public standalone source `c7b09a4050e8cd42c08d2892e9bed04dc79e6c82` (1.5.14 Mac build 36). Existing development worktrees and published standalone artifacts are unchanged.
+Worktree: `mac-store-review-dev`, branch `fix/mac-store-network-review`, based on `80ac6bb`. Runtime source at that commit is identical to public standalone source `c7b09a4050e8cd42c08d2892e9bed04dc79e6c82` (1.5.14 Mac build 36). Existing development worktrees and prior standalone build 36 artifacts were preserved. New build 37 publication is recorded below.
 
 ## Remedy
 
@@ -18,7 +18,7 @@ The separate Shot Shooting Order navigation and app route are removed. The regul
 
 The existing browser/native aggregate now verifies tab absence, regular Shot List canonical order/edit/reorder/Undo/Redo, and exact retained-field preservation through import, save, portable export and recipient import. Backend portable tests retain complete project fields, IDs and original PDF bytes. Low-level legacy order parsing remains for compatibility.
 
-Candidate: **1.5.14 (37)**, `com.hosier.scheduler.ipad`, team `FZ298DXLS3`. Marketing version follows the latest public feature baseline; unique build 37 follows standalone build 36 and the latest observed ASC Mac upload 31. The Store builder now defaults `testFlightInternalTestingOnly` to false; internal-only uploads require an explicit option. The published standalone version/feed/artifacts are untouched.
+Released/submitted version: **1.5.14 (37)**, `com.hosier.scheduler.ipad`, team `FZ298DXLS3`. Marketing version follows the latest public feature baseline; unique build 37 follows standalone build 36 and the latest observed ASC Mac upload 31. The Store builder now defaults `testFlightInternalTestingOnly` to false; internal-only uploads require an explicit option. The separately signed standalone channel now publishes build 37; old artifacts remain intact.
 
 ## Exact App Review Information text
 
@@ -39,7 +39,7 @@ Production Desk requires com.apple.security.network.server for its bundled offli
 
 Validation evidence and the final upload/selection/submission state are recorded separately in the final task handoff. Successful upload/processing or resubmission does not constitute Apple approval.
 
-## Verified candidate and execution blocker
+## Verified App Store package and submission
 
 Implementation commit: `35460adcc911e8020f358074c468452702a430a7` (follow-up test/documentation commits may follow; production payload remains this implementation). Candidate output is under ignored `windows-src/build/store-review-20261023/`:
 
@@ -53,6 +53,26 @@ Implementation commit: `35460adcc911e8020f358074c468452702a430a7` (follow-up tes
 
 Native save-panel interaction was not newly driven manually this turn. The signed sandbox suite verified export API/bytes/import and the native save policy was tested. Intel code was built/signed, while runtime checks ran on Apple Silicon. The updated standalone Chromium compatibility tool was syntax-checked; its shared assertions ran in native sandbox WebKit.
 
-**Upload denied before execution.** Automatic approval review rejected the `xcodebuild -exportArchive` operation using `distribution/ExportOptions-upload.plist`, citing the original prepare-only restriction and not accepting the later delegated user authorization to upload. No upload process was started. Do not bypass or retry this denied operation without materially new relevant authorization evidence. The attempted parent-task message via the app tool failed with `thread not found`; this task's checkpoint/final response is the handoff channel.
+The initial upload was denied before execution because automatic approval review applied the earlier prepare-only restriction. The user then explicitly authorized retry, publication and resubmission. The single authorized retry succeeded; `upload-retry.log` records the upload. It reported 77 warnings for unavailable prebuilt Python runtime dSYMs, while the main app and PDF helper dSYMs are retained. Processing completed successfully.
 
-App Store Connect was not mutated: Mac remains rejected 1.5.10 (31); no new build was selected, no review Notes/reply was saved/sent, and no resubmission occurred. No iOS/Scenic record, standalone artifact/feed, account security setting, signing credential, real project or installed app changed. Upload readiness is verified locally; processing, selection and resubmission remain blocked, and Apple approval is unknown.
+Build `c7a2eb24-34bc-478d-bc25-557c2d08e607` was selected for Mac version **1.5.14 (37)**. The exact App Review Information above was saved, the exact reply above was posted once, and the corrected Mac item was resubmitted. The existing [submission receipt](https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/7d2a7d8a-ebdc-473e-a13f-b819742790db) displayed **Waiting for Review**, Mac App 1.5.14, build 1.5.14 (37), on 2026-10-23 at approximately 02:33 UTC. This is a verified resubmission, not Apple approval. iOS and Scenic submissions were not changed.
+
+## Standalone publication and live downloads
+
+Standalone release source is `906a498f295f8feba1182e1d4e2051411e188ad9`, with the same tested editor payload as the Store candidate. Publication commit `9e67456218bad0c83bccca9b801dd8e74fc2c486` adds new artifacts and updates the signed feed/download page. Website commit `36b6f101f50d667ddd5925f90a90eded46b89439` changes only Mac download links and version label. Both Pages builds completed successfully. No DNS, Windows release, old Mac asset, signing credential or security setting was changed.
+
+- [Immutable Mac build 37 release](https://github.com/OfficialSquidProductions/production-desk-updates/releases/tag/macos-1.5.14-build-37)
+- [App ZIP](https://updates.squidproductions.org/Production-Desk-1.5.14-37.zip): SHA-256 `957a229abcac632a1f42a35ada6ea13fe833c840522e91a6cceece5421bb0e23`, 21,337,755 bytes.
+- [Installer ZIP](https://updates.squidproductions.org/Production-Desk-Installer-1.5.14-37.zip): SHA-256 `63047fc831f8202ff28c41dc43e78966320be5c5b50fef9d27fe66e374b1bcd6`, 19,564,408 bytes.
+- [Signed Sparkle feed](https://updates.squidproductions.org/appcast.xml)
+- [Product website](https://productiondesk.squidproductions.org/) and [download website](https://updates.squidproductions.org/): served HTML points to build 37 app and installer. Actual downloaded bytes, including GitHub redirect targets, match the hashes above. Windows links remain unchanged.
+
+The standalone app and installer use Developer ID signing, notarization and stapled tickets; they are not the App Store package. Signature, ticket, Gatekeeper and distribution checks passed, including checks on fresh public downloads. The installer contains the exact notarized app ZIP. Sparkle's Ed25519 signature was independently verified. Existing feed URL, public key, consent and channel policies remain intact. A real Sparkle check using the previous signed **1.5.14 (36)** host offered **1.5.14 (37)** from the live feed; it was dismissed with zero downloads/installations and an unchanged host. Same marketing version works because the internal build increased.
+
+Evidence under ignored `windows-src/build/release-1.5.14-37/`: `signed-archive.json`, `app-package-verified.json`, `installer-package-verified.json`, `actual-app-result.json`, `live-updater-result.json`, `live-verification.json`, and associated raw logs. The notarized actual app was preflighted and launched only against disposable storage, and passed the 62 named WebKit checks plus focus/save/import/reload checks. Packaged Python tests passed 94 with one existing Windows dependency skip. Installer self-tests passed fresh install/update/project preservation and invalid-target protections without driving an installation onto the user's app.
+
+## Storage protection observations and limits
+
+The initial sandbox test's 1,236-file baseline was unchanged. Across the longer standalone work interval, a later comparison found three existing Slate files changed: `workspace.json`, `workspace.previous.json` and `desktop.log`; no files were added/removed and installed-app fingerprints were unchanged. A scoped system log records a separate user-interactive LaunchServices launch of `local.slate.filmscheduler` at 22:13:38 EDT on October 22, ending at 22:14:21. The actor/writer is not established. Our test backend log records its disposable data path; no real project was intentionally opened or restored by this task. This discrepancy is recorded in `protected-delta.json` and `productiondesk-launch-context.log`; do not infer whole-interval storage invariance. Later tightly scoped actual-app and updater tests each independently confirmed all 1,232 protected files unchanged during those tests. Nothing was restored or overwritten to conceal the discrepancy.
+
+Native save-panel interaction was not newly driven manually; the sandbox API/export bytes, import roundtrip and native save policy were verified. Intel code was built/signed; runtime tests ran on Apple Silicon. No build/upload is still active, no Codex restart was performed, and there is no remaining execution blocker. Apple review is pending.
