@@ -25,11 +25,21 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     var startupDeadline = Date()
     var support: URL!
     var isQuitting = false
-    let updates = ProductionDeskUpdates()
+    let updates: ProductionDeskUpdates
+    private var editorReadinessTimer: Timer?
+    private var editorReadinessGeneration = 0
+    private var editorReadinessProbeInFlight = false
+    private var updaterStartupRetryAfter = Date.distantPast
+    private var updaterStartupRetryDelay: TimeInterval = 1
     var sessionFile: URL?
     #if APP_STORE
     let storeExports = StoreExports()
     #endif
+
+    init(updates: ProductionDeskUpdates = ProductionDeskUpdates()) {
+        self.updates = updates
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         createMenu()
@@ -160,6 +170,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
                 timer.invalidate()
                 try? fm.removeItem(at: self.readyFile)
                 self.localOrigin = url
+                self.observeEditorReadiness()
                 self.web.load(URLRequest(url: url))
             } else if Date() > self.startupDeadline {
                 timer.invalidate()
@@ -169,12 +180,64 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        if webView.url?.scheme == "http", webView.url?.host == "127.0.0.1", webView.url?.port == localOrigin?.port,
-           !isDevelopmentPreview {
-            webView.callAsyncJavaScript("return await (window.slateDesktop?.ready ?? false);", arguments: [:], in: nil, in: .page) { [weak self] result in
-                if case .success(let ready) = result, ready as? Bool == true { self?.updates.start() }
-            }
+        observeEditorReadiness()
+    }
+
+    // Observe independently of didFinish: modules can install the bridge later,
+    // and navigation callbacks may be missed. Each probe returns immediately,
+    // even while the editor's readiness promise is still pending.
+    func observeEditorReadiness() {
+        #if !APP_STORE
+        guard !isDevelopmentPreview, !isQuitting, editorReadinessTimer == nil else { return }
+        editorReadinessTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            self?.probeEditorReadiness()
         }
+        probeEditorReadiness()
+        #endif
+    }
+
+    func stopEditorReadinessObservation() {
+        editorReadinessTimer?.invalidate()
+        editorReadinessTimer = nil
+        editorReadinessGeneration += 1
+        editorReadinessProbeInFlight = false
+    }
+
+    private func probeEditorReadiness() {
+        #if !APP_STORE
+        guard !isQuitting, !editorReadinessProbeInFlight, let web = web,
+              Date() >= updaterStartupRetryAfter,
+              let origin = localOrigin, origin.scheme == "http", origin.host == "127.0.0.1",
+              web.url?.scheme == origin.scheme, web.url?.host == origin.host, web.url?.port == origin.port else { return }
+        let generation = editorReadinessGeneration
+        editorReadinessProbeInFlight = true
+        web.evaluateJavaScript("""
+            (() => {
+                const ready = window.slateDesktop?.ready;
+                if (!ready) return false;
+                let state = window.__productionDeskNativeReadiness;
+                if (!state || state.promise !== ready) {
+                    state = {promise: ready, ready: false};
+                    window.__productionDeskNativeReadiness = state;
+                    Promise.resolve(ready).then(value => { state.ready = value === true; }, () => {});
+                }
+                return state.ready;
+            })()
+            """) { [weak self, weak web] value, _ in
+                guard let self = self, self.editorReadinessGeneration == generation else { return }
+                self.editorReadinessProbeInFlight = false
+                guard !self.isQuitting, web?.url?.scheme == origin.scheme,
+                      web?.url?.host == origin.host, web?.url?.port == origin.port,
+                      self.localOrigin == origin, value as? Bool == true else { return }
+                if self.updates.start() { self.stopEditorReadinessObservation() }
+                else {
+                    // A persistent Sparkle configuration error must not produce
+                    // a tight retry/log loop. Manual checks can retry immediately.
+                    self.updaterStartupRetryAfter = Date().addingTimeInterval(self.updaterStartupRetryDelay)
+                    self.updaterStartupRetryDelay = min(30, self.updaterStartupRetryDelay * 2)
+                }
+            }
+        #endif
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -374,6 +437,7 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
     func applicationWillTerminate(_ notification: Notification) {
         isQuitting = true; readyTimer?.invalidate()
+        stopEditorReadinessObservation()
         if let file = sessionFile, let raw = try? Data(contentsOf: file),
            let value = try? JSONSerialization.jsonObject(with: raw) as? [String: Int],
            value["pid"] == Int(ProcessInfo.processInfo.processIdentifier) { try? FileManager.default.removeItem(at: file) }

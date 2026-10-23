@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 from threading import Thread
 import uuid
+import time
 from macos_updates import ROOT, release_config, sparkle_distribution, updater_plist
 
 
@@ -20,6 +21,8 @@ class Feed(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.requests.append(self.path)
+        if self.mode in ("manual-retry", "manual-before-ready", "cancel-retry"):
+            time.sleep(0.2)
         if self.mode == "malformed":
             data = b"<rss><channel><item>broken"
         elif self.mode == "offline":
@@ -40,7 +43,7 @@ class Feed(BaseHTTPRequestHandler):
         pass
 
 
-def build_fixture(folder, feed_url, sparkle, config):
+def build_fixture(folder, feed_url, sparkle, config, test_source="UpdaterLaunchCheck.swift"):
     app = folder / "Production Desk Update QA.app"
     contents = app / "Contents"
     (contents / "MacOS").mkdir(parents=True)
@@ -54,7 +57,7 @@ def build_fixture(folder, feed_url, sparkle, config):
     (contents / "Info.plist").write_bytes(plistlib.dumps(info))
     subprocess.run(["swiftc", "-module-cache-path", str(ROOT / ".cache/swift"), "-F", str(sparkle), "-framework", "Sparkle",
                     "-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks", str(ROOT / "desktop/Updates.swift"),
-                    str(ROOT / "tests/UpdaterLaunchCheck.swift"), "-o", str(contents / "MacOS/UpdateQA")], check=True)
+                    str(ROOT / "tests" / test_source), "-o", str(contents / "MacOS/UpdateQA")], check=True)
     subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
     return app
 
@@ -85,14 +88,16 @@ def main():
             assert info["CFBundleExecutable"] == "UpdateQA" and info["SUFeedURL"] == f"http://127.0.0.1:{server.server_port}/appcast.xml"
             assert not (app / "Contents/Resources/runtime").exists()
             print("Before fixture launch: dedicated home, preferences/cache/log routing, unique QA identity and loopback-only feed verified; no workspace, PDF or backup backend", flush=True)
-            for mode in ["equal", "older", "newer", "newer", "incompatible", "offline", "malformed", "opt-out"]:
+            for mode in ["equal", "older", "newer", "newer", "incompatible", "offline", "malformed", "opt-out", "startup-retry", "manual-retry", "manual-before-ready", "cancel-retry"]:
                 Feed.mode = mode
                 Feed.requests.clear()
                 subprocess.run([str(binary), mode], env=env, check=True, timeout=45)
-                expected = 0 if mode == "opt-out" else 3 if mode == "newer" else 1
+                expected = 0 if mode == "opt-out" else 3 if mode in ("newer", "startup-retry") else 1
                 if mode == "offline":
                     # NSURLSession may retry an abruptly closed connection.
                     assert 1 <= len(Feed.requests) <= 3, (mode, Feed.requests)
+                elif mode == "cancel-retry":
+                    assert 1 <= len(Feed.requests) <= 2, (mode, Feed.requests)
                 else:
                     assert len(Feed.requests) == expected, (mode, Feed.requests)
                 assert all(path == "/appcast.xml" for path in Feed.requests)

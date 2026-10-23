@@ -10,25 +10,48 @@ final class ProductionDeskUpdates: NSObject, SPUUpdaterDelegate, NSMenuItemValid
     private var saving = false
     private var installing = false
     private var started = false
+    private var starting = false
+    private var launchCheckRequested = false
+    private let startUpdater: (SPUUpdater) throws -> Void
     private var offeredBuilds = Set<String>()
     var saveWorkspace: ((@escaping (Bool) -> Void) -> Void)?
     weak var window: NSWindow?
 
-    init(userDriver: SPUUserDriver? = nil) {
+    init(userDriver: SPUUserDriver? = nil, startUpdater: @escaping (SPUUpdater) throws -> Void = { try $0.start() }) {
+        self.startUpdater = startUpdater
         super.init()
         driver = userDriver ?? SPUStandardUserDriver(hostBundle: .main, delegate: nil)
         updateEngine = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: driver, delegate: self)
     }
 
-    func start() {
-        guard !started else { return }
-        started = true
+    @discardableResult
+    private func prepare(reportError: Bool = false) -> Bool {
+        if started { return true }
+        guard !starting else { return false }
+        starting = true
+        defer { starting = false }
         do {
-            try updateEngine.start()
-            // Sparkle recommends forcing a launch check immediately after start,
-            // before its scheduled cycle. This is asynchronous and respects opt-out.
-            if updateEngine.automaticallyChecksForUpdates { updateEngine.checkForUpdatesInBackground() }
-        } catch { NSLog("Production Desk update checking could not start: %@", error.localizedDescription) }
+            try startUpdater(updateEngine)
+            started = true
+            return true
+        } catch {
+            NSLog("Production Desk update checking could not start: %@", error.localizedDescription)
+            if reportError { driver.showUpdaterError(error, acknowledgement: {}) }
+            return false
+        }
+    }
+
+    @discardableResult
+    func start() -> Bool {
+        guard prepare() else { return false }
+        guard !launchCheckRequested else { return true }
+        launchCheckRequested = true
+        // Start once after editor readiness; a manual check can consume this
+        // launch check first. Sparkle owns session scheduling and cancellation.
+        if updateEngine.automaticallyChecksForUpdates && !updateEngine.sessionInProgress {
+            updateEngine.checkForUpdatesInBackground()
+        }
+        return true
     }
 
     func addMenuItems(to menu: NSMenu) {
@@ -43,8 +66,12 @@ final class ProductionDeskUpdates: NSObject, SPUUpdaterDelegate, NSMenuItemValid
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
+        guard !saving, !installing, !starting else { return }
         if pendingInstall != nil { finishInstallation() }
-        else { updateEngine.checkForUpdates() }
+        else if prepare(reportError: true), updateEngine.canCheckForUpdates, !updateEngine.sessionInProgress {
+            launchCheckRequested = true
+            updateEngine.checkForUpdates()
+        }
     }
     @objc private func toggleChecks(_ sender: Any?) {
         updateEngine.automaticallyChecksForUpdates.toggle()
@@ -53,7 +80,7 @@ final class ProductionDeskUpdates: NSObject, SPUUpdaterDelegate, NSMenuItemValid
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(checkForUpdates) {
             item.title = pendingInstall == nil ? "Check for Updates…" : "Continue Installing Update…"
-            return !saving && !installing && (pendingInstall != nil || updateEngine.canCheckForUpdates)
+            return !saving && !installing && !starting && (pendingInstall != nil || !started || (updateEngine.canCheckForUpdates && !updateEngine.sessionInProgress))
         }
         if item.action == #selector(toggleChecks) {
             item.state = updateEngine.automaticallyChecksForUpdates ? .on : .off

@@ -58,6 +58,14 @@ Check for Updates can reopen it. Ordinary exit never installs an update, and
 offline or invalid feeds stay quiet during automatic checks. Existing Mac Sparkle
 signatures and Windows HTTPS/checksum validation remain in use.
 
+On Mac, Check for Updates can initialize the updater before the editor is ready
+and retry a failed initialization. Automatic startup observes delayed editor
+readiness independently of navigation completion, with bounded retry delays if
+Sparkle cannot initialize. The native updater check above uses uniquely identified
+QA bundles, disposable storage/preferences and loopback fixtures; it never opens
+the installed app or a production workspace. See the
+[startup fix verification](UPDATER-STARTUP-FIX.md) for coverage and limits.
+
 ## Build on Windows
 
 Use Windows x64, Python 3.12, and Node 22:
