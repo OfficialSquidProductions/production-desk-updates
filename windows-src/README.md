@@ -113,11 +113,10 @@ headers also accept drops. Hold near the scroll-pane edge to scroll; Escape canc
 Click a handle for the precise Move dialog, or click strip content to open its breakdown.
 See [local review and verification](../SCHEDULE-DRAG-REVIEW.md).
 
-## Independent shot filming order (local development)
+## Saved filming-order compatibility
 
-Use **Shot Shooting Order** to arrange shot strips across scenes while keeping **Shot list**
-as the canonical list. Drag the top/bottom half of a strip to insert before/after, or
-click its grab handle for exact placement. Escape cancels. Details remain shared;
-shot identifiers and scene schedules retain their values. Newly created shots append
-to the filming order. Complete project files and backups carry the arrangement.
-See [implementation and review](../SHOT-SHOOTING-ORDER-REVIEW.md).
+The separate Shot Shooting Order tab was removed in Mac build 37. Use the regular
+**Shot list** for shot editing, reordering, filtering, estimates, export and print.
+Older filming-order data is retained unchanged in saved projects and portable
+.productiondesk exports for compatibility; no data migration deletes it.
+See [Mac release verification](../MAC-APP-STORE-REVIEW.md).
