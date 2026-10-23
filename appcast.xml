@@ -3,18 +3,18 @@
     <channel>
         <title>Production Desk</title>
         <item>
-            <title>1.5.14</title>
-            <pubDate>Thu, 22 Oct 2026 22:14:44 -0400</pubDate>
-            <sparkle:version>37</sparkle:version>
-            <sparkle:shortVersionString>1.5.14</sparkle:shortVersionString>
+            <title>1.5.15</title>
+            <pubDate>Fri, 23 Oct 2026 18:46:22 -0400</pubDate>
+            <sparkle:version>45</sparkle:version>
+            <sparkle:shortVersionString>1.5.15</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<!doctype html><html><head><meta charset="utf-8"><title>Production Desk 1.5.14 (37)</title></head><body><h1>Production Desk 1.5.14 (37) for Mac</h1>
-<p>Removed the separate Shot Shooting Order tab. The regular Shot List remains available for shot editing, reordering, filters, estimates, export and printing. Existing saved filming-order data remains in portable project files and backups for compatibility.</p>
-<p>Includes the latest tested breakdown, original-script PDF, lined-script gutter export, schedule drag, Shot List and portable project fixes. Existing projects and offline operation are preserved.</p>
-<p>This is a new Developer ID signed, Apple notarized Mac desktop update. Mac App Store review is a separate distribution channel.</p></body></html>
+            <description><![CDATA[<h1>Production Desk 1.5.15 (45) for Mac</h1>
+<p>Fixes an intermittent disabled Check for Updates command when the editor becomes ready after the native startup callback. The updater now recognizes delayed readiness and recovers from startup errors. Check for Updates can initialize or retry the updater, with protection against overlapping checks and repeated clicks.</p>
+<p>Automatic-check preferences, signed download validation and save-before-install remain in effect. Existing breakdowns, scripts/PDFs, lined annotations, Shot List, schedules, portable projects and offline operation are preserved.</p>
+<p>Standalone Mac update only. Developer ID signed and Apple-notarized. Windows remains 1.5.15 (44); iPhone, iPad, Mac App Store and TestFlight submissions are unchanged.</p>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.14-37.zip" length="21337755" type="application/octet-stream" sparkle:edSignature="lnMZ2U8Zpppg3U6NX8ja9PTFJeb5uXXV8myHvu/7LVj6aj3TIvchgtbrFG+JZQFBMgAbHJdRlL04CWxhgCn3DA=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.15-45.zip" length="21342269" type="application/octet-stream" sparkle:edSignature="r9LO0Nb3nAc6YHlqpv4pMPWdJggERIwLA89j8fGBZ52keyEZBM3eLKRSCkl832D3RL7SME/hflXmKvCi4rLDAA=="/>
         </item>
     </channel>
 </rss>
