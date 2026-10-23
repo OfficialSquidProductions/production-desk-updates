@@ -4,5 +4,5 @@ cd "$(dirname "$0")/.."
 xcodebuild -project ProductionDesk.xcodeproj -scheme ProductionDesk \
   -configuration Release -destination 'generic/platform=iOS' \
   -derivedDataPath archive-build \
-  -archivePath artifacts/ProductionDesk-1.5.5-24-registered-ipad-unsigned.xcarchive \
+  -archivePath artifacts/ProductionDesk-1.5.14-39-unsigned.xcarchive \
   CODE_SIGNING_ALLOWED=NO archive

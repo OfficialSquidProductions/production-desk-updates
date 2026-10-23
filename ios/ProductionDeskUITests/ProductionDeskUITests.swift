@@ -2,6 +2,39 @@ import XCTest
 import UIKit
 
 final class ProductionDeskUITests: XCTestCase {
+    @MainActor private func revealSaveAs(_ web: XCUIElement) {
+        let save = web.buttons["Save As…"]
+        XCTAssertTrue(save.waitForExistence(timeout: 10))
+        if !save.isHittable { web.swipeUp() }
+        XCTAssertTrue(save.isHittable)
+    }
+
+    @MainActor func testTouchScheduleDragAndLinedToolbar() throws {
+        let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait;app.launch()
+        let web=app.webViews["production-desk-webview"]
+        XCTAssertTrue(web.waitForExistence(timeout:15))
+        let load=web.buttons["Load The Last Light demo"];XCTAssertTrue(load.waitForExistence(timeout:10));load.tap()
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:load)
+        XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed)
+        web.buttons["Shooting schedule"].tap()
+        let source=web.buttons["Move scene 3"].firstMatch
+        let target=web.buttons["Move scene 4"].firstMatch
+        XCTAssertTrue(source.waitForExistence(timeout:10))
+        for _ in 0..<6 {if source.isHittable && target.isHittable {break};web.swipeUp()}
+        XCTAssertTrue(source.isHittable && target.isHittable)
+        source.press(forDuration:1.2,thenDragTo:target)
+        XCTAssertTrue(web.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Strip moved.")).firstMatch.waitForExistence(timeout:8),app.debugDescription)
+        let board=XCTAttachment(screenshot:app.screenshot());board.name="Touch drag between schedule strips";board.lifetime = .keepAlways;add(board)
+        web.buttons["Lined script"].tap()
+        let pen=web.switches.matching(NSPredicate(format:"label CONTAINS %@","Pen")).firstMatch
+        XCTAssertTrue(pen.waitForExistence(timeout:10))
+        for _ in 0..<6 {if pen.isHittable {break};web.swipeUp()}
+        XCTAssertTrue(pen.isHittable);pen.tap();XCTAssertEqual(pen.value as? String,"1")
+        let select=web.switches.matching(NSPredicate(format:"label CONTAINS %@","Select")).firstMatch
+        XCTAssertTrue(select.isHittable);select.tap();XCTAssertEqual(select.value as? String,"1")
+        let lined=XCTAttachment(screenshot:app.screenshot());lined.name="Touch lined-script toolbar controls";lined.lifetime = .keepAlways;add(lined)
+    }
+
     @MainActor func testPopulatedMobileViewsAndKeyboard() throws {
         let app = XCUIApplication(); app.launch()
         let web = app.webViews["production-desk-webview"]
@@ -137,6 +170,7 @@ final class ProductionDeskUITests: XCTestCase {
         let app=XCUIApplication();app.launch()
         let web=app.webViews["production-desk-webview"]
         XCTAssertTrue(web.waitForExistence(timeout:15))
+        revealSaveAs(web)
         let save=web.buttons["Save As…"]
         XCTAssertTrue(save.waitForExistence(timeout:10));XCTAssertTrue(save.isHittable)
         save.tap()
@@ -185,6 +219,7 @@ final class ProductionDeskUITests: XCTestCase {
         let web=app.webViews["production-desk-webview"]
         XCTAssertTrue(web.waitForExistence(timeout:15))
         let stem="Portable-UI-"+String(UUID().uuidString.prefix(8))
+        revealSaveAs(web)
         web.buttons["Save As…"].tap()
         let filename=app.textFields["DOCPicker.filenameTextField"]
         XCTAssertTrue(filename.waitForExistence(timeout:10),app.debugDescription)
@@ -362,6 +397,7 @@ final class ProductionDeskUITests: XCTestCase {
         let lined=XCTAttachment(screenshot:XCUIScreen.main.screenshot());lined.name="Bundled original PDF with linked editable demo coverage";lined.lifetime = .keepAlways;add(lined)
         web.buttons.matching(NSPredicate(format:"label CONTAINS %@","Main breakdown")).firstMatch.tap()
         let stem="The-Last-Light-Demo-"+String(UUID().uuidString.prefix(8))
+        revealSaveAs(web)
         web.buttons["Save As…"].tap()
         let filename=app.textFields["DOCPicker.filenameTextField"]
         XCTAssertTrue(filename.waitForExistence(timeout:10),app.debugDescription);filename.tap()

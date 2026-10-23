@@ -25,20 +25,15 @@ export function readProjectFile(value) {
   return projectFile(value.workspace).workspace;
 }
 
-// Remap only identifiers and relationship fields. Free text and the embedded
-// source script must remain byte-for-byte equivalent, even if they contain IDs.
+// Entity IDs are scoped to their production. Keep them and every relationship,
+// including extension fields, intact. Only a colliding production ID needs a new
+// identity so the existing production remains independently selectable.
 export function mergeProductions(current, incoming, activeID) {
   const known=new Set(current.projects.map(p=>p.id));
   const titles=new Set(current.projects.map(p=>p.project||p.name));
   const imported=incoming.map(original=>{
-    let copy=structuredClone(original);
-    if(known.has(copy.id)) {
-      const map=new Map();
-      const gather=value=>{if(Array.isArray(value))value.forEach(gather);else if(value&&typeof value==='object'){if(typeof value.id==='string')map.set(value.id,crypto.randomUUID());for(const [key,item] of Object.entries(value))if(key!=='_sourceScript')gather(item);}};
-      const references=new Set(['id','category','calendar','sceneId','shotId','elements','linkedElements','breakdownIds']);
-      const replace=(value,key)=>typeof value==='string'?(references.has(key)?map.get(value)||value:value):Array.isArray(value)?value.map(item=>replace(item,key)):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,k==='_sourceScript'?v:replace(v,k)])):value;
-      gather(copy);copy=replace(copy);
-    }
+    const copy=structuredClone(original);
+    if(known.has(copy.id))copy.id=crypto.randomUUID();
     let title=copy.project||copy.name;
     if(titles.has(title)){const base=title+' · imported copy';title=base;let n=2;while(titles.has(title))title=base+' '+n++;copy.project=title;}
     known.add(copy.id);titles.add(title);return copy;
