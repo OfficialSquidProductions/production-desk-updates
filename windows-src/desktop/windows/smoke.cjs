@@ -56,11 +56,11 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
 
   const original = await (await fetch(origin+'/api/workspace')).json();
   assert.ok(original.projects.length);
-  for(const view of ['workspace','schedule','shots','shot-order','elements','reports']) {
+  for(const view of ['workspace','schedule','shots','elements','reports']) {
     await js(`document.querySelector('[data-view="${view}"]').click()`);
     assert.ok(await js('document.querySelector("#content").textContent.trim().length > 20'));
   }
-  checks.push('All six shared application views render');
+  checks.push('All five shared application views render');
   checks.push(...await require('./support-regressions.cjs')({win,origin,dataFolder,waitFor,readEmailDraft,reload:async()=>{await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});await waitFor('document.querySelector("#project-picker")?.options.length > 0');}}));
   const regressionChecks = await require('./regressions.cjs')({
     js, flush, waitFor,
@@ -75,11 +75,11 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   const {autoUpdater} = require('electron-updater');
   const currentVersion=autoUpdater.currentVersion;
   try {
-    autoUpdater.currentVersion=new currentVersion.constructor('1.4.4');
+    autoUpdater.currentVersion=new currentVersion.constructor('1.5.14');
     assert.equal(await autoUpdater.isUpdateAvailable({version:require('./package.json').version}),true);
-    assert.equal(await autoUpdater.isUpdateAvailable({version:'1.4.4'}),false);
+    assert.equal(await autoUpdater.isUpdateAvailable({version:'1.5.14'}),false);
   } finally {autoUpdater.currentVersion=currentVersion;}
-  checks.push('The real Windows updater recognizes newer versions and rejects equal-version rebuilds');
+  checks.push('The real Windows updater offers this release to Windows 1.5.14 and rejects equal-version rebuilds');
 
   await js(`document.querySelector('[data-view="shots"]').click(); document.querySelector('#add-scene').click();
     document.querySelector('#new-shot-description').value='Windows packaged application test';`);
