@@ -24,7 +24,7 @@ function desk(p) {
   p._shots ??= []; p._shotSettings ??= {startTime:'07:00'};
   let current=p, downloaded, printed=0;
   const nodes=new Map();
-  for(const selector of ['#shot-day','#shot-scene','#shot-status','#shot-search','#shot-start','#shot-metrics','#shot-list','#shot-count','#shot-detail-label','#print-area'])nodes.set(selector,{});
+  for(const selector of ['#shot-day','#shot-scene','#shot-status','#shot-search','#shot-start','#shot-metrics','#shot-list','#shot-count','#shot-detail-label','#shot-editor','#print-area'])nodes.set(selector,{});
   globalThis.document={querySelector:selector=>nodes.get(selector)??null,querySelectorAll:()=>[],createElement:()=>({style:{},setAttribute(){},append(){},contains(){return false;},focus(){},getBoundingClientRect(){return {width:100,height:40};}}),body:{append(){}},addEventListener(){},dispatchEvent(){}};
   globalThis.window={print:()=>printed++,addEventListener(){}};
   const controller=createShotDesk({esc,id:()=>crypto.randomUUID(),stamp:()=>new Date().toISOString(),project:()=>current,selectedScene:()=>current.breakdowns[0]?.id,slug:b=>b?.scene ? `Scene ${b.scene}` : '',groups:()=>current.stripboards[0].boards[0].breakdownIds,dates:count=>Array.from({length:count},(_,i)=>`2026-10-${12+i}`),dateLabel:d=>d,scenarioSelect:()=>'',scenarioName:()=>current.stripboards[0].name,download:(filename,content,mime)=>downloaded={filename,content,mime},mutate:fn=>fn(),edit:fn=>fn(),render:()=>controller.render()});
@@ -322,14 +322,14 @@ test('portable project wraps every field, preserves original source, and rejects
   const missing=structuredClone(value);missing.workspace._pdfDocuments={};
   assert.throws(()=>readProjectFile(missing),/embedded original PDF/);
 });
-test('duplicate imports remap relationships, label copies, preserve all free text, and leave existing work intact', async()=>{
+test('duplicate imports retain scoped relationships, label copies, preserve all fields, and leave existing work intact', async()=>{
   const {mergeProductions}=await import('../ProductionDesk/Web/project-file.js');
   const value=JSON.parse(readFileSync(new URL('../ProductionDeskTests/Fixtures/portable-desktop.productiondesk',import.meta.url))).workspace;
   delete value._pdfDocuments;
   const original=structuredClone(value),p=value.projects[0];p.description=p.id;p._sourceScript.text=p.id;
   const before=structuredClone(value),first=mergeProductions(value,[p]),copy=first.imported[0];
   assert.deepEqual(value,before);assert.deepEqual(first.workspace.projects[0],p);
-  assert.notEqual(copy.id,p.id);assert.notEqual(copy.breakdowns[0].id,p.breakdowns[0].id);
+  assert.notEqual(copy.id,p.id);assert.equal(copy.breakdowns[0].id,p.breakdowns[0].id);
   assert.equal(copy.description,p.id);assert.equal(copy._sourceScript.text,p.id);
   assert.equal(copy._shots[0].sceneId,copy.breakdowns[0].id);
   assert.equal(copy._linedScript.documents[0].marks[0].shotId,copy._shots[0].id);
@@ -410,7 +410,7 @@ test('collision and stale-registry demo loading preserves imported copies and va
  const incoming=runtimeDemo(),w=structuredClone(incoming);w._demoProjects={[DEMO_KEY]:'deleted-production'};
  const before=structuredClone(w),added=planDemo(w,incoming).workspace;
  assert.deepEqual(w,before);assert.equal(added.projects.length,2);assert.deepEqual(added.projects[0],w.projects[0]);
- const demo=managedDemo(added);assert.notEqual(demo.id,w.projects[0].id);assert.notEqual(demo.breakdowns[0].id,w.projects[0].breakdowns[0].id);
+ const demo=managedDemo(added);assert.notEqual(demo.id,w.projects[0].id);assert.equal(demo.breakdowns[0].id,w.projects[0].breakdowns[0].id);
  assert.equal(demo._shots[0].sceneId,demo.breakdowns[0].id);assert.equal(demo._linedScript.documents[0].marks[0].shotId,demo._shots[0].id);validateWorkspace(added);
 });
 test('invalid or stale demo operations leave workspace untouched',async()=>{

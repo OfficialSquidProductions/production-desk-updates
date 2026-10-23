@@ -14,9 +14,37 @@ final class RuntimeWorkflowTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(100))
         }
         let content = try? await controller.webView.evaluateJavaScript("document.body?.innerText")
+        let problem = try? await controller.webView.callAsyncJavaScript("return await window.webkit.messageHandlers.scheduler.postMessage({operation:'support'});", arguments: [:], in: nil, contentWorld: .page)
+        print("Startup diagnostics: \(String(describing: problem))")
         XCTFail("Bundled application did not initialize: \(String(describing: content))")
         throw CocoaError(.coderReadCorrupt)
     }
+
+    @MainActor private func runParityFixture(_ name: String) async throws {
+        let desk = try await openDesk()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let original = window.rootViewController
+        defer { window.rootViewController = original }
+        window.rootViewController = desk
+        desk.view.layoutIfNeeded()
+        // Seed fictional scenes independently of the simulator's earlier test order.
+        _ = try await desk.webView.callAsyncJavaScript("""
+        await window.slateDesktop.importProjectFile(new File(['1 INT. PARITY ROOM - DAY\\n\\nMAYA\\nSynthetic test.\\n\\n2 EXT. ROAD - NIGHT\\n\\nA second scene.'],'Parity.fountain'));
+        return true;
+        """, arguments: [:], in: nil, contentWorld: .page)
+        let fixture = try XCTUnwrap(Bundle(for: PlatformTests.self).url(forResource: name + "-parity", withExtension: "js", subdirectory: "Fixtures"))
+        let source = try String(contentsOf: fixture, encoding: .utf8)
+        let checks = try await desk.webView.callAsyncJavaScript("const run = " + source + "; return await run();", arguments: [:], in: nil, contentWorld: .page)
+        let result = try XCTUnwrap(checks as? [String])
+        XCTAssertFalse(result.isEmpty)
+        let evidence = XCTAttachment(string: result.joined(separator: "\n"))
+        evidence.name = "iOS Mac parity — " + name; evidence.lifetime = .keepAlways; add(evidence)
+    }
+
+    @MainActor func testLatestLinedControlsAndOpaqueRetiredOrder() async throws { try await runParityFixture("lined-controls") }
+    @MainActor func testLatestShotNavigationAndDeletion() async throws { try await runParityFixture("shot-navigation") }
+    @MainActor func testLatestScheduleDragPlacementAndPreservation() async throws { try await runParityFixture("schedule-drag") }
 
     @MainActor func testScriptBreakdownScheduleShotUndoAndReopen() async throws {
         let desk = try await openDesk()
@@ -282,6 +310,8 @@ final class RuntimeWorkflowTests: XCTestCase {
         const $=s=>document.querySelector(s);$('#new-open').click();
         const field=$('[data-field="modal-value"]');field.value='Empty tablet production';field.dispatchEvent(new Event('input',{bubbles:true}));$('#modal-ok').click();
         for(let i=0;i<100&&$('#project-title').textContent!=='Empty tablet production';i++)await new Promise(r=>setTimeout(r,25));
+        // UIKit can deliver a queued change after the modal's asynchronous render.
+        field.value='Late stale dialog change';field.dispatchEvent(new Event('change',{bubbles:true}));
         // A later modal must not inherit the scene-edit handlers from the render.
         $('#new-open').click();const again=$('[data-field="modal-value"]');again.value='Second empty production';again.dispatchEvent(new Event('input',{bubbles:true}));$('#modal-cancel').click();
         await window.productionDeskSave();await new Promise(r=>setTimeout(r,100));

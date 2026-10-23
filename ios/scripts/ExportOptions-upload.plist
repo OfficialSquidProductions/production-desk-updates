@@ -22,7 +22,7 @@
 	<key>teamID</key>
 	<string>FZ298DXLS3</string>
 	<key>testFlightInternalTestingOnly</key>
-	<true/>
+	<false/>
 	<key>uploadSymbols</key>
 	<true/>
 </dict>
