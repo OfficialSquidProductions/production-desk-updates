@@ -38,3 +38,21 @@ Production Desk requires com.apple.security.network.server for its bundled offli
 - [App Sandbox Information (temporary exception entitlements)](https://developer.apple.com/help/app-store-connect/reference/app-uploads/app-sandbox-information/)
 
 Validation evidence and the final upload/selection/submission state are recorded separately in the final task handoff. Successful upload/processing or resubmission does not constitute Apple approval.
+
+## Verified candidate and execution blocker
+
+Implementation commit: `35460adcc911e8020f358074c468452702a430a7` (follow-up test/documentation commits may follow; production payload remains this implementation). Candidate output is under ignored `windows-src/build/store-review-20261023/`:
+
+- `distribution/ProductionDesk.xcarchive`: universal arm64/x86_64 Apple Distribution archive, with matching main-app dSYM UUIDs.
+- `export/Production Desk.pkg`: Mac Installer Distribution package, SHA-256 `8ac9bce096c22c063e175763cbf1950a0ded0077edffdd8f547fd3a96d33ce8c`.
+- `package-verification.json`: all 79 signed native files, main and inherited helper entitlements, exact runtime resource/source/archive comparison, no Sparkle, no real workspace or migration source.
+- `sandbox-runtime-result.json`, `sandbox-webkit.log`: corrected sandbox app plus separately sandbox-signed WebKit harness passed 62 named aggregate checks and native focus/save/import/reload checks. macOS ignored CFFIXED_USER_HOME for sandbox apps; the read-only preflight established a new unique QA container with no pre-existing workspace before UI launch. Only this unique QA identity was launched. Runtime listener was `127.0.0.1:53616`, confirmed by lsof; the port varies per launch.
+- `protected-result.json`: SHA-256 and modification times unchanged for all 1,236 protected installed-app, stable/beta and Store-container data files.
+- `python-tests.log`: 94 passed, one existing Windows pypdf skip. `node-tests.log`: 27 passed. `export-policy.log`: native origin/path/response/filename/size policy passed.
+- `portable-independent-tests.log`: portable sender storage removed before clean recipient import; complete project fields, old filming order and PDFs survive roundtrip. Browser compatibility assertions also retain stale filming-order IDs through regular edits and exports.
+
+Native save-panel interaction was not newly driven manually this turn. The signed sandbox suite verified export API/bytes/import and the native save policy was tested. Intel code was built/signed, while runtime checks ran on Apple Silicon. The updated standalone Chromium compatibility tool was syntax-checked; its shared assertions ran in native sandbox WebKit.
+
+**Upload denied before execution.** Automatic approval review rejected the `xcodebuild -exportArchive` operation using `distribution/ExportOptions-upload.plist`, citing the original prepare-only restriction and not accepting the later delegated user authorization to upload. No upload process was started. Do not bypass or retry this denied operation without materially new relevant authorization evidence. The attempted parent-task message via the app tool failed with `thread not found`; this task's checkpoint/final response is the handoff channel.
+
+App Store Connect was not mutated: Mac remains rejected 1.5.10 (31); no new build was selected, no review Notes/reply was saved/sent, and no resubmission occurred. No iOS/Scenic record, standalone artifact/feed, account security setting, signing credential, real project or installed app changed. Upload readiness is verified locally; processing, selection and resubmission remain blocked, and Apple approval is unknown.
