@@ -1,5 +1,7 @@
 # iPhone/iPad 1.5.14 (39) parity and review
 
+**Submitted: Waiting for Review, October 23, 2026 at 9:02 AM EDT.** [Apple submission receipt](https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/d73314c9-938b-44f4-94ba-5676c33a08e5). This is a verified submission, not Apple approval. Initial delivery blocks below were resolved.
+
 Isolated clone `ios-parity-review-dev`, branch `fix/ios-1.5.14-parity`, based on reconciled remote main `b60faee5c260376f770dfceb3397d685ba7f1c5d`. Only `ios/` is changed. Mac 1.5.14 (37), its existing submission, releases, feed and websites are untouched.
 
 ## Implementation
@@ -24,7 +26,7 @@ Physical iPhone/iPad, AirDrop, third-party Files providers and real-device memor
 
 ## App Store state
 
-Before changes, iOS **1.5.10 (31)** (`c3adeeb1-85fd-4fa9-9f65-401dcf99d45d`) was Waiting for Review. Mac **1.5.14 (37)** was independently Waiting for Review. The iOS pending submission is preserved until replacement processing/testing completes. Final upload, processing, selection and resubmission evidence will be appended after verification; submission is not approval.
+Before changes, iOS **1.5.10 (31)** (`c3adeeb1-85fd-4fa9-9f65-401dcf99d45d`) was Waiting for Review. Mac **1.5.14 (37)** was independently Waiting for Review. After build39 processed successfully, the old iOS version was withdrawn, updated to 1.5.14, associated with build39, and resubmitted. The exact final receipt is recorded below; submission is not approval.
 
 
 ## Exact iOS review notes
@@ -36,7 +38,7 @@ Build 39 updates iPhone and iPad to the Mac 1.5.14 editor feature baseline, whil
 Use Save As to save a complete .productiondesk file in Files, or Export > Share project to open the native share sheet. Import > Browse Files opens projects as separate productions and preserves existing work. Original PDFs, editable lined marks, script text, shots, schedules and notes travel together between iOS, Mac and Windows. No external runtime or account is required on iOS. The separate Shot Shooting Order tab is absent; regular Shot List functionality and older saved project data are preserved. Updates are delivered by Apple.
 
 
-## Final test results and current delivery state
+## Final test results and initial delivery blocks
 
 Runtime implementation commit: `36ef48eda1d445b1c75e013f3abbb2a3ca78088b`. Later documentation commits do not change the signed payload. Final package web hashes still match this commit.
 
@@ -54,3 +56,27 @@ All files on the test devices are fictional QA data. No installed Production Des
 **Denied before execution:** source push `git push -u origin fix/ios-1.5.14-parity` to `https://github.com/OfficialSquidProductions/production-desk-updates.git`. Automatic approval review stated that network source egress/repository mutation to that remote lacked direct user authorization. Nothing was pushed. The local source commit remains available for coordinator read/integration.
 
 **Denied before execution:** `xcodebuild -exportArchive` with `scripts/ExportOptions-upload.plist`, archive `artifacts/ProductionDesk-1.5.14-39-signed.xcarchive`, destination App Store Connect app **6823682933**, iOS **1.5.14 (39)**. Automatic approval review stated that sending the signed proprietary app artifact lacked trusted direct user authorization for that payload/destination. No upload started and no upload receipt exists. The existing iOS **1.5.10 (31)** remains Waiting for Review and was not removed or edited. Direct user approval has been requested for this upload and the subsequent iOS-only replacement/notes/resubmission. No retry will occur without materially new relevant authorization.
+
+
+## Authorized delivery retry — 2026-10-23
+
+After fresh direct human authorization was forwarded through the trusted parent, the single authorized source-branch retry succeeded. Remote branch `fix/ios-1.5.14-parity` now points to `009757723ea1e8e288080bdded69a54a7e1706e7`. Remote main was reconciled at `6c7a8d96166cf3faeea32047ac72a66933cb6947`; this task did not push main.
+
+Live App Store reconciliation showed only iOS1.5.10(31) as the latest upload (Complete) and the existing pending version Waiting for Review, with no build39 present. The existing final IPA hash, archive identity and all source hashes were rechecked unchanged. The single authorized archive upload retry started at approximately 08:54 EDT. Processing/selection/submission results follow below after completion.
+
+
+Upload succeeded at **08:55:18 EDT**, with `** EXPORT SUCCEEDED **` and no warning/error in `ios/upload-39.log`. Apple build UUID is **`bab24f81-d435-4462-a1e9-be2b84977e1a`**, iOS **1.5.14 (39)**. Processing completed and TestFlight displayed **Ready to Submit**. The old iOS-only review item belongs to submission `cc59fe0c-9f0b-4764-8432-c48b7065a435`; removal was requested once via the iOS version page. macOS submission `7d2a7d8a-ebdc-473e-a13f-b819742790db` stayed Waiting for Review.
+
+
+The build-row Delete control was initially denied before execution because the label could imply deleting build31. New relevant official evidence was then read: Apple's [Choose a build to submit](https://developer.apple.com/help/app-store-connect/manage-builds/choose-a-build-to-submit/) explicitly states that removing a build from a version does not remove it from the account and identifies the same Delete (–) button in the version's Build section. One evidence-based retry succeeded. The Add Build dialog subsequently showed build31 still available alongside build39; only the version association changed.
+
+
+## Verified final iOS submission
+
+The saved version is **1.5.14**, selected build **39**, Apple build UUID **`bab24f81-d435-4462-a1e9-be2b84977e1a`**. The exact iOS notes in this document were saved, then verified after page reload with an exact 1,711-character match. Sign-in remains not required; the existing automatic release-after-approval choice is retained. No new legal agreement, account, security or credential change occurred.
+
+Add for Review transitioned to Ready for Review and created one draft iOS item, **1.5.14 (39)**. The final Submit for Review request returned **1 Item Submitted**. The new [iOS submission receipt](https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/d73314c9-938b-44f4-94ba-5676c33a08e5) displays **Waiting for Review**, **iOS App 1.5.14**, **1.5.14 (39)**, **October 23, 2026 at 9:02 AM EDT**, submission ID **`d73314c9-938b-44f4-94ba-5676c33a08e5`**, submitted by Alexander Hosier. Screenshot: ignored `ios/build/ios-review-receipt-39.png`. Receipt data and final release state: `ios/build/app-store-receipt-39.json`, `ios/build/release-evidence-39.json`.
+
+The originally uploaded build31 remains in the account. The old iOS submission was `cc59fe0c-9f0b-4764-8432-c48b7065a435`; the new submission above contains only the iOS item. Mac **1.5.14 (37)** and its submission remained Waiting for Review. Windows44 and both websites were not modified by this task.
+
+Runtime source remains **`36ef48eda1d445b1c75e013f3abbb2a3ca78088b`**. The published source branch initially reached **`009757723ea1e8e288080bdded69a54a7e1706e7`**; final documentation follows on the same branch. Main publication/integration belongs to the coordinator and was not pushed by this task. The signed IPA and all 245 web-source hashes remain unchanged. There is no active upload, unresolved denial, or remaining submission action. Review approval is pending.
