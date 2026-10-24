@@ -4,7 +4,16 @@ const assert = require('node:assert/strict');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}) => {
-  const js = source => win.webContents.executeJavaScript(source);
+  const js = async source => {
+    const invocation = new Error('Native QA invocation').stack;
+    try { return await win.webContents.executeJavaScript(source); }
+    catch (error) { throw new Error(String(error.stack || error) + '\n' + invocation); }
+  };
+  const networkErrors=[];
+  win.webContents.session.webRequest.onErrorOccurred(details=>{
+    networkErrors.push({url:details.url,method:details.method,error:details.error,resourceType:details.resourceType});
+    fs.writeFileSync(path.join(output,'native-network-errors.json'),JSON.stringify(networkErrors,null,2));
+  });
   const waitFor = async source => {
     const deadline = Date.now()+15000;
     while (!await js(source)) {
@@ -35,6 +44,11 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
     }
   };
   const checks = [];
+  const runShared = async (name, args=[]) => {
+    fs.writeFileSync(path.join(output,'smoke-progress.json'),JSON.stringify({stage:name,completed:checks},null,2));
+    const source='('+require(name).toString()+')('+args.map(value=>JSON.stringify(value)).join(',')+')';
+    return js('(async()=>{try{return await '+source+';}catch(error){throw new Error('+JSON.stringify(name)+"+': '+String(error)+': '+(error.stack||''));}})()");
+  };
   await waitFor('document.querySelector("#project-picker")?.options.length > 0');
   assert.equal(await js('window.slateDesktop.ready'), true);
   assert.equal(await js('typeof window.productionDeskWindows?.print'), 'function');
@@ -153,8 +167,8 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push('Cross-origin requests rejected');
   const linedOriginal=await (await fetch(origin+'/api/workspace')).json();
   const fixture=fs.readFileSync(path.join(output,'lined-script.pdf')).toString('base64');
-  checks.push(...await js('('+require('./lined-regressions.cjs').toString()+')('+JSON.stringify(fixture)+')'));
-  checks.push(...await js('('+require('./workspace-layout-regressions.cjs').toString()+')()'));
+  checks.push(...await runShared('./lined-regressions.cjs',[fixture]));
+  checks.push(...await runShared('./workspace-layout-regressions.cjs'));
   fs.writeFileSync(path.join(output,'continuous-script-export.pdf'),Buffer.from(await js('window.workspaceLayoutExport.content'),'base64'));
   const exported=await js('window.linedTestExport.content');
   fs.writeFileSync(path.join(output,'lined-script-export.pdf'),Buffer.from(exported,'base64'));
@@ -164,16 +178,16 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   const linedPath=await Promise.race([linedDownloaded,delay(20000).then(()=>{throw Error('Lined PDF download timed out');})]);
   assert.equal(fs.readFileSync(linedPath).subarray(0,4).toString(),'%PDF');
   checks.push('Native lined PDF download completes in the installed desktop app');
-  checks.push(...await js('('+require('./breakdown-editing-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./script-pdf-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./lined-controls-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./shot-navigation-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./schedule-drag-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./project-import-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./export-regressions.cjs').toString()+')()'));
-  checks.push(...await js('('+require('./viewport-followup-regressions.cjs').toString()+')()'));
+  checks.push(...await runShared('./breakdown-editing-regressions.cjs'));
+  checks.push(...await runShared('./script-pdf-regressions.cjs'));
+  checks.push(...await runShared('./lined-controls-regressions.cjs'));
+  checks.push(...await runShared('./shot-navigation-regressions.cjs'));
+  checks.push(...await runShared('./schedule-drag-regressions.cjs'));
+  checks.push(...await runShared('./project-import-regressions.cjs'));
+  checks.push(...await runShared('./export-regressions.cjs'));
+  checks.push(...await runShared('./viewport-followup-regressions.cjs'));
   await screenshot('original-pdf-breakdown.png');
-  checks.push(...await js('('+require('./shot-order-regressions.cjs').toString()+')()'));
+  checks.push(...await runShared('./shot-order-regressions.cjs'));
   await screenshot('shot-shooting-order.png');
   assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};
