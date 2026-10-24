@@ -14,7 +14,12 @@ The user selected 1.5.16 after Windows downgrade rejection was demonstrated for 
 - Mac package compiled; all 236 web resources and five backend modules match source; demo directory, test fixture directory and sample project files absent.
 - Isolated background native WebKit aggregate passed real controls, CSV parsing and complete portable restore into a fresh recipient after sender removal, with 12 CSV breakdown rows and two original PDF revisions. Also covers shot navigation/order/deletion, large imports, schedule drag/cancel/undo, original-PDF annotations and gutter export.
 - Native Mac updater save, initialization failure/retry, delayed/rejected readiness, navigation interruption/repeated callback, cancellation, overlapping-check prevention and App Store updater behavior passed. QA apps used unique identifiers, disposable Foundation homes/preferences and nonpersistent WebKit. Installed apps and real projects were unused.
-- Windows packaged installer/upgrade and signed Mac public-distribution validation are release gates still to complete. iOS Simulator runtime/Files UI has not been rerun in this task; test targets compile, fixtures are external to the shipping app.
+- Exact-source Windows branch validation #51 and main release workflow #52 passed the packaged app, installed copy and reinstall checks. Source: `151f38d330e3131576d3eda47e0bf52ba914cea2`. The Windows harness saves/reopens between independent heavy scenarios after Chromium reported WSAENOBUFS in a combined run; all assertions remain, and per-stage/network diagnostics are retained.
+- Mac app and one-click installer passed Developer ID signature, notarization/stapling, Gatekeeper and distribution checks. The shipping installer passed fresh install/update/data preservation and invalid-payload tests in disposable storage; signed build 45 → 46 upgrade preserved synthetic project/settings/PDF bytes. Native Mac shipping sources have not changed since the package build; subsequent changes affect only Windows QA helpers.
+- Mac release: https://github.com/OfficialSquidProductions/production-desk-updates/releases/tag/macos-1.5.16-build-46
+- Windows release: https://github.com/OfficialSquidProductions/production-desk-updates/releases/tag/windows-1.5.16-build-52
+- Exact-source main CI: https://github.com/OfficialSquidProductions/production-desk-updates/actions/runs/40115935619
+- iOS Simulator runtime/Files UI has not been rerun in this task; test targets compile, fixtures are external to the shipping app. Signed iPhone/iPad 1.5.16 (40) IPA and universal Mac App Store 1.5.16 (46) PKG are prepared locally, not uploaded. Existing review submissions remain unchanged.
 
 ## Proposed historical-download cleanup — NOT executed
 
