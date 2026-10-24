@@ -44,8 +44,17 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
     }
   };
   const checks = [];
-  const runShared = async (name, args=[]) => {
+  const runShared = async (name, args=[], fresh=false) => {
     fs.writeFileSync(path.join(output,'smoke-progress.json'),JSON.stringify({stage:name,completed:checks},null,2));
+    if(fresh){
+      // These scenarios import their own fixtures. Reopen the saved editor to
+      // release the preceding 80-page PDF workers and rendering resources,
+      // rather than accumulating every independent scenario in one renderer.
+      assert.equal(await flush(),true,'Scenario boundary must save successfully');
+      await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});
+      await waitFor('document.querySelector("#project-picker")?.options.length > 0');
+      assert.equal(await js('window.slateDesktop.ready'),true);
+    }
     const source='('+require(name).toString()+')('+args.map(value=>JSON.stringify(value)).join(',')+')';
     return js('(async()=>{try{return await '+source+';}catch(error){throw new Error('+JSON.stringify(name)+"+': '+String(error)+': '+(error.stack||''));}})()");
   };
@@ -183,11 +192,11 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push(...await runShared('./lined-controls-regressions.cjs'));
   checks.push(...await runShared('./shot-navigation-regressions.cjs'));
   checks.push(...await runShared('./schedule-drag-regressions.cjs'));
-  checks.push(...await runShared('./project-import-regressions.cjs'));
-  checks.push(...await runShared('./export-regressions.cjs'));
-  checks.push(...await runShared('./viewport-followup-regressions.cjs'));
+  checks.push(...await runShared('./project-import-regressions.cjs',[],true));
+  checks.push(...await runShared('./export-regressions.cjs',[],true));
+  checks.push(...await runShared('./viewport-followup-regressions.cjs',[],true));
   await screenshot('original-pdf-breakdown.png');
-  checks.push(...await runShared('./shot-order-regressions.cjs'));
+  checks.push(...await runShared('./shot-order-regressions.cjs',[],true));
   await screenshot('shot-shooting-order.png');
   assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};
