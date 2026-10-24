@@ -12,6 +12,8 @@ module.exports = async ({win, origin, output, flush}) => {
   const provide = () => js('window.productionDeskTestFixture='+JSON.stringify(fixture));
   win.webContents.on('did-finish-load', () => { void provide(); });
   await provide();
+  // Persist normal editor initialization before taking the preservation baseline.
+  assert.equal(await flush(), true);
   const before = await (await fetch(origin+'/api/workspace')).json();
   await js('(async()=>{const starter=structuredClone(window.productionDeskTestFixture);delete starter.workspace.projects[0]._linedScript;starter.workspace._pdfDocuments={};await window.slateDesktop.importProjectFile(new File([JSON.stringify(starter)],"Synthetic.productiondesk"));})()');
   assert.equal(await flush(), true);
