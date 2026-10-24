@@ -132,6 +132,7 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   assert.deepEqual(await page.evaluate(async()=>await(await fetch('/api/workspace')).json()),beforeCancel);
   checks.push('Real mouse drag works from full strip content and large handles; live edge autoscroll/placement feedback, Escape cancellation, tiny-motion clicks, handle placement dialogs and exact saved board/coverage relationships survive reload');
   checks.push(...await page.evaluate('('+require('../desktop/windows/project-import-regressions.cjs').toString()+')()'));
+  checks.push(...await page.evaluate('('+require('../desktop/windows/export-regressions.cjs').toString()+')()'));
   const importSaved=await page.evaluate(()=>window.projectImportExpected);
   await page.reload();await page.evaluate(()=>window.slateDesktop.ready);
   assert.deepEqual(await page.evaluate(async()=>await(await fetch('/api/workspace')).json()),importSaved);

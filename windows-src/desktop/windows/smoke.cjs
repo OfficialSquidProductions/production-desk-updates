@@ -170,6 +170,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   checks.push(...await js('('+require('./shot-navigation-regressions.cjs').toString()+')()'));
   checks.push(...await js('('+require('./schedule-drag-regressions.cjs').toString()+')()'));
   checks.push(...await js('('+require('./project-import-regressions.cjs').toString()+')()'));
+  checks.push(...await js('('+require('./export-regressions.cjs').toString()+')()'));
   checks.push(...await js('('+require('./viewport-followup-regressions.cjs').toString()+')()'));
   await screenshot('original-pdf-breakdown.png');
   checks.push(...await js('('+require('./shot-order-regressions.cjs').toString()+')()'));

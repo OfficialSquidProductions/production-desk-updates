@@ -28,6 +28,18 @@ See the [lined-script guide](LINED-SCRIPTS.md) for PDF annotations and exports.
 python3 -m unittest discover -s tests -v
 ```
 
+For CSV and portable-file changes, also run:
+
+```sh
+node --test tests/breakdown-csv.cjs tests/project-file-purity.cjs
+python3 -B tools/check_export_ui.py  # macOS native UI, isolated synthetic data
+```
+
+The native UI check uses a unique bundle identity, nonpersistent WebKit and a
+Foundation-preflighted disposable home before launch. It never launches the
+installed app or opens real projects. CSV output is checked by Python's standard
+CSV reader; portable output is imported after the temporary sender is removed.
+
 Windows PDF tests require `pypdf`; they skip if it is unavailable. Mac PDF tests
 require the Xcode tools. Fixtures are synthetic productions.
 
