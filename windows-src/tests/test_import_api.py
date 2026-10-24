@@ -1,3 +1,4 @@
+from demo_data import demo_workspace
 import copy
 import http.client
 import json
@@ -8,7 +9,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 
 from film import validate_uss
-from server import Handler, demo_workspace
+from server import Handler
 
 
 class ImportAPITests(unittest.TestCase):

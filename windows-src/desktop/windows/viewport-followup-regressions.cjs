@@ -4,7 +4,7 @@ module.exports = async function runViewportFollowupChecks(){
   const workspace=async()=>{expect(await window.slateDesktop.flush(),'Follow-up save failed');return(await fetch('/api/workspace')).json();};
   const saved=async()=>{const w=await workspace();return w.projects.find(p=>p.id===w.activeProject);};
   const encode=bytes=>{let text='';for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(text);};
-  const portable=await(await fetch('/demo/the-last-light.productiondesk')).json(),p=portable.workspace.projects[0];
+  const portable=structuredClone(window.productionDeskTestFixture),p=portable.workspace.projects[0];
   p.id=crypto.randomUUID();p.project='Viewport and portable gutter QA';portable.workspace.activeProject=p.id;
   p._sourceScript={filename:'Original story.fountain',text:'Title: Portable original\n\nINT. ROOM - DAY\nÉLI\nThe original source travels with the production.\n'};
   p._extension={retained:['café',null,true],sceneId:p.breakdowns[0].id,inlineAsset:'data:image/png;base64,aGVsbG8='};

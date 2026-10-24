@@ -1,3 +1,4 @@
+from demo_data import demo_workspace
 import base64
 import copy
 import hashlib
@@ -8,7 +9,7 @@ import tempfile
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
-from server import Handler, demo_workspace
+from server import Handler
 from lined import store_pdf, add_backup_pdfs, restore_backup_pdfs, pdf_path
 
 FIXTURE = (Path(__file__).parent / 'lined-script.pdf').read_bytes()

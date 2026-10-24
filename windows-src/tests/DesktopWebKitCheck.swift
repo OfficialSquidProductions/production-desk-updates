@@ -20,12 +20,20 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         let setup = """
+        window.productionDeskTestFixture=JSON.parse(portableFixture);
         const waitFor=async check=>{const deadline=Date.now()+15000;while(!check()){if(Date.now()>deadline)throw Error('UI timed out');await new Promise(r=>setTimeout(r,50));}};
         const expect=(value,message)=>{if(!value)throw Error(message);};
         const load=async()=>{const w=await(await fetch('/api/workspace')).json();return w.projects.find(p=>p.id===w.activeProject);};
         await waitFor(()=>document.querySelector('#save-status').textContent.includes('Saved'));
         """
         let checks = """
+        expect(!document.querySelector('#load-demo,#demo-guide,#demo-launcher'),'Shipping demo controls remain');
+        const fresh=await(await fetch('/api/workspace')).json();
+        expect(fresh.projects.length===1&&fresh.projects[0].breakdowns.length===0,'New workspace is not empty');
+        expect((await fetch('/demo/the-last-light.productiondesk')).status===404,'Shipping demo script remains');
+        const starter=JSON.parse(portableFixture);delete starter.workspace.projects[0]._linedScript;starter.workspace._pdfDocuments={};
+        await window.slateDesktop.importProjectFile(new File([JSON.stringify(starter)],'Synthetic.productiondesk'));
+        expect(await window.slateDesktop.flush(),'Synthetic QA fixture import failed');
         document.querySelector('#app-settings-open').click();
         document.querySelector('#report-bug').click();
         expect(document.querySelector('#support-report').open,'Bug report did not open');
@@ -109,6 +117,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         return true;
         """
         let root = URL(fileURLWithPath: CommandLine.arguments[2])
+        let portableFixture = try! String(contentsOf: root.appendingPathComponent("tests/fixtures/demo/the-last-light.productiondesk"), encoding: .utf8)
         let fixture = try! Data(contentsOf: root.appendingPathComponent("tests/lined-script.pdf")).base64EncodedString()
         let testSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/lined-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
         let layoutSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/workspace-layout-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
@@ -123,7 +132,7 @@ final class DesktopWebKitCheck: NSObject, WKNavigationDelegate {
         let exportSource = try! String(contentsOf: root.appendingPathComponent("desktop/windows/export-regressions.cjs"), encoding: .utf8).replacingOccurrences(of: "module.exports = ", with: "")
         let linedChecks = "const runLinedChecks = " + testSource + "; const runLayoutChecks = " + layoutSource + "; const prior = await runLinedChecks(fixture); const added = await runLayoutChecks(); const runBreakdownChecks = " + breakdownSource + "; const breakdown = await runBreakdownChecks(); const runPDFChecks = " + pdfSource + "; const pdfChecks = await runPDFChecks(); const runControlsChecks = "+controlsSource+"; const controls = await runControlsChecks(); const runNavigationChecks = "+navigationSource+"; const navigation = await runNavigationChecks(); const runScheduleChecks = "+scheduleSource+"; const schedule = await runScheduleChecks(); const runImportChecks = "+importSource+"; const imports = await runImportChecks(); const runViewportChecks = "+viewportSource+"; const viewport = await runViewportChecks(); const runShotOrderChecks = "+shotOrderSource+"; const shotOrder = await runShotOrderChecks(); const runExportChecks = "+exportSource+"; const exports = await runExportChecks(); return {breakdownCSV:window.exportCheckCSV,portableProject:window.exportCheckProject,sourceProject:window.exportCheckSource,checks:[...exports,...shotOrder,...prior,...added,...breakdown,...pdfChecks,...controls,...navigation,...schedule,...imports,...viewport],pdf:window.workspaceLayoutExport.content};"
         let body = setup + (phase == 0 ? checks : reloadChecks.replacingOccurrences(of: "return true;", with: "") + linedChecks)
-        web.callAsyncJavaScript("try {" + body + "} catch(error) { throw new Error((error && error.stack) || String(error)); }", arguments: ["fixture":fixture,"testSource":testSource], in: nil, in: .page) { result in
+        web.callAsyncJavaScript("try {" + body + "} catch(error) { throw new Error((error && error.stack) || String(error)); }", arguments: ["fixture":fixture,"testSource":testSource,"portableFixture":portableFixture], in: nil, in: .page) { result in
             switch result {
             case .failure(let error): print("FAIL: \(error)"); exit(1)
             case .success(let value):

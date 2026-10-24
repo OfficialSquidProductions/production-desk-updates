@@ -10,7 +10,7 @@ module.exports = async function runExportChecks(){
   HTMLAnchorElement.prototype.click=function(){if(this.href.includes('/api/download/')){download={url:this.href,name:this.download};return;}return originalClick.call(this);};
   try{
     if($('#modal').open)$('#modal').close();
-    const portable=await(await fetch('/demo/the-last-light.productiondesk')).json(),p=portable.workspace.projects[0],b=p.breakdowns[0];
+    const portable=structuredClone(window.productionDeskTestFixture),p=portable.workspace.projects[0],b=p.breakdowns[0];
     p.id=crypto.randomUUID();portable.workspace.activeProject=p.id;p.project='Rich export QA — Café, "crew" 東京 🎬';
     b.description='Maya says "bonjour", then leaves.\nSecond line — café.';b.comments='Continuity\r\nKeep key, map and cast tags.';b._completed=true;
     p._sourceScript.text+='\n# Full source — café 東京 🎬\n';p._breakdownSettings={continuousScroll:true,futureProjectOption:{keep:true}};

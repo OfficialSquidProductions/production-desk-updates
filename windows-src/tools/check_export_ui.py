@@ -31,6 +31,7 @@ def main():
         source = (ROOT / 'tests/DesktopWebKitCheck.swift').read_text()
         source = source.replace('web = WKWebView(frame: NSRect(x: 0, y: 0, width: 1440, height: 940))',
             'let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()\n        web = WKWebView(frame: NSRect(x: 0, y: 0, width: 1440, height: 940), configuration: configuration)')
+        source = source.replace('window.orderFront(nil)', 'window.orderBack(nil)')
         source = source.replace('(error && error.stack) || String(error)', "String(error) + ': ' + ((error && error.stack) || '')")
         swift = folder / 'ExportQA.swift'
         swift.write_text(source)
@@ -52,7 +53,7 @@ def main():
         print('PREFLIGHT: unique identity, disposable Foundation storage/preferences, explicit synthetic backend data/PDF/backup paths; installed app unused', flush=True)
         ready = home / 'ready.json'
         with (output / 'backend.log').open('w') as log:
-            server = subprocess.Popen([sys.executable, '-E', '-s', '-B', str(ROOT / 'server.py'), '--port', '0',
+            server = subprocess.Popen([os.environ.get('PRODUCTION_DESK_PYTHON', sys.executable), '-E', '-s', '-B', str(Path(os.environ.get('PRODUCTION_DESK_RUNTIME', ROOT)) / 'server.py'), '--port', '0',
                 '--data', str(data), '--ready-file', str(ready), '--parent-pid', str(os.getpid())], env=env, stdout=log, stderr=log)
             try:
                 deadline = time.monotonic() + 20

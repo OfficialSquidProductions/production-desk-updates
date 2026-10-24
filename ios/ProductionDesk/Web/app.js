@@ -1,6 +1,5 @@
 import {createStripDrag} from './strip-drag.js';
 import {createScriptPDF} from './script-pdf.js';
-import {createDemoControls} from './demo/demo-controls.js';
 import {mergeProductions} from './project-file.js';
 import {breakdownCSV} from './breakdown-csv.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
@@ -161,7 +160,7 @@ function render() {
   $('#project-picker').innerHTML = workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===project.id?'selected':''}>${esc(p.project || p.name)}</option>`).join('');
   $('#project-title').textContent = project.project || project.name;
   $('#breadcrumb').textContent = project.project || project.name;
-  $('#project-eyebrow').textContent = project._demo ? 'SAMPLE PRODUCTION · EXPLORE THE WORKSPACE' : 'PRODUCTION WORKSPACE';
+  $('#project-eyebrow').textContent = 'PRODUCTION WORKSPACE';
   const subtitles = {lined:'Your original pages. Every angle, movement, and mark.',workspace:'From the page to the production. One scene at a time.',schedule:'Build your shooting days. Keep the whole story in view.',elements:'Every person, place, and thing your production needs.',reports:'A clear picture of the days ahead.',shots:'Scene by scene. Setup by setup. Every shot accounted for.'};
   $('#page-subtitle').textContent = subtitles[view];
   $$('#navigation button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
@@ -618,10 +617,7 @@ const shotDesk=createShotDesk({...shotContext,isActive:()=>view==='shots'});
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
 $('#app-settings-open').onclick=()=>appSettings.open();
-const demoControls=createDemoControls({workspace:()=>workspace,importFile:file=>api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}),
-  apply:next=>mutate(()=>{workspace=next;scenarioIndex=0;selected=undefined;search='';selectedText='';view='workspace';}),
-  flush:()=>window.slateDesktop.flush(),modal,toast,download});
-demoControls.bind();
+
 
 
 $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[data-view]');if(button){view=button.dataset.view;render();}});

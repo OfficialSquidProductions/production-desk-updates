@@ -10,7 +10,7 @@ module.exports = async function runProjectImportChecks(){
     close();expect($('#save-as-open').nextElementSibling?.id==='import-open','Import is not beside Save As');
     const start=await read();$('#import-open').click();expect($('#modal').open&&$('#import-file').accept.includes('.productiondesk'),'Header Import cannot choose portable projects');$('#modal-cancel').click();expect(same(await read(),start),'Cancelled picker changed workspace');
     checks.push('Header Import and cancellation preserve existing productions');
-    const portable=await(await fetch('/demo/the-last-light.productiondesk')).json(),p=portable.workspace.projects[0];
+    const portable=structuredClone(window.productionDeskTestFixture),p=portable.workspace.projects[0];
     p.id=crypto.randomUUID();p.project='Complete portable import QA';portable.workspace.activeProject=p.id;
     p._sourceScript={filename:'Original QA.fountain',text:'Title: Original QA\n\nINT. ROOM - DAY\nÉLI\nPreserve all original source.\n'};
     p._extension={id:'extension-owned-id',sceneId:p.breakdowns[0].id,shotId:p._shots[0].id,notes:p._shots[0].id,asset:'data:image/png;base64,aGVsbG8=',nested:{keep:[null,true,3,'café']}};

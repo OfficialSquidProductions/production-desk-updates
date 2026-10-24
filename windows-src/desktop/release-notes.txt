@@ -1,7 +1,8 @@
-Production Desk 1.5.15 (45) for Mac
+Production Desk 1.5.16
 
-Fixes an intermittent disabled Check for Updates command when the editor becomes ready after the native startup callback. The updater now recognizes delayed readiness and recovers from startup errors. Check for Updates can initialize or retry the updater, with protection against overlapping checks and repeated clicks.
+- Remove the demo launcher, guide and bundled sample script. New workspaces start with an empty production. Existing projects and imported samples are preserved.
+- Export complete breakdowns as interoperable CSV with Unicode, quoted fields and clear columns.
+- Save and restore complete .productiondesk projects, including breakdowns, tags, script/PDF attachments, shots, lined-script annotations and schedules.
+- Retain the standalone Mac updater startup and retry fix from 1.5.15 (45).
 
-Automatic-check preferences, signed download validation and save-before-install remain in effect. Existing breakdowns, scripts/PDFs, lined annotations, Shot List, schedules, portable projects and offline operation are preserved.
-
-Standalone Mac update only. Developer ID signed and Apple-notarized. Windows remains 1.5.15 (44); iPhone, iPad, Mac App Store and TestFlight submissions are unchanged.
+Mac and Windows desktop update. App Store review submissions are managed separately.

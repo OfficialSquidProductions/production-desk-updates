@@ -1,6 +1,6 @@
 {
   "name": "production-desk",
-  "version": "1.5.15",
+  "version": "1.5.16",
   "description": "Offline film scheduling, script breakdowns and shot lists",
   "author": "Squid Productions",
   "private": true,
@@ -38,7 +38,7 @@
       "viewport-followup-regressions.cjs",
       "support-regressions.cjs",
       "workspace-layout-regressions.cjs",
-      "demo-regressions.cjs",
+      "shipping-content-regressions.cjs",
       "breakdown-editing-regressions.cjs",
       "script-pdf-regressions.cjs",
       "shot-order-regressions.cjs"

@@ -6,7 +6,7 @@ module.exports = async function runShotOrderChecks(){
   if($('#modal').open)$('#modal').close();
   expect(!$('[data-view="shot-order"]'),'Removed Shot Shooting Order tab is present');
   expect(!!$('[data-view="shots"]'),'Regular Shot List is missing');
-  const file=await(await fetch('/demo/the-last-light.productiondesk')).json(),p=file.workspace.projects[0];
+  const file=structuredClone(window.productionDeskTestFixture),p=file.workspace.projects[0];
   p.id=crypto.randomUUID();p.project='Retired shot order compatibility QA';file.workspace.activeProject=p.id;
   // Older clients may contain IDs for deleted shots; preserve this opaque field.
   const order=p._shotShootingOrder=[...p._shots.map(s=>s.id).reverse(),'older-client-deleted-shot'];

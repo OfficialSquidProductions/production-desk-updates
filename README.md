@@ -34,14 +34,12 @@ macOS and Windows are the public desktop editions. iPhone and iPad builds are av
 - **Line original script PDFs:** link straight/wavy coverage to shots, draw and highlight,
   add camera movements and notes, and export lined PDFs. Set key binds and label opacity in Settings, move connected labels into page gutters, and renumber/search linked shots.
 - **Create reports:** one-line schedules, scene breakdowns, cast workdays, and printable PDFs.
-- **Move your work:** Save As and Import complete `.productiondesk` projects, or export full JSON backups, USS schedules, and CSV reports.
+- **Move your work:** Save As and Import complete `.productiondesk` projects, or export full JSON backups, CSV breakdowns, and CSV reports.
 - **Work locally:** automatic disk saves, Undo/Redo, and light/dark appearance.
 
 ## Get started
 
-1. Choose **Load The Last Light demo** in the sidebar to explore **The Last Light**, then open
-   **Demo guide** for all eight scenes, schedules, shots, lined PDF, reports and the matching Scenic handoff. Existing productions
-   remain available in the production selector; choose **New production** to start your own.
+1. Choose **New production** to start an empty project.
 2. Choose **Import…** beside **Save As…** to bring in a complete project, screenplay or schedule. Imports create a
    separate production and preserve your existing projects.
 3. Review the imported scene headings, cast, and page estimates in **Main breakdown**.

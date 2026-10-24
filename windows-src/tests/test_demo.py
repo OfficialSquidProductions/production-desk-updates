@@ -16,14 +16,14 @@ from project_file import import_project,export_project
 
 class DemoTests(unittest.TestCase):
     def setUp(self):
-        self.value=json.loads((ROOT/'web/demo/the-last-light.productiondesk').read_text())
+        self.value=json.loads((ROOT/'tests/fixtures/demo/the-last-light.productiondesk').read_text())
         self.workspace=self.value['workspace'];self.project=self.workspace['projects'][0]
 
     def test_original_script_and_all_tool_data(self):
         p=self.project;validate_uss(p)
-        original=next(ast.literal_eval(n.value) for n in ast.parse((ROOT/'server.py').read_text()).body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='DEMO' for t in n.targets))
+        original=next(ast.literal_eval(n.value) for n in ast.parse((ROOT/'tests/demo_data.py').read_text()).body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='DEMO' for t in n.targets))
         self.assertEqual(p['_sourceScript']['text'],original)
-        self.assertEqual((ROOT/'web/demo/the-last-light.fountain').read_text(),original)
+        self.assertEqual((ROOT/'tests/fixtures/demo/the-last-light.fountain').read_text(),original)
         scenes=[b for b in p['breakdowns'] if b['type']=='scene']
         self.assertEqual([b['scene'] for b in scenes],list(map(str,range(1,9))))
         self.assertTrue(all(b['_scriptText'] and b['description'] and b['comments'] and b['duration'] for b in scenes))
@@ -45,7 +45,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual({m['type'] for m in doc['marks']},{'coverage','pen','highlighter','arrow','text'})
 
     def test_pair_matches_every_scene_and_shot(self):
-        scenic=json.loads((ROOT/'web/demo/the-last-light.scenic').read_text());p=self.project
+        scenic=json.loads((ROOT/'tests/fixtures/demo/the-last-light.scenic').read_text());p=self.project
         scenes=[b for b in p['breakdowns'] if b['type']=='scene']
         self.assertEqual(scenic['sharedDemo'],p['_sharedDemo'])
         for b,scene in zip(scenes,scenic['scenes']):
@@ -66,11 +66,10 @@ class DemoTests(unittest.TestCase):
             digest=self.project['_linedScript']['activePdf'];self.assertEqual(hashlib.sha256((datafile.parent/'pdfs'/f'{digest}.pdf').read_bytes()).hexdigest(),digest)
 
     def test_generator_and_mobile_consistency(self):
-        before=(ROOT/'web/demo/the-last-light.productiondesk').read_bytes()
+        before=(ROOT/'tests/fixtures/demo/the-last-light.productiondesk').read_bytes()
         subprocess.run([sys.executable,str(ROOT/'tools/build_demo.py')],check=True,capture_output=True)
-        self.assertEqual((ROOT/'web/demo/the-last-light.productiondesk').read_bytes(),before)
-        mobile=ROOT.parent/'ios/ProductionDesk/Web'
-        for name in ['demo/demo.js','demo/demo-controls.js','demo/the-last-light.productiondesk','demo/the-last-light.fountain','demo/the-last-light.scenic','production-start.css']:
-            self.assertEqual((ROOT/'web'/name).read_bytes(),(mobile/name).read_bytes(),name)
+        self.assertEqual((ROOT/'tests/fixtures/demo/the-last-light.productiondesk').read_bytes(),before)
+        self.assertFalse((ROOT/'web/demo').exists())
+        self.assertFalse((ROOT.parent/'ios/ProductionDesk/Web/demo').exists())
 
 if __name__=='__main__':unittest.main()

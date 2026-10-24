@@ -1,4 +1,4 @@
-import {mergeProductions} from '../project-file.js';
+import {mergeProductions} from '../../../web/project-file.js';
 
 // Temporary beta entry point. Disable this flag in both bundled copies to hide
 // the controls at launch; saved sample productions remain ordinary user files.

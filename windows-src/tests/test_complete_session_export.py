@@ -13,7 +13,7 @@ from server import atomic_save, json_object
 
 
 def rich_project():
-    value = json.loads((Path(__file__).resolve().parents[1] / 'web/demo/the-last-light.productiondesk').read_bytes())
+    value = json.loads((Path(__file__).resolve().parents[1] / 'tests/fixtures/demo/the-last-light.productiondesk').read_bytes())
     p = value['workspace']['projects'][0]
     b = p['breakdowns'][0]
     p['project'] = 'Café, "lighthouse" — 東京 🎬'

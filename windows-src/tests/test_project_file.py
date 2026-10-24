@@ -1,3 +1,4 @@
+from demo_data import demo_workspace
 import copy
 import json
 from pathlib import Path
@@ -5,7 +6,7 @@ import tempfile
 import unittest
 from project_file import export_project, import_project
 from lined import pdf_path
-from server import demo_workspace
+
 
 FIXTURE = Path(__file__).parent / 'portable-project.productiondesk'
 
@@ -82,7 +83,7 @@ class ProjectFileAPITests(unittest.TestCase):
         self.assertEqual(status,200);self.assertEqual(json.loads(raw),original)
         self.assertEqual(self.server.datafile.read_bytes(),self.before)
     def test_original_scenic_demo_uses_normal_json_export_without_changing_workspace(self):
-        content=(Path(__file__).resolve().parents[1]/'web/demo/the-last-light.scenic').read_text()
+        content=(Path(__file__).resolve().parents[1]/'tests/fixtures/demo/the-last-light.scenic').read_text()
         status,raw=self.request('/api/export',{'filename':'The-Last-Light.scenic','content':content,'mime':'application/json'})
         self.assertEqual(status,200,raw)
         status,download=self.request(json.loads(raw)['url'],method='GET')

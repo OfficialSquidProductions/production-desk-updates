@@ -23,7 +23,10 @@ let browser,log='';server.stderr.on('data',v=>log+=v);
   }
   const boardBaseline=process.argv.indexOf('--baseline-board');
   if(boardBaseline>=0){const ref=process.argv[boardBaseline+1];if(!ref)throw Error('Pass a commit after --baseline-board');const original=execFileSync('git',['show',ref+':windows-src/web/app.js'],{cwd:root,encoding:'utf8'});await page.route('**/app.js',route=>route.fulfill({contentType:'text/javascript',body:original}));}
+  const portableFixture=JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/demo/the-last-light.productiondesk'),'utf8'));
+  await page.addInitScript(value=>{window.productionDeskTestFixture=value;},portableFixture);
   await page.goto(JSON.parse(fs.readFileSync(ready)).url);await page.evaluate(()=>window.slateDesktop.ready);
+  await page.evaluate(async value=>{delete value.workspace.projects[0]._linedScript;value.workspace._pdfDocuments={};await window.slateDesktop.importProjectFile(new File([JSON.stringify(value)],'Synthetic.productiondesk'));await window.slateDesktop.flush();},portableFixture);
   const checks=[],fixture=fs.readFileSync(path.join(root,'tests/lined-script.pdf')).toString('base64');
   if(process.argv.includes('--all')){
     checks.push(...await require('../desktop/windows/regressions.cjs')({

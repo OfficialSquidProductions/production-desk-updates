@@ -52,7 +52,7 @@ SPECS = [
 ]
 
 def original_script():
-    tree=ast.parse((ROOT/'server.py').read_text())
+    tree=ast.parse((ROOT/'tests/demo_data.py').read_text())
     return next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='DEMO' for t in n.targets))
 
 def script_pdf(scenes):
@@ -163,15 +163,12 @@ def build(scenic_root=None):
     p['_linedScript']={'activePdf':digest,'documents':[{'sha256':digest,'filename':'The Last Light — original demo.pdf','marks':marks}]}
     workspace={'version':1,'activeProject':p['id'],'projects':[p],'_pdfDocuments':{digest:base64.b64encode(raw).decode()}};validate_workspace(workspace)
     scenic={'version':1,'projectId':SCENIC_KEY,'demoKey':SCENIC_KEY,'name':'DEMO · The Last Light','theme':'light','active':scenic_scenes[0]['id'],'scenes':scenic_scenes,'editorSettings':{'grid':True,'snap':True,'simulation':True},'sharedDemo':{'title':'The Last Light','scriptSHA256':source_hash,'revision':1},'portable':{'format':'org.squidproductions.scenic.project','version':1}}
-    target=ROOT/'web/demo';target.mkdir(exist_ok=True)
+    target=ROOT/'tests/fixtures/demo';target.mkdir(exist_ok=True)
     (target/'the-last-light.productiondesk').write_text(json.dumps({'format':'org.squidproductions.productiondesk.project','formatVersion':1,'workspace':workspace},ensure_ascii=False,indent=2)+'\n')
     (target/'the-last-light.fountain').write_text(script)
     (target/'the-last-light.scenic').write_text(json.dumps(scenic,ensure_ascii=False,indent=2)+'\n')
-    spec={'title':'The Last Light','fictional':True,'revision':1,'scriptSHA256':source_hash,'canonicalSource':'production-desk-store/windows-src/server.py:DEMO','characters':['MAYA','ELI','JONAH'],'scenes':[{'sceneId':b['id'],'scenicSceneId':ss['id'],'number':b['scene'],'heading':ss['title'],'description':b['description'],'scriptText':b['_scriptText'],'location':SPECS[i][0],'characters':SPECS[i][2],'props':[x[2] for x in SPECS[i][3]],'shots':[dict(shot,number=b['scene']+shot['number']) for shot in all_shots if shot['sceneId']==b['id']]} for i,(b,ss) in enumerate(zip(scenes,scenic_scenes))]}
+    spec={'title':'The Last Light','fictional':True,'revision':1,'scriptSHA256':source_hash,'canonicalSource':'windows-src/tests/demo_data.py:DEMO','characters':['MAYA','ELI','JONAH'],'scenes':[{'sceneId':b['id'],'scenicSceneId':ss['id'],'number':b['scene'],'heading':ss['title'],'description':b['description'],'scriptText':b['_scriptText'],'location':SPECS[i][0],'characters':SPECS[i][2],'props':[x[2] for x in SPECS[i][3]],'shots':[dict(shot,number=b['scene']+shot['number']) for shot in all_shots if shot['sceneId']==b['id']]} for i,(b,ss) in enumerate(zip(scenes,scenic_scenes))]}
     (target/'the-last-light-spec.json').write_text(json.dumps(spec,ensure_ascii=False,indent=2)+'\n')
-    # Keep desktop and mobile entry points and assets byte-identical.
-    mobile=ROOT.parent/'ios/ProductionDesk/Web/demo';mobile.mkdir(exist_ok=True)
-    for name in ['the-last-light.productiondesk','the-last-light.fountain','the-last-light.scenic','demo.js','demo-controls.js']:(mobile/name).write_bytes((target/name).read_bytes())
     if scenic_root:
         scenic_root=Path(scenic_root)
         module=(scenic_root/'tools/demo-controller.js').read_text().replace('/* GENERATED_FIXTURE */',json.dumps(scenic,ensure_ascii=False,separators=(',',':')))

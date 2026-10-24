@@ -360,12 +360,12 @@ test('legacy full JSON backups with missing schedules are repaired without losin
  validateWorkspace(result.workspace);
 });
 
-const demoFixture=()=>JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.productiondesk',import.meta.url),'utf8')).workspace;
+const demoFixture=()=>JSON.parse(readFileSync(new URL('../../windows-src/tests/fixtures/demo/the-last-light.productiondesk',import.meta.url),'utf8')).workspace;
 const runtimeDemo=()=>{const w=demoFixture();delete w._pdfDocuments;return w;};
 
 test('offline Last Light sample covers all scenes, schedules, shots and original PDF pages',async()=>{
  const {readProjectFile}=await import('../ProductionDesk/Web/project-file.js');
- const value=JSON.parse(readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.productiondesk',import.meta.url),'utf8'));
+ const value=JSON.parse(readFileSync(new URL('../../windows-src/tests/fixtures/demo/the-last-light.productiondesk',import.meta.url),'utf8'));
  const w=readProjectFile(value),p=w.projects[0];validateUSS(p);
  assert.equal(p.project,'DEMO · The Last Light');assert.equal(p.breakdowns.filter(b=>b.type==='scene').length,8);
  assert.equal(p.breakdowns.filter(b=>b.type==='banner').length,3);assert.equal(p.stripboards.length,2);
@@ -375,11 +375,11 @@ test('offline Last Light sample covers all scenes, schedules, shots and original
  assert.equal(new Set(p._linedScript.documents[0].marks.map(m=>m.page)).size,8);
  const raw=Buffer.from(Object.values(w._pdfDocuments)[0],'base64');assert.ok(raw.subarray(0,8).toString().startsWith('%PDF-1.4'));
  const {createHash}=await import('node:crypto');assert.equal(createHash('sha256').update(raw).digest('hex'),p._linedScript.activePdf);
- const text=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.fountain',import.meta.url),'utf8');assert.equal(p._sourceScript.text,text);
+ const text=readFileSync(new URL('../../windows-src/tests/fixtures/demo/the-last-light.fountain',import.meta.url),'utf8');assert.equal(p._sourceScript.text,text);
  for(const sentence of ['We should have left yesterday.',"One hundred and twelve steps. Your father counted every morning.",'Now I am.'])assert.ok(text.includes(sentence));
 });
 test('demo load preserves legacy samples, same-title productions, workspace extensions and edited repeats',async()=>{
- const {DEMO_KEY,planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const {DEMO_KEY,planDemo,managedDemo}=await import('../../windows-src/tests/fixtures/demo/demo.js');
  const incoming=runtimeDemo(),w=workspace(project());w.projects[0].project=incoming.projects[0].project;w.projects[0]._betaDemo={key:'productiondesk.the-last-cue.v1'};w._extension={keep:true};
  const before=structuredClone(w),first=planDemo(w,incoming);assert.deepEqual(w,before);assert.equal(first.workspace.projects.length,2);
  assert.deepEqual(first.workspace.projects[0],w.projects[0]);assert.deepEqual(first.workspace._extension,w._extension);
@@ -389,7 +389,7 @@ test('demo load preserves legacy samples, same-title productions, workspace exte
  assert.equal(repeat.workspace.activeProject,demo.id);assert.deepEqual(managedDemo(repeat.workspace),demo);assert.equal(repeat.workspace.projects.length,2);
 });
 test('portable copies never acquire reset ownership; safe reset replaces only its managed sample',async()=>{
- const {planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const {planDemo,managedDemo}=await import('../../windows-src/tests/fixtures/demo/demo.js');
  const {mergeProductions,projectFile,readProjectFile}=await import('../ProductionDesk/Web/project-file.js');
  const source=demoFixture(),first=planDemo(workspace(project()),runtimeDemo()).workspace,owned=managedDemo(first);
  owned.breakdowns[0].comments='Only this edited demo may reset';
@@ -406,7 +406,7 @@ test('portable copies never acquire reset ownership; safe reset replaces only it
  assert.equal(managedDemo({version:1,projects:[imported],activeProject:imported.id}),undefined);
 });
 test('collision and stale-registry demo loading preserves imported copies and valid relationships',async()=>{
- const {DEMO_KEY,planDemo,managedDemo}=await import('../ProductionDesk/Web/demo/demo.js');
+ const {DEMO_KEY,planDemo,managedDemo}=await import('../../windows-src/tests/fixtures/demo/demo.js');
  const incoming=runtimeDemo(),w=structuredClone(incoming);w._demoProjects={[DEMO_KEY]:'deleted-production'};
  const before=structuredClone(w),added=planDemo(w,incoming).workspace;
  assert.deepEqual(w,before);assert.equal(added.projects.length,2);assert.deepEqual(added.projects[0],w.projects[0]);
@@ -414,14 +414,14 @@ test('collision and stale-registry demo loading preserves imported copies and va
  assert.equal(demo._shots[0].sceneId,demo.breakdowns[0].id);assert.equal(demo._linedScript.documents[0].marks[0].shotId,demo._shots[0].id);validateWorkspace(added);
 });
 test('invalid or stale demo operations leave workspace untouched',async()=>{
- const {planDemo}=await import('../ProductionDesk/Web/demo/demo.js');const w=workspace(project()),before=structuredClone(w);
+ const {planDemo}=await import('../../windows-src/tests/fixtures/demo/demo.js');const w=workspace(project()),before=structuredClone(w);
  for(const value of [undefined,{projects:[]},{projects:[project()]}])assert.throws(()=>planDemo(w,value),/bundled demo/);
  assert.throws(()=>planDemo(w,runtimeDemo(),'stale-ID'),/Only the demo created here/);assert.deepEqual(w,before);
 });
 
 test('turning off the demo flag rejects new loads without changing saved productions',async()=>{
- const source=readFileSync(new URL('../ProductionDesk/Web/demo/demo.js',import.meta.url),'utf8')
-   .replace("'../project-file.js'",JSON.stringify(new URL('../ProductionDesk/Web/project-file.js',import.meta.url).href))
+ const source=readFileSync(new URL('../../windows-src/tests/fixtures/demo/demo.js',import.meta.url),'utf8')
+   .replace("'../../../web/project-file.js'",JSON.stringify(new URL('../ProductionDesk/Web/project-file.js',import.meta.url).href))
    .replace('export const DEMO_ENABLED = true','export const DEMO_ENABLED = false');
  const disabled=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const w=runtimeDemo(),before=structuredClone(w);assert.equal(disabled.DEMO_ENABLED,false);
@@ -438,14 +438,14 @@ function demoControlsHarness(initial,options={}) {
  return {nodes,config,workspace:()=>current,stats:()=>({applied,imports,fetches,messages})};
 }
 test('demo controls stop on failed current save or missing asset and keep existing work intact',async()=>{
- const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const {createDemoControls}=await import('../../windows-src/tests/fixtures/demo/demo-controls.js');
  const before=workspace(project()),failed=demoControlsHarness(before,{flush:()=>false});createDemoControls(failed.config).bind();
  await failed.nodes.get('#load-demo').onclick();assert.equal(failed.workspace(),before);assert.equal(failed.stats().applied,0);assert.equal(failed.stats().fetches,0);assert.match(failed.stats().messages[0],/Save your current work/);assert.equal(failed.nodes.get('#load-demo').disabled,false);
  const missing=demoControlsHarness(before,{fetchError:'Missing sample'});createDemoControls(missing.config).bind();await missing.nodes.get('#load-demo').onclick();
  assert.equal(missing.workspace(),before);assert.equal(missing.stats().applied,0);assert.match(missing.stats().messages[0],/Missing sample/);
 });
 test('demo controls merge against current async edits and repeated load reuses the saved sample offline',async()=>{
- const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const {createDemoControls}=await import('../../windows-src/tests/fixtures/demo/demo-controls.js');
  const w=workspace(project()),h=demoControlsHarness(w,{duringFetch:()=>{w.projects[0].description='Edit made while reading sample';}});
  createDemoControls(h.config).bind();await h.nodes.get('#load-demo').onclick();
  assert.equal(h.workspace().projects.length,2);assert.equal(h.workspace().projects[0].description,'Edit made while reading sample');assert.equal(h.stats().imports,1);
@@ -453,7 +453,7 @@ test('demo controls merge against current async edits and repeated load reuses t
  assert.equal(h.workspace().projects.length,2);assert.equal(h.workspace().projects.at(-1).project,'Renamed managed sample');assert.equal(h.stats().fetches,1);assert.equal(h.stats().imports,1);assert.equal(h.nodes.get('#demo-launcher').hidden,false);
 });
 test('demo controls report a failed final save truthfully and permit a safe retry',async()=>{
- const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');let saves=0;
+ const {createDemoControls}=await import('../../windows-src/tests/fixtures/demo/demo-controls.js');let saves=0;
  const h=demoControlsHarness(workspace(project()),{flush:()=>++saves!==2});createDemoControls(h.config).bind();await h.nodes.get('#load-demo').onclick();
  assert.equal(h.workspace().projects.length,2);assert.match(h.stats().messages[0],/open but its save failed/);assert.equal(h.nodes.get('#load-demo').disabled,false);
  await h.nodes.get('#load-demo').onclick();assert.equal(h.workspace().projects.length,2);assert.equal(h.stats().imports,1);assert.match(h.stats().messages.at(-1),/existing demo/);
@@ -461,12 +461,12 @@ test('demo controls report a failed final save truthfully and permit a safe retr
 
 
 test('demo guide exports the paired Scenic file with the supported JSON export type',async()=>{
- const {createDemoControls}=await import('../ProductionDesk/Web/demo/demo-controls.js');
+ const {createDemoControls}=await import('../../windows-src/tests/fixtures/demo/demo-controls.js');
  const h=demoControlsHarness(workspace(project()));
  for(const key of ['#demo-guide-close','#demo-scenic-file','#demo-guide-open','#modal'])h.nodes.set(key,{disabled:false,close(){}});
  h.config.modal=()=>{};let exported;
  h.config.download=async(filename,content,type)=>{exported={filename,content,type};return true;};
- const fixture=readFileSync(new URL('../ProductionDesk/Web/demo/the-last-light.scenic',import.meta.url),'utf8');
+ const fixture=readFileSync(new URL('../../windows-src/tests/fixtures/demo/the-last-light.scenic',import.meta.url),'utf8');
  globalThis.fetch=async()=>({ok:true,text:async()=>fixture});
  createDemoControls(h.config).bind();h.nodes.get('#demo-guide').onclick();await h.nodes.get('#demo-scenic-file').onclick();
  assert.equal(exported.filename,'The-Last-Light.scenic');assert.equal(exported.type,'application/json');

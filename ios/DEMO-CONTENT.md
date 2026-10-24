@@ -1,3 +1,8 @@
+> Historical demo documentation. Removed from shipping apps in 1.5.16.
+> Synthetic files and legacy controller coverage are retained only under
+> `windows-src/tests/fixtures/demo/`; the original test screenplay is in
+> `windows-src/tests/demo_data.py`. Existing user projects are never removed.
+
 # The Last Light — temporary offline demo
 
 **Load The Last Light demo** is a prominent permanent entry beside the production

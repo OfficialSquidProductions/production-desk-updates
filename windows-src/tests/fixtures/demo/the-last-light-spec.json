@@ -3,7 +3,7 @@
   "fictional": true,
   "revision": 1,
   "scriptSHA256": "84b4bea90b72a1d3d09be8925b07cdf696e9bc579386ed21c3255bb305336f87",
-  "canonicalSource": "production-desk-store/windows-src/server.py:DEMO",
+  "canonicalSource": "windows-src/tests/demo_data.py:DEMO",
   "characters": [
     "MAYA",
     "ELI",

@@ -52,7 +52,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
     }
   } finally { win.setBounds(bounds); }
   checks.push('Native Desktop branding and exact packaged version survive narrow and wide layouts');
-  checks.push(...await require('./demo-regressions.cjs')({win,origin,output,flush,waitFor}));
+  checks.push(...await require('./shipping-content-regressions.cjs')({win,origin,output,flush,waitFor}));
 
   const original = await (await fetch(origin+'/api/workspace')).json();
   assert.ok(original.projects.length);

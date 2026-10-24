@@ -1,6 +1,6 @@
 # Production Desk for iPhone and iPad
 
-Open `ProductionDesk.xcodeproj`, scheme `ProductionDesk`. The app supports iOS/iPadOS 17+ and retains bundle ID `com.hosier.scheduler.ipad` and the v1 local workspace store. Version 1.5.14 (39) ports the tested Mac build 37 editor improvements: continuous original-PDF reading, lined-script tools and keyboard preferences, gutter information labels and exports, focused undo/redo, shot-list navigation/deletion, schedule placement feedback, and atomic imports. Native Files, AirDrop/sharing, iPhone touch targets and iPad portrait panes remain platform-specific. The separate Shot Shooting Order view is absent; saved `_shotShootingOrder` data, including stale IDs, is preserved as opaque compatibility data.
+Open `ProductionDesk.xcodeproj`, scheme `ProductionDesk`. The app supports iOS/iPadOS 17+ and retains bundle ID `com.hosier.scheduler.ipad` and the v1 local workspace store. Version 1.5.16 (40) retains the tested Mac build 37 editor improvements: continuous original-PDF reading, lined-script tools and keyboard preferences, gutter information labels and exports, focused undo/redo, shot-list navigation/deletion, schedule placement feedback, and atomic imports. Native Files, AirDrop/sharing, iPhone touch targets and iPad portrait panes remain platform-specific. The separate Shot Shooting Order view is absent; saved `_shotShootingOrder` data, including stale IDs, is preserved as opaque compatibility data.
 
 The UIKit/WKWebView shell bundles its editor and PDF engines for offline use. `ProductionDesk/Web/project-file.js` is shared with `../windows-src/web/project-file.js`; keep the implementations identical. Native Files, sharing and document opening live in `NativeFiles.swift`, `DeskViewController.swift` and `AppDelegate.swift`.
 
@@ -10,6 +10,6 @@ For distribution, use the existing team and matching app-specific profile. `scri
 
 See [portable project format](PORTABLE-PROJECTS.md) for compatibility and limits. Physical Files providers, AirDrop and large-production memory usage remain physical-device QA items.
 
-Temporary TestFlight demo: **Load The Last Light demo** adds or reopens the separate fictional eight-scene *The Last Light* production without replacing existing work. See [demo content and removal](DEMO-CONTENT.md).
+Shipping apps start empty and include no demo controls or screenplay. Existing productions, including previously imported samples, are retained. Synthetic fixtures live only in test targets.
 
 See [iOS 1.5.14 review evidence](IOS-APP-STORE-REVIEW-1.5.14.md) for package identity, test results, limitations and submission receipt.

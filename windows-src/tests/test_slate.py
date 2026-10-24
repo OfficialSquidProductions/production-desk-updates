@@ -1,10 +1,11 @@
+from demo_data import demo_workspace
 import copy
 import json
 from pathlib import Path
 import tempfile
 import unittest
 from film import import_script, parse_heading, parse_script, validate_uss, empty_project
-from server import atomic_save, demo_workspace, extract_pdf
+from server import atomic_save, extract_pdf
 
 FDX = '''<?xml version="1.0"?><FinalDraft><Content>
 <Paragraph Type="Scene Heading" Number="12A"><Text>INT. KITCHEN - NIGHT</Text></Paragraph>

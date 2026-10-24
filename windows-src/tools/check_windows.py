@@ -28,6 +28,7 @@ def main():
     from test_slate import simple_pdf
     (output / 'fixture.pdf').write_bytes(simple_pdf())
     shutil.copy2(ROOT / 'tests/fixture.fdx', output / 'fixture.fdx')
+    shutil.copy2(ROOT / 'tests/fixtures/demo/the-last-light.productiondesk', output / 'portable-fixture.productiondesk')
     shutil.copy2(ROOT / 'tests/lined-script.pdf', output / 'lined-script.pdf')
     result = output / 'result.json'
 
