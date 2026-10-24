@@ -104,5 +104,3 @@ def demo_workspace():
     p["stripboards"][0]["boards"][0]["breakdownIds"] = [[ids[2], ids[3], ids[4]], [ids[5], ids[6]]]
     p["stripboards"][0]["boards"][1]["breakdownIds"] = [ids[0], ids[1], ids[7]]
     return {"version": 1, "activeProject": p["id"], "projects": [p]}
-
-

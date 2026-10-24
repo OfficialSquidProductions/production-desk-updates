@@ -44,4 +44,3 @@ class ShippingContentTests(unittest.TestCase):
         server = (ROOT/'server.py').read_text()
         self.assertNotIn('def demo_workspace', server)
         self.assertNotIn('THE LAST LIGHT', server)
-
