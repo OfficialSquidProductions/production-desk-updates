@@ -448,7 +448,12 @@ function importModal() {
   const cancel=()=>{if(!session.committing)session.cancelled=true;};
   dialog.onclose=()=>{if(!dialog.open)cancel();};
   for(const control of [$('#modal-close'),$('#modal-cancel')])control.onclick=()=>{if(!session.committing){cancel();dialog.close();}};
-  dialog.oncancel=event=>{if(session.committing)event.preventDefault();else cancel();};
+  dialog.oncancel=event=>{
+    // File inputs also emit a bubbling cancel event when their picker closes.
+    // That cancels file selection, not the still-open import dialog/session.
+    if(event.target!==dialog)return;
+    if(session.committing)event.preventDefault();else cancel();
+  };
   $('#import-submit').onclick=async()=>{
     const file=$('#import-file').files[0],text=$('#paste-script').value;
     if(!file&&!text.trim()){ $('#modal-error').textContent='Choose a file or paste script text.';return; }
