@@ -41,7 +41,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/breakdown-csv.cjs tests/project-file-purity.cjs tests/lined-export.cjs tests/schedule-drag.cjs tests/shot-shooting-order.cjs tests/support-errors.cjs tests/platform-branding.cjs tests/mac-store-exports.cjs tests/navigation-order.cjs
+          node --test tests/import-cancellation.cjs tests/breakdown-csv.cjs tests/project-file-purity.cjs tests/lined-export.cjs tests/schedule-drag.cjs tests/shot-shooting-order.cjs tests/support-errors.cjs tests/platform-branding.cjs tests/mac-store-exports.cjs tests/navigation-order.cjs
       - name: Build complete offline EXE installer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
