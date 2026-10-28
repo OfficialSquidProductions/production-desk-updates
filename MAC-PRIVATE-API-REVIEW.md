@@ -69,7 +69,7 @@ Foundation-only launcher with no GUI.
 Runtime checks ran on Apple Silicon. Intel binaries are compiled and audited;
 an Intel runtime test has not been performed.
 
-## Submission checkpoint
+## Earlier submission checkpoint (superseded packages)
 
 App Store replacement candidates are Mac 1.5.14 (38) and iPhone/iPad 1.5.14 (40).
 Live App Store Connect inspection confirmed the current Mac build is 37 and the
@@ -136,3 +136,42 @@ Proposed factual reviewer response, to update with the actual selected build:
 Only post claims above after the final package and GUI checks support them.
 
 Official runtime source: https://www.python.org/downloads/release/python-31410/
+
+## Final reset-control package checkpoint
+
+Product source commit `37d72c2` moves Restore default order beside the Navigation
+tabs heading. The first real phone touch test proved that the former button below
+six rows could lie outside the modal viewport. That run passed reordering and
+cold-launch persistence but did not restore the default. The revised test checks
+the actual first tab and a second cold launch, rather than a transient status.
+The final phone/iPad touch and Mac packaged-runtime retests are still required.
+
+The final Store packages have been rebuilt after this correction:
+
+- Mac 1.5.14 (38): `export-final/Production Desk.pkg`, 18,660,710 bytes,
+  SHA-256 `189367f244da23dba6fb4b50a2e8a2084e0ce7415aa815696f0db8b1eb748567`.
+  Its expanded payload passes strict deep signatures, profile and entitlement
+  checks, exact source/archive resource comparison, and the recursive audit of
+  all 68 universal Mach-O files against all 86 rejected symbols and private
+  framework references. See `final-package-verification.json` and
+  `final-package-binary-audit.json` under the private-api-review build directory.
+- iPhone/iPad 1.5.14 (40): `ios/artifacts/export-1.5.14-40-final/Production Desk.ipa`,
+  3,319,709 bytes, SHA-256
+  `15b9f2cb45448bed6430d91d78da09f1ff8df5abc999a60c46f79e230b531b39`.
+  Signature, distribution profile, team, device families and all 246 web resource
+  paths/bytes match the source. See `ios/build/ipa-40-final-verification.json`.
+
+All 44 native iPhone workflow tests passed before the layout-only correction.
+The final simulator test build succeeds with normal ad-hoc simulator signing.
+The prior packaged Mac feature checks and manual mouse/keyboard, native Save As
+success/cancel checks passed; the final layout is awaiting its packaged retest.
+All 30 shared and 47 mobile JavaScript tests pass after the correction.
+
+Public-source integration is separately committed at `c59551a`: Mac 1.5.16 (47),
+preserving newer public-source changes and the Windows 1.5.16 (52) release.
+Its standalone archive is built and Developer ID signed locally; 38 applicable
+shared tests and 47 mobile web tests pass. The Windows updater test requires the
+absent Windows electron-updater installation and is outside this Mac release's
+local test set. No upload, notarization submission, App Store review replacement,
+source push, release publication or website deployment has occurred at this
+checkpoint. The existing waiting iOS review item remains unchanged.
