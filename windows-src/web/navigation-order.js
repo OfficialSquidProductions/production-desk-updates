@@ -28,7 +28,7 @@ export function applyNavigationOrder(navigation,value) {
 export function navigationOrderSettings({get,persist}) {
   const section=document.createElement('section');
   section.className='settings-section navigation-settings';
-  section.innerHTML='<h3>Navigation tabs</h3><p id="navigation-order-help">Use Move up or Move down to arrange your tabs. Changes are saved on this device.</p><ol id="navigation-order-list" aria-label="Navigation tab order" aria-describedby="navigation-order-help"></ol><button type="button" id="navigation-order-reset">Restore default order</button><p id="navigation-order-status" role="status" aria-live="polite"></p>';
+  section.innerHTML='<div class="navigation-order-heading"><h3>Navigation tabs</h3><button type="button" id="navigation-order-reset">Restore default order</button></div><p id="navigation-order-help">Use Move up or Move down to arrange your tabs. Changes are saved on this device.</p><ol id="navigation-order-list" aria-label="Navigation tab order" aria-describedby="navigation-order-help"></ol><p id="navigation-order-status" role="status" aria-live="polite"></p>';
   const list=section.querySelector('#navigation-order-list'),reset=section.querySelector('#navigation-order-reset'),status=section.querySelector('#navigation-order-status');
   let busy=false;
   const isDefault=order=>order.every((id,index)=>id===DEFAULT_NAVIGATION_ORDER[index]);

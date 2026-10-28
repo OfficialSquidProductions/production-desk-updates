@@ -15,7 +15,8 @@ final class ProductionDeskUITests: XCTestCase {
             XCTAssertTrue(reset.waitForExistence(timeout:5))
             if reset.isEnabled {
                 reveal(reset);reset.tap()
-                XCTAssertTrue(web.staticTexts["Default tab order restored."].waitForExistence(timeout:5))
+                let restored=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == false"),object:reset)
+                XCTAssertEqual(XCTWaiter.wait(for:[restored],timeout:5),.completed)
             }
         }
         func linedIsFirst() {
@@ -23,6 +24,12 @@ final class ProductionDeskUITests: XCTestCase {
             let main=web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Main breakdown")).firstMatch
             XCTAssertTrue(lined.waitForExistence(timeout:10)&&main.exists)
             XCTAssertTrue(lined.frame.minY<main.frame.minY || (abs(lined.frame.minY-main.frame.minY)<2 && lined.frame.minX<main.frame.minX),app.debugDescription)
+        }
+        func mainIsFirst() {
+            let lined=web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Lined script")).firstMatch
+            let main=web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Main breakdown")).firstMatch
+            XCTAssertTrue(main.waitForExistence(timeout:10)&&lined.exists)
+            XCTAssertTrue(main.frame.minY<lined.frame.minY || (abs(main.frame.minY-lined.frame.minY)<2 && main.frame.minX<lined.frame.minX),app.debugDescription)
         }
         web.buttons["Settings"].tap();restoreDefault()
         let up=web.buttons["Move Lined script up"];reveal(up)
@@ -33,6 +40,7 @@ final class ProductionDeskUITests: XCTestCase {
         web.buttons["Close dialog"].tap();linedIsFirst()
         app.terminate();app.launch();linedIsFirst()
         web.buttons["Settings"].tap();restoreDefault();web.buttons["Close dialog"].tap()
+        mainIsFirst();app.terminate();app.launch();mainIsFirst()
         let defaults=XCTAttachment(screenshot:app.screenshot());defaults.name="Default navigation restored after cold launch";defaults.lifetime = .keepAlways;add(defaults)
     }
 
