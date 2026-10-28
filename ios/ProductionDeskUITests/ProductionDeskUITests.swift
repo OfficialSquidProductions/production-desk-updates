@@ -59,6 +59,25 @@ final class ProductionDeskUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for:[closed],timeout:10),.completed)
     }
 
+    @MainActor func testBottomNavigationControlsAreReachableByTouch() throws {
+        let app=XCUIApplication();app.launch()
+        let web=app.webViews["production-desk-webview"]
+        XCTAssertTrue(web.waitForExistence(timeout:15))
+        web.buttons["Settings"].tap()
+        // The last row starts below the phone modal viewport. Scroll the real
+        // dialog, then verify the tap changed the saved order rather than merely
+        // trusting accessibility's isHittable result for offscreen web controls.
+        web.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.7)).press(forDuration:0.1,thenDragTo:web.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)))
+        let up=web.buttons["Move Elements up"]
+        XCTAssertTrue(up.waitForExistence(timeout:5));XCTAssertTrue(up.isHittable)
+        up.tap()
+        XCTAssertTrue(web.staticTexts["Elements is now tab 5 of 6. Tab order saved."].waitForExistence(timeout:5))
+        let down=web.buttons["Move Elements down"];XCTAssertTrue(down.isHittable);down.tap()
+        XCTAssertTrue(web.staticTexts["Elements is now tab 6 of 6. Tab order saved."].waitForExistence(timeout:5))
+        let evidence=XCTAttachment(screenshot:app.screenshot());evidence.name="Bottom navigation controls after scrolling";evidence.lifetime = .keepAlways;add(evidence)
+        web.swipeDown();web.buttons["Close dialog"].tap()
+    }
+
     @MainActor private func revealSaveAs(_ web: XCUIElement) {
         let save = web.buttons["Save As…"]
         XCTAssertTrue(save.waitForExistence(timeout: 10))
