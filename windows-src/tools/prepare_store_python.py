@@ -47,14 +47,18 @@ def prepare(installer, output):
         for name in ['License.rtf','ReadMe.rtf']:
             shutil.copy2(expanded / 'Resources' / name, framework / 'Resources' / ('Python-Installer-' + name))
     version = framework / 'Versions' / ABI
-    # The app uses AppKit/WebKit and PDFKit. Tcl/Tk and XZ/LZMA are unused;
+    # The app uses AppKit/WebKit, PDFKit and plain loopback HTTP. Tk, XZ and
+    # Python TLS/OpenSSL are unused; SHA-256 uses CPython's built-in _sha2.
     # remove those complete optional modules rather than editing their symbols.
     removed = []
     patterns = ['Headers','Frameworks','share','lib/pkgconfig','lib/python3.14/config-*',
                 'lib/python3.14/test','lib/python3.14/idlelib','lib/python3.14/tkinter',
                 'lib/python3.14/turtle*','lib/python3.14/turtledemo','lib/python3.14/lzma.py',
+                'lib/python3.14/ssl.py','lib/libssl*','lib/libcrypto*',
                 'lib/python3.14/ensurepip','lib/python3.14/site-packages/*',
                 'lib/python3.14/lib-dynload/_tkinter.*','lib/python3.14/lib-dynload/_lzma.*',
+                'lib/python3.14/lib-dynload/_ssl.*','lib/python3.14/lib-dynload/_hashlib.*',
+                'lib/python3.14/lib-dynload/_hmac.*',
                 'lib/python3.14/lib-dynload/*test*','lib/python3.14/lib-dynload/xx*',
                 'bin/*config*','bin/*intel64','bin/idle*','bin/pydoc*']
     for pattern in patterns:

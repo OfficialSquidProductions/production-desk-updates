@@ -185,7 +185,7 @@ def build(args):
               'architectures':['arm64','x86_64'],'sparkleIncluded':False,'resourceHashes':manifest}
     if pd:
         result['pythonRuntime'] = {'version':VERSION,'installerSha256':SHA256,
-                                   'binaryAudit':'binary-audit.json','unusedTkAndLzmaRemoved':True}
+                                   'binaryAudit':'binary-audit.json','unusedComponentsRemoved':['Tk/Tcl','LZMA','OpenSSL/TLS']}
     (out / 'build-result.json').write_text(json.dumps(result,indent=2) + '\n')
     if profile and args.installer_identity and not args.local_development:
         options = {'method':'app-store-connect','destination':'export','signingStyle':'manual',

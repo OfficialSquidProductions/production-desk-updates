@@ -21,9 +21,10 @@ The downloaded bytes match Python.org's checksum and macOS confirms the trusted
 PSF installer signature, timestamp, and notarization. It is extracted into this
 task's workspace; nothing is installed and package scripts/pip are not run.
 
-SSL and hashing remain available through bundled OpenSSL 3.5.9. The complete
-unused Tk/Tcl frameworks, tkinter extension/package, and LZMA extension/module
-are excluded. Python code, dependency symbols and diagnostic strings are not
+The app uses plain loopback HTTP and SHA-256 PDF integrity, with no Python TLS
+feature. The final runtime excludes the complete unused Tk/Tcl, LZMA and
+SSL/OpenSSL components, including `_ssl`, `_hashlib`, `_hmac`, `libssl` and
+`libcrypto`. Hashing remains available through Python's built-in `_sha2` implementation. Python code, dependency symbols and diagnostic strings are not
 hidden or renamed. Dynamic library paths are relocated to the actual packaged
 dependencies. Original Python license and installer dependency notices remain.
 Every prepared file and symlink is checked against its source manifest.
@@ -33,7 +34,7 @@ public feed, pricing, release setting and other platforms are unchanged.
 Existing sandbox and inherited helper entitlements are retained; no new
 certificate, account capability, profile or security exception was created.
 
-## Validation completed before GUI access
+## Initial candidate validation (superseded by the offline runtime and navigation update)
 
 Evidence is under ignored `windows-src/build/private-api-review/`:
 
@@ -70,8 +71,9 @@ an Intel runtime test has not been performed.
 
 ## Submission checkpoint
 
-Distribution candidate is 1.5.14 (38), pending inspection of current App Store
-Connect build availability before upload. Its profile/certificates match the
+App Store replacement candidates are Mac 1.5.14 (38) and iPhone/iPad 1.5.14 (40).
+Live App Store Connect inspection confirmed the current Mac build is 37 and the
+current iOS build is 39; the proposed build numbers are available. Its profile/certificates match the
 existing Production Desk Mac identity and are valid. The common standalone
 release configuration remains at build 37; Store build number is an explicit
 candidate override.
@@ -87,19 +89,45 @@ Main app and PDF helper dSYMs match both architecture slices. Package is
 `exported-package-binary-audit.json` record these checks. The 1,236 protected
 files remain unchanged since the pre-GUI snapshot (`protected-result.json`).
 
-Shared GUI/browser access is pending the parent task's slot. Still required:
-live ASC listing/version/build/release-setting verification, isolated final
-packaged WebKit/native app checks,
-upload, processing, build selection, factual review response and resubmission.
-No upload or resubmission has occurred at this checkpoint.
+The first final-package sandbox WebKit/native aggregate passed before the user's
+navigation update; it is being repeated against the final feature packages. The
+GUI slot has been released to Script Call while source/CLI work continues. No
+upload or resubmission has been attempted. The waiting iOS review item is intact.
+
+## Custom navigation requested on October 28
+
+The user requested the default order Main breakdown, Lined script, Shot list,
+Shooting schedule, Reports, Elements, plus customizable ordering on Mac,
+iPhone and iPad. Settings now offers accessible 44px Move up/Move down buttons
+and Restore default order. Changes persist as a device preference rather than
+project data, preserve every existing navigation button and the active editor,
+and suppress unrelated editor redraws. Failed saves retain the confirmed order
+and report an accessible error. Settings writes are serialized. Invalid saved
+orders fall back to the six defaults; invalid backend writes are atomic.
+
+The exact submitted iOS39 source was restored before the mobile changes, preserving
+its native bridges and verified editor behavior. Shared navigation/settings code
+is identical in desktop and mobile resources. The public source is separately
+reconciled against GitHub's newer 1.5.16 (46) Mac release, so publishing the
+requested website/direct-download update will preserve its later fixes and demo
+removal. The uncommitted Windows-only picker work is not included.
+
+CLI checks: 98 backend tests ran under the signed offline Python 3.14.10 runtime;
+97 passed and one Windows-only dependency check skipped. 30 shared JavaScript
+checks and 47 mobile web/data checks passed. New Mac and iOS runtime fixtures
+cover relaunch persistence, save failures, active editor/draft preservation,
+other settings/project invariance, touch target sizes and default restoration.
+An XCUITest adds real touch ordering and cold-launch verification. The iOS app
+and tests compile successfully (`ios/build-navigation`, no simulator launched).
+Runtime/UI results and final archive/package hashes will be recorded after tests.
 
 Proposed factual reviewer response, to update with the actual selected build:
 
 > We replaced the Xcode Python 3.9 runtime in the Mac app with Python Software
-> Foundation Python 3.14.10. SSL and hashing now use the packaged OpenSSL 3.5.9
-> libraries and no longer link TrustEvaluationAgent or another private framework.
-> We removed the unused Tcl/Tk frameworks and tkinter extension, and the unused
-> LZMA extension/module. We audited every native binary and both architecture
+> Foundation Python 3.14.10. We removed the complete unused SSL/OpenSSL, Tcl/Tk
+> and LZMA components, including the four extensions identified in the rejection.
+> SHA-256 PDF integrity uses Python's built-in hash implementation. No packaged
+> binary links TrustEvaluationAgent or another private framework. We audited every native binary and both architecture
 > slices in the final package against all the symbols and framework references
 > listed in the October 26 guideline 2.5.1 rejection. The audit found none.
 > The local server, script/PDF imports, project save/reload and exports were

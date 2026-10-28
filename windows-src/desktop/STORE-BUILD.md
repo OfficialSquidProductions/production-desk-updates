@@ -39,9 +39,10 @@ python3 tools/prepare_store_python.py --installer /path/python-3.14.10-macos11.p
 
 Pass `--python-framework /absolute/new/python-runtime/Python.framework` to the
 Store builder. Preparation verifies the release checksum and Apple-trusted PSF
-signature, removes unused complete Tk/Tcl and LZMA components, and relocates
-packaged dynamic dependencies. Python 3.14.10's SSL and hashing use its bundled
-OpenSSL 3.5.9. Installer scripts and pip are never run. Original Python licenses
+signature, removes the complete unused Tk/Tcl, LZMA and SSL/OpenSSL components,
+and relocates packaged dynamic dependencies. The app uses plain loopback HTTP
+and SHA-256 for PDF integrity; hashing uses Python 3.14.10's built-in `_sha2`
+implementation. Installer scripts and pip are never run. Original Python licenses
 and installer dependency notices are retained. The builder verifies the complete
 prepared file and symlink manifest, then audits every packaged native binary
 against Apple's 86 rejected symbols, private frameworks, external dependencies,

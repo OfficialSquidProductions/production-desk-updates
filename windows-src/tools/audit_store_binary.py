@@ -39,6 +39,8 @@ def audit(app, output):
         with path.open('rb') as stream:
             if stream.read(4) not in MAGIC: continue
         relative = str(path.relative_to(app))
+        if path.name.startswith(('_ssl.','_hashlib.','_hmac.','_tkinter.','_lzma.','libssl','libcrypto')):
+            failures.append({'file':relative,'unusedRuntimeComponentBundled':True})
         linked = subprocess.check_output(['otool','-L',str(path)],text=True)
         symbols = subprocess.check_output(['nm','-u',str(path)],text=True,stderr=subprocess.DEVNULL)
         strings = subprocess.check_output(['strings','-a',str(path)],text=True,errors='replace')
