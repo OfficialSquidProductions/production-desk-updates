@@ -208,3 +208,70 @@ WebKit editor/export suite, including CSV parsing and portable project transfer
 into fresh storage. Its notarization upload succeeded (submission
 `86B1F326-8593-4872-BF17-1A99F4EE0509`); the exported app's ticket is still pending.
 No public release, feed, download-link or website deployment has occurred yet.
+
+## Completed delivery
+
+Both Apple submissions are now confirmed **Waiting for Review**. No Apple
+approval is claimed. Existing automatic-release-after-approval settings and
+pricing were preserved.
+
+- Mac **1.5.14 (38)** was resubmitted October 28, 2026 at 22:56 UTC using the
+  existing submission `7d2a7d8a-ebdc-473e-a13f-b819742790db` and uploaded build
+  `1e28f62c-9afd-4060-ad8c-41e3d17e8495`.
+  [Mac receipt](https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/7d2a7d8a-ebdc-473e-a13f-b819742790db).
+- iPhone/iPad **1.5.14 (40)** was submitted October 28 at 22:46 UTC. After the
+  final tests and processed-build validation, the old waiting build39 submission
+  was canceled and replaced with submission `c756ff3f-a902-409a-af65-685d01ca2e15`,
+  build `396ed4c7-cb35-4629-916a-630474c0d822`.
+  [iOS receipt](https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/c756ff3f-a902-409a-af65-685d01ca2e15).
+
+Both descriptions and review notes now explain the navigation controls. The Mac
+notes also describe the actual removed dependencies, complete binary audit and
+verified sandbox behavior. The Store product source is `37d72c2`; subsequent
+commits add test/evidence records only. The exact Store source is preserved on
+`release/app-store-1.5.14-navigation` rather than replacing the newer public main.
+
+The public Mac **1.5.16 (47)** release is published at
+[GitHub](https://github.com/OfficialSquidProductions/production-desk-updates/releases/tag/macos-1.5.16-build-47).
+Its app and sealed installer both have valid Apple notarization tickets and pass
+strict signatures, Gatekeeper and distribution checks. The 46-to-47 signed
+upgrade test preserves synthetic settings, backups, portable files and original
+PDFs without launching or changing an installed app. The actual packaged editor
+passes native WebKit/export/portable-transfer tests. Public product source is
+`10607afea7da7022047217f655cfd123906336fb`; its full CI run passed.
+
+Verified public files:
+
+- [App ZIP](https://updates.squidproductions.org/Production-Desk-1.5.16-47.zip),
+  21,311,982 bytes, SHA-256
+  `bde93257c4c0f0c0aad87e2c60364c46cc36b7fe68a9e5475f8bf70a716e00af`.
+- [Installer ZIP](https://updates.squidproductions.org/Production-Desk-Installer-1.5.16-47.zip),
+  19,540,592 bytes, SHA-256
+  `10d8ddf8cf1c9b795c0854e20651286965d581c9fd647ec76407ec9945d7eb89`.
+
+The signed [Mac appcast](https://updates.squidproductions.org/appcast.xml) and
+immutable downloads were deployed in updates commit
+`14296966aa8e6d0daea8f845f36fd9f54830e47e`. The
+[Production Desk website](https://productiondesk.squidproductions.org/) was
+updated in `b52329c990742858a416f8538c9049ffc88330ab`. Both Pages deployments
+completed successfully. Live downloads from GitHub and the updates host match
+the verified bytes and checksums; downloaded app/installer signatures, tickets,
+payload and source resources pass verification. Update-signature checks reject
+tampered content and an unrelated signing key.
+
+All 17 website link checks pass (HTTPS responses and mailto syntax checks).
+Real Sparkle clients from signed builds36,37,45,46 offer exactly 1.5.16 (47) from
+the live feed; the isolated test driver dismisses every offer and forbids download
+or installation. The latest GitHub release remains `windows-1.5.16-build-52`;
+its identity and all four asset hashes are unchanged, and the generic Windows
+latest-feed download matches its existing published hash. Old hosted versioned
+downloads remain present and unchanged.
+
+Final public evidence is under the publication checkout's ignored
+`windows-src/build/release-1.5.16-47/`: `live-verification.json`,
+`live-updater-result.json`, `app-package-verified.json`,
+`installer-package-verified.json`, `signed-upgrade-result.json`, deployment and
+CI records. Runtime testing used Apple Silicon and iOS27 simulators. The Mac
+Store package's Intel slices were compiled/audited; no Intel runtime test was
+performed. No pending approval or remaining delivery blocker exists; Apple's
+review decision is pending.
