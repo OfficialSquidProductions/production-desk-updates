@@ -2,6 +2,40 @@ import XCTest
 import UIKit
 
 final class ProductionDeskUITests: XCTestCase {
+    @MainActor func testTouchNavigationOrderingAndColdLaunch() throws {
+        let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait;app.launch()
+        let web=app.webViews["production-desk-webview"]
+        XCTAssertTrue(web.waitForExistence(timeout:15))
+        func reveal(_ button: XCUIElement) {
+            for _ in 0..<5 {if button.isHittable {break};web.swipeUp()}
+            XCTAssertTrue(button.isHittable,app.debugDescription)
+        }
+        func restoreDefault() {
+            let reset=web.buttons["Restore default order"]
+            XCTAssertTrue(reset.waitForExistence(timeout:5))
+            if reset.isEnabled {
+                reveal(reset);reset.tap()
+                XCTAssertTrue(web.staticTexts["Default tab order restored."].waitForExistence(timeout:5))
+            }
+        }
+        func linedIsFirst() {
+            let lined=web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Lined script")).firstMatch
+            let main=web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Main breakdown")).firstMatch
+            XCTAssertTrue(lined.waitForExistence(timeout:10)&&main.exists)
+            XCTAssertTrue(lined.frame.minY<main.frame.minY || (abs(lined.frame.minY-main.frame.minY)<2 && lined.frame.minX<main.frame.minX),app.debugDescription)
+        }
+        web.buttons["Settings"].tap();restoreDefault()
+        let up=web.buttons["Move Lined script up"];reveal(up)
+        XCTAssertGreaterThanOrEqual(up.frame.width,44);XCTAssertGreaterThanOrEqual(up.frame.height,44)
+        up.tap()
+        XCTAssertTrue(web.staticTexts["Lined script is now tab 1 of 6. Tab order saved."].waitForExistence(timeout:5))
+        let controls=XCTAttachment(screenshot:app.screenshot());controls.name="Touch navigation order controls";controls.lifetime = .keepAlways;add(controls)
+        web.buttons["Close dialog"].tap();linedIsFirst()
+        app.terminate();app.launch();linedIsFirst()
+        web.buttons["Settings"].tap();restoreDefault();web.buttons["Close dialog"].tap()
+        let defaults=XCTAttachment(screenshot:app.screenshot());defaults.name="Default navigation restored after cold launch";defaults.lifetime = .keepAlways;add(defaults)
+    }
+
     @MainActor private func revealSaveAs(_ web: XCUIElement) {
         let save = web.buttons["Save As…"]
         XCTAssertTrue(save.waitForExistence(timeout: 10))

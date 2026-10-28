@@ -268,7 +268,7 @@ class Handler(SimpleHTTPRequestHandler):
             value = {}
         theme = value.get('theme') if isinstance(value, dict) else None
         output = {'theme': theme if theme in ('light', 'dark') else 'light'}
-        for key in ('linedKeyBinds', 'linedLabelOpacity'):
+        for key in ('linedKeyBinds', 'linedLabelOpacity', 'navigationOrder'):
             if isinstance(value, dict) and key in value:
                 try:
                     output.update(validate_preferences({key: value[key]}))
