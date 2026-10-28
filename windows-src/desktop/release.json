@@ -1,6 +1,6 @@
 {
   "version": "1.5.16",
-  "build": "46",
+  "build": "47",
   "feed_url": "https://updates.squidproductions.org/appcast.xml",
   "public_key": "zYDS1uaHcfMaDuiU1sUul0kiXVXuWaDnLpdaXsBLexk=",
   "keychain_account": "production-desk",

@@ -1,8 +1,7 @@
-Production Desk 1.5.16
+Production Desk 1.5.16 (47) for Mac
 
-- Remove the demo launcher, guide and bundled sample script. New workspaces start with an empty production. Existing projects and imported samples are preserved.
-- Export complete breakdowns as interoperable CSV with Unicode, quoted fields and clear columns.
-- Save and restore complete .productiondesk projects, including breakdowns, tags, script/PDF attachments, shots, lined-script annotations and schedules.
-- Retain the standalone Mac updater startup and retry fix from 1.5.15 (45).
+Arrange your Production tools tabs in Settings with Move up and Move down. Your chosen order is saved on this device.
 
-Mac and Windows desktop update. App Store review submissions are managed separately.
+The default order is Main breakdown, Lined script, Shot list, Shooting schedule, Reports, Elements. Restore default order is beside the heading and works with mouse, keyboard or touch.
+
+Changing tab order preserves the active editor, drafts and saved productions. Portable project files keep their existing format.
