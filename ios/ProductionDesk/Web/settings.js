@@ -1,9 +1,14 @@
 import {LINED_ACTIONS,DEFAULT_BINDS,eventBinding,bindingError} from './lined-shortcuts.js';
 import {resetLinkedDeleteWarnings} from './linked-actions.js';
+import {navigationOrder,applyNavigationOrder,navigationOrderSettings} from './navigation-order.js';
 export function createAppSettings({api,modal,toast,isIPad}) {
   let preferences={theme:'light'};
-  const get=()=>({...preferences,linedKeyBinds:{...DEFAULT_BINDS,...preferences.linedKeyBinds},linedLabelOpacity:preferences.linedLabelOpacity??.94});
-  const notify=()=>document.dispatchEvent(new Event('productiondesk:preferences'));
+  const get=()=>({...preferences,navigationOrder:navigationOrder(preferences.navigationOrder),linedKeyBinds:{...DEFAULT_BINDS,...preferences.linedKeyBinds},linedLabelOpacity:preferences.linedLabelOpacity??.94});
+  const notify=changes=>{
+    applyNavigationOrder(document.querySelector('#navigation'),get().navigationOrder);
+    // Navigation-only changes must not redraw the active editor or its overlay.
+    if(!changes||Object.keys(changes).some(key=>key!=='navigationOrder'))document.dispatchEvent(new Event('productiondesk:preferences'));
+  };
   const $=s=>document.querySelector(s);
   const applyTheme=theme=>{document.documentElement.dataset.theme=theme;};
   async function init(){
@@ -14,14 +19,20 @@ export function createAppSettings({api,modal,toast,isIPad}) {
     }
     applyTheme(preferences.theme);notify();
   }
-  async function persist(changes){
-    if(isIPad){
-      const next={...preferences,...changes};
-      localStorage.setItem('productionDeskPreferences',JSON.stringify(next));
-      localStorage.setItem('productionDeskTheme',next.theme);
-      preferences=next;
-    }else preferences=(await api('/api/settings',changes)).preferences;
-    notify();
+  let pendingSave=Promise.resolve();
+  function persist(changes){
+    const save=async()=>{
+      if(isIPad){
+        const next={...preferences,...changes};
+        localStorage.setItem('productionDeskPreferences',JSON.stringify(next));
+        if('theme' in changes)localStorage.setItem('productionDeskTheme',next.theme);
+        preferences=next;
+      }else preferences=(await api('/api/settings',changes)).preferences;
+      notify(changes);
+    };
+    const result=pendingSave.then(save);
+    pendingSave=result.catch(()=>{});
+    return result;
   }
   function keyBinds(){
     const draft={...get().linedKeyBinds};
@@ -46,6 +57,7 @@ export function createAppSettings({api,modal,toast,isIPad}) {
   }
   function open(){
     modal('Settings',`<div id="app-settings"><section class="settings-section"><h3>Appearance</h3><p>Choose how Production Desk looks on this device.</p><div class="theme-options" role="group" aria-label="Appearance"><button data-theme-choice="light" aria-pressed="${preferences.theme==='light'}"><span>☀</span>Light</button><button data-theme-choice="dark" aria-pressed="${preferences.theme==='dark'}"><span>☾</span>Dark</button></div></section><p id="settings-status" role="status"></p></div>`);
+    $('#app-settings').insertBefore(navigationOrderSettings({get,persist}),$('#settings-status'));
     window.productionDeskSupport?.attachSettings($('#app-settings'));
     const deletion=document.createElement('section');deletion.className='settings-section';
     deletion.innerHTML='<h3>Deletion warnings</h3><p>Show confirmations again when deleting linked shots and coverage lines.</p><button id="reset-delete-warnings">Reset deletion warnings</button>';

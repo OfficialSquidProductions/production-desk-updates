@@ -8,12 +8,18 @@ DEFAULT_BINDS = dict(zip(ACTIONS, ('v','c','p','h','a','t','w','Shift+c','[',']'
                                  'Shift+n','l','r','Delete','Shift+o','Mod+e')))
 BIND = re.compile(r'(?:Mod\+)?(?:Alt\+)?(?:Shift\+)?(?:[a-z0-9\[\]=\-]|Arrow(?:Up|Down|Left|Right)|Delete|Backspace|F(?:[1-9]|1[0-2]))')
 RESERVED = re.compile(r'(?:Mod\+(?:Shift\+)?[zsyqwxrvacptnfohm]|(?:Shift\+)?F(?:5|10|11)|(?:Shift\+)?Backspace)')
+NAVIGATION_TABS = ('workspace','lined','shots','schedule','reports','elements')
 
 
 def validate_preferences(value):
     if not isinstance(value, dict):
         raise ValueError('Invalid app settings.')
     output = {}
+    if 'navigationOrder' in value:
+        order = value['navigationOrder']
+        if not isinstance(order, list) or len(order) != len(NAVIGATION_TABS) or any(type(tab) is not str for tab in order) or set(order) != set(NAVIGATION_TABS):
+            raise ValueError('Tab order must contain each navigation tab exactly once.')
+        output['navigationOrder'] = list(order)
     if 'theme' in value:
         if value['theme'] not in ('light', 'dark'):
             raise ValueError('Choose Light or Dark appearance.')

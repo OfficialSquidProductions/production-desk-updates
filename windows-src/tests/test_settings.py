@@ -95,3 +95,33 @@ class SettingsTests(unittest.TestCase):
                 self.assertEqual(self.path.read_bytes(), before)
         self.assertEqual(self.request(value={'linedKeyBinds':{'coverage':''}})[0], 200)
         self.assertEqual(self.request()[1]['preferences']['linedKeyBinds']['coverage'], '')
+
+    def test_tab_order_persists_with_other_preferences_without_touching_project(self):
+        order = ['lined','workspace','shots','schedule','elements','reports']
+        project = b'{"private-project":"keep exactly"}'
+        self.server.datafile.write_bytes(project)
+        self.assertEqual(self.request(value={'navigationOrder':order})[0], 200)
+        self.assertEqual(self.request(value={'theme':'dark','linedLabelOpacity':.35})[0], 200)
+        expected = {'theme':'dark','navigationOrder':order,'linedLabelOpacity':.35}
+        self.assertEqual(self.request(), (200, {'preferences':expected}))
+        self.assertEqual(json.loads(self.path.read_text()), expected)
+        self.assertEqual(self.server.datafile.read_bytes(), project)
+        self.assertFalse(self.server.datafile.with_suffix('.previous.json').exists())
+
+    def test_invalid_tab_orders_cannot_partially_save_or_remove_a_tab(self):
+        default = ['workspace','lined','shots','schedule','reports','elements']
+        self.request(value={'theme':'dark','navigationOrder':default})
+        before = self.path.read_bytes()
+        for order in [None, {}, 'workspace', [], default[:-1], default+['shots'],
+                      ['workspace']*6, ['workspace','lined','shots','schedule','reports','unknown'],
+                      [True,*default[1:]], [[tab] for tab in default]]:
+            with self.subTest(order=order):
+                self.assertEqual(self.request(value={'theme':'light','navigationOrder':order})[0], 400)
+                self.assertEqual(self.path.read_bytes(), before)
+
+    def test_malformed_saved_tab_order_falls_back_without_rewriting_settings(self):
+        value = {'theme':'dark','linedLabelOpacity':.35,'navigationOrder':['lined','lined']}
+        self.path.write_text(json.dumps(value))
+        before = self.path.read_bytes()
+        self.assertEqual(self.request(), (200, {'preferences':{'theme':'dark','linedLabelOpacity':.35}}))
+        self.assertEqual(self.path.read_bytes(), before)

@@ -22,7 +22,7 @@ struct StoreMain {
                 let process = Process()
                 let bundle = Bundle.main.bundleURL
                 let runtime = bundle.appendingPathComponent("Contents/Resources/runtime")
-                process.executableURL = bundle.appendingPathComponent("Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9")
+                process.executableURL = bundle.appendingPathComponent("Contents/Frameworks/Python.framework/Versions/3.14/bin/python3.14")
                 process.currentDirectoryURL = runtime
                 process.environment = ["PATH": "/usr/bin:/bin", "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
                                        "TMPDIR": NSTemporaryDirectory(), "LANG": "en_US.UTF-8"]

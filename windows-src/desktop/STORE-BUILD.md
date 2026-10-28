@@ -22,12 +22,34 @@ certificate, and `--installer-identity EXISTING_MAC_INSTALLER_SHA1`.
 The tool validates the profile's Mac platform, team, bundle ID, distribution
 restrictions, expiry, and signing certificate. Mac profiles need not contain the
 `beta-reports-active` entitlement; only entitlements present in the profile are copied. It emits manual export/upload options with
-`testFlightInternalTestingOnly=true` and automatic version changes disabled.
+`testFlightInternalTestingOnly=false` and automatic version changes disabled;
+internal-only testing requires the explicit `--testflight-internal-only` option.
 It does not create credentials or profiles, upload, or change account settings.
 Never use `-allowProvisioningUpdates` to work around missing signing assets.
 
-Store builds link `StoreUpdates.swift` instead of Sparkle. The copied Python
-framework and required nested interpreter use the app's identity. Executable
+Store builds link `StoreUpdates.swift` instead of Sparkle. Production Desk Store
+builds require a separately prepared, pinned Python Software Foundation runtime;
+they never copy Xcode's Python 3.9 framework. Download the official installer from
+the URL pinned in `tools/prepare_store_python.py`, then extract it without installing:
+
+```sh
+python3 tools/prepare_store_python.py --installer /path/python-3.14.10-macos11.pkg \
+  --output /absolute/new/python-runtime
+```
+
+Pass `--python-framework /absolute/new/python-runtime/Python.framework` to the
+Store builder. Preparation verifies the release checksum and Apple-trusted PSF
+signature, removes the complete unused Tk/Tcl, LZMA and SSL/OpenSSL components,
+and relocates packaged dynamic dependencies. The app uses plain loopback HTTP
+and SHA-256 for PDF integrity; hashing uses Python 3.14.10's built-in `_sha2`
+implementation. Installer scripts and pip are never run. Original Python licenses
+and installer dependency notices are retained. The builder verifies the complete
+prepared file and symlink manifest, then audits every packaged native binary
+against Apple's 86 rejected symbols, private frameworks, external dependencies,
+missing library targets and universal architectures. The old rejected build is
+a positive control for the audit. No private symbol or string is concealed.
+
+The Python framework and required nested interpreter use the app's identity. Executable
 children have only sandbox/inherit entitlements; the parent allows loopback
 server/client, user-selected files, and printing. `store_server.py` initializes
 Python's built-in MIME map, avoiding inaccessible system Apache configuration.

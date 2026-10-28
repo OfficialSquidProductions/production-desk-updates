@@ -142,11 +142,12 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
         fm.createFile(atPath: logURL.path, contents: nil)
         logHandle = try FileHandle(forWritingTo: logURL)
         let process = Process()
-        let pythonHome = Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/Python3.framework/Versions/3.9")
-        process.executableURL = pythonHome.appendingPathComponent("bin/python3.9")
         #if APP_STORE
+        process.executableURL = Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/Python.framework/Versions/3.14/bin/python3.14")
         let serverScript = "store_server.py"
         #else
+        let pythonHome = Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/Python3.framework/Versions/3.9")
+        process.executableURL = pythonHome.appendingPathComponent("bin/python3.9")
         let serverScript = "server.py"
         #endif
         process.arguments = ["-E", "-s", "-B", runtime.appendingPathComponent(serverScript).path, "--port", "0", "--data", workspace.path, "--ready-file", readyFile.path, "--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]

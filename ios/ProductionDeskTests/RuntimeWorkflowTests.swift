@@ -46,6 +46,24 @@ final class RuntimeWorkflowTests: XCTestCase {
     @MainActor func testLatestShotNavigationAndDeletion() async throws { try await runParityFixture("shot-navigation") }
     @MainActor func testLatestScheduleDragPlacementAndPreservation() async throws { try await runParityFixture("schedule-drag") }
 
+    @MainActor func testNavigationTabOrderPersistenceFailureAndRestore() async throws {
+        let desk = try await openDesk()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let original = window.rootViewController
+        defer { window.rootViewController = original }
+        let fixture = try XCTUnwrap(Bundle(for: PlatformTests.self).url(forResource: "navigation-order-parity", withExtension: "js", subdirectory: "Fixtures"))
+        let source = try String(contentsOf: fixture, encoding: .utf8)
+        window.rootViewController = desk; desk.view.layoutIfNeeded()
+        let checks = try await desk.webView.callAsyncJavaScript("const run=" + source + "; return await run({leaveCustom:true});", arguments: [:], in: nil, contentWorld: .page)
+        XCTAssertEqual((checks as? [String])?.count,3)
+        let reopened = try await openDesk()
+        window.rootViewController = reopened; reopened.view.layoutIfNeeded()
+        let persisted = try await reopened.webView.callAsyncJavaScript("const run=" + source + "; return await run({afterReload:true});", arguments: [:], in: nil, contentWorld: .page)
+        XCTAssertEqual((persisted as? [String])?.count,1)
+        let evidence=XCTAttachment(string:String(describing:checks)+"\n"+String(describing:persisted));evidence.name="Navigation order, failed save, editor preservation and native relaunch";evidence.lifetime = .keepAlways;add(evidence)
+    }
+
     @MainActor func testScriptBreakdownScheduleShotUndoAndReopen() async throws {
         let desk = try await openDesk()
         let result = try await desk.webView.callAsyncJavaScript("""
