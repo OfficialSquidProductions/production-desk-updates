@@ -22,6 +22,8 @@ def main():
             parser.error('--source and --app are mutually exclusive')
         app = args.app.resolve()
     python = app / 'Contents/Frameworks/Python3.framework/Versions/3.9/bin/python3.9'
+    if (app / 'Contents/Frameworks/Python.framework').exists():
+        python = app / 'Contents/Frameworks/Python.framework/Versions/3.14/bin/python3.14'
     runtime = app / 'Contents/Resources/runtime'
     if args.source:
         python, runtime = Path(sys.executable), ROOT

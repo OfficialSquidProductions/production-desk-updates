@@ -13,6 +13,8 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
+from prepare_store_python import ABI, SHA256, VERSION, hashes, symlinks
+from audit_store_binary import audit
 
 TEAM = 'FZ298DXLS3'
 MAGIC = {bytes.fromhex(s) for s in ['feedface','cefaedfe','feedfacf','cffaedfe','cafebabe','bebafeca','cafebabf','bfbafeca']}
@@ -70,13 +72,16 @@ def build(args):
     if pd:
         sources.append(source_dir / 'StoreMain.swift'); flags += ['-D','SUPPORT_TESTING']
         sources.append(source_dir / 'StoreExports.swift')
-        framework = Path('/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework')
+        if not args.python_framework:
+            raise ValueError('Production Desk Store builds require --python-framework prepared with prepare_store_python.py.')
+        framework = args.python_framework.resolve()
+        runtime_source = json.loads((framework.parent / 'runtime-source.json').read_text())
+        if framework.name != 'Python.framework' or runtime_source['version'] != VERSION or runtime_source['installerSha256'] != SHA256 or runtime_source['hashes'] != hashes(framework) or runtime_source['symlinks'] != symlinks(framework):
+            raise ValueError('Prepared Python runtime differs from its pinned source manifest.')
         frameworks = contents / 'Frameworks'; frameworks.mkdir()
         shutil.copytree(framework, frameworks / framework.name, symlinks=True)
-        # Development tools and package installers are not part of this runtime.
-        python = frameworks / 'Python3.framework/Versions/3.9'
-        shutil.rmtree(python / 'lib/python3.9/site-packages')
-        (python / 'lib/python3.9/site-packages').mkdir()
+        python = frameworks / ('Python.framework/Versions/' + ABI)
+        shutil.copy2(framework.parent / 'runtime-source.json', cache / 'runtime-source.json')
         # Apple's launcher execs this nested interpreter. Preserve it, give the
         # copied runtime our identity, and sign it as a sandbox-inheriting child.
         for path, identifier in [(python / 'Resources/Info.plist', args.bundle_id + '.python-framework'),
@@ -158,14 +163,15 @@ def build(args):
     if pd:
         files = [p for p in contents.rglob('*') if native(p) and p != main]
         for path in files:
-            child = path.name in ['python3.9','Python','extract_pdf']
+            child = path.name in ['python' + ABI,'Python','extract_pdf']
             sign(path,source_dir / 'StoreChild.entitlements' if child else None)
         for bundle in sorted(contents.rglob('*.app'), key=lambda p:len(p.parts), reverse=True):
             sign(bundle, source_dir / 'StoreChild.entitlements')
-        framework = contents / 'Frameworks/Python3.framework'
+        framework = contents / 'Frameworks/Python.framework'
         sign(framework)
     sign(app,signing_entitlements)
     run('codesign','--verify','--deep','--strict','--verbose=2',app)
+    if pd: audit(app, out / 'binary-audit.json')
     properties = {'ApplicationPath':'Applications/' + app.name,'CFBundleIdentifier':args.bundle_id,
                   'CFBundleShortVersionString':info['CFBundleShortVersionString'],'CFBundleVersion':info['CFBundleVersion'],
                   'SigningIdentity':identity,'Team':TEAM}
@@ -177,6 +183,9 @@ def build(args):
               'version':info['CFBundleShortVersionString'],'build':info['CFBundleVersion'],
               'localCandidateOnly':identity == '-' or args.local_development,'distributionProfile':profile['Name'] if profile else None,
               'architectures':['arm64','x86_64'],'sparkleIncluded':False,'resourceHashes':manifest}
+    if pd:
+        result['pythonRuntime'] = {'version':VERSION,'installerSha256':SHA256,
+                                   'binaryAudit':'binary-audit.json','unusedTkAndLzmaRemoved':True}
     (out / 'build-result.json').write_text(json.dumps(result,indent=2) + '\n')
     if profile and args.installer_identity and not args.local_development:
         options = {'method':'app-store-connect','destination':'export','signingStyle':'manual',
@@ -195,6 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--bundle-id',required=True)
     parser.add_argument('--build')
+    parser.add_argument('--python-framework',type=Path,help='Pinned, prepared PSF Python.framework; required for Production Desk Store builds')
     parser.add_argument('--testflight-internal-only', action='store_true', help='Restrict the upload to internal TestFlight; omit for an App Store candidate')
     parser.add_argument('--identity',default='-',help='Existing identity; default ad-hoc is local verification only')
     parser.add_argument('--local-development',action='store_true',help='Use an existing development identity for local sandbox checks only')
