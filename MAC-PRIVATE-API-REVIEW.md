@@ -175,3 +175,36 @@ absent Windows electron-updater installation and is outside this Mac release's
 local test set. No upload, notarization submission, App Store review replacement,
 source push, release publication or website deployment has occurred at this
 checkpoint. The existing waiting iOS review item remains unchanged.
+
+## Final runtime gates and successful uploads
+
+The final reset-header package passed the full signed sandbox/WebKit aggregate
+(`header-sandbox-runtime-result.json`). All 1,237 protected installed-app and
+real-data files retained their exact bytes and modification times. The final
+iPhone touch test passed move/save/cold-launch, reset, and a second cold launch
+with the defaults. The final iPad run passed all 44 native workflow tests and the
+same touch/reset/relaunch test. Exported test screenshots were visually inspected.
+A separate phone test proves the final Elements row responds to actual up/down
+taps after a bounded scroll. Its initial full swipe overscrolled past the controls;
+the bounded-drag test passes without a product code change.
+
+Xcode confirms successful uploads of Mac 1.5.14 (38) and iOS 1.5.14 (40).
+App Store Connect shows them processing with build IDs
+`1e28f62c-9afd-4060-ad8c-41e3d17e8495` (Mac) and
+`396ed4c7-cb35-4629-916a-630474c0d822` (iOS). Selection and resubmission have
+not occurred while processing is pending. The Mac upload has optional missing
+dSYM warnings for PSF runtime modules; main app and PDF-helper dSYMs match both
+architecture slices. The upload itself succeeded.
+
+The Mac version description and review notes were saved with the navigation
+feature and factual guideline 2.5.1 correction/testing details. Automatic release
+after approval remains selected. The existing waiting iOS39 review is unchanged.
+
+Public source commit `10607afea7da7022047217f655cfd123906336fb` was fast-forwarded
+to the official repository's main branch, preserving the Windows release version.
+CI passed backend/shared tests and compilation and is finishing packaged Windows
+validation. The public Mac47 archive also passes the actual packaged native
+WebKit editor/export suite, including CSV parsing and portable project transfer
+into fresh storage. Its notarization upload succeeded (submission
+`86B1F326-8593-4872-BF17-1A99F4EE0509`); the exported app's ticket is still pending.
+No public release, feed, download-link or website deployment has occurred yet.
