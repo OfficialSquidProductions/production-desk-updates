@@ -1,3 +1,4 @@
+import {createStripDrag} from './strip-drag.js';
 import {createScriptPDF} from './script-pdf.js';
 import {createDemoControls} from './demo/demo-controls.js';
 import {mergeProductions} from './project-file.js';
@@ -5,9 +6,10 @@ import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from '
 import {createShotDesk} from './shots.js';
 import {createLinedDesk,removeCoverage,clearCoverageScene} from './lined-script.js';
 import {nativeAPI, nativePrint} from './native-platform.js';
+import {bindWorkspacePanes} from './ios-workspace.js';
+import {isEditing} from './lined-shortcuts.js';
 import {createAppSettings} from './settings.js';
 import {createElementActions} from './element-actions.js';
-import {bindWorkspacePanes} from './ios-workspace.js';
 const isIPadApp = !!window.webkit?.messageHandlers?.scheduler;
 if (window.productionDeskWindows) window.print = () => window.productionDeskWindows.print();
 const savedLabel = isIPadApp ? '✓ Saved on this device' : '✓ Saved on this computer';
@@ -23,9 +25,18 @@ const stamp = () => new Date().toISOString();
 const clone = value => structuredClone(value);
 let workspace, project, selected, view = 'workspace', report = 'oneline', scenarioIndex = 0;
 let history = [], future = [], revision = 0, savedRevision = 0, saving = false, saveTimer;
-let search = '', elementSearch = '', elementCategory = '', dragging = null, selectedText = '', selectedRange, toastTimer;
+let search = '', elementSearch = '', elementCategory = '', selectedText = '', selectedRange, toastTimer;
+let editorReady;
 // The desktop window asks for a disk flush before quitting.
-window.slateDesktop = {importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:async(file)=>{receiveImport(await api('/api/import',file,{'X-Filename':encodeURIComponent(file.name)}));$('#modal').close();toast('Imported a separate production. Your existing work is preserved.');}, print:()=>action('print'), flush:async()=>{
+window.slateDesktop = {undoEdit:forward=>{
+  const target=document.activeElement;
+  if(isEditing(target)){if(target?.isContentEditable||/INPUT|TEXTAREA/.test(target?.tagName))document.execCommand(forward?'redo':'undo');return;}
+  if(!document.querySelector('dialog[open]'))undo(!!forward);
+},ready:new Promise(resolve=>{editorReady=resolve;}), importScript:()=>importModal(), saveAs:()=>saveProjectFile('files'), importProjectFile:file=>importProjectFile(file), print:()=>action('print'), prepareForUpdate:async()=>{
+  // Dialog drafts are committed only by their Save/Add action. Leave them intact.
+  if(document.querySelector('dialog[open]'))return false;
+  return await window.slateDesktop.flush();
+}, flush:async()=>{
   clearTimeout(saveTimer);
   const deadline=Date.now()+15000;
   while(saving && Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,50));
@@ -80,15 +91,18 @@ async function save() {
   catch(e) { saveStatus('Save failed · click to retry'); toast(e.message); }
   finally { saving = false; if (savedRevision === target && revision > target) save(); }
 }
+const historyViews=new WeakMap();
+function historySnapshot(){const snapshot=clone(workspace);if(view==='lined')historyViews.set(snapshot,linedDesk.captureState());if(view==='shots')historyViews.set(snapshot,shotDesk.captureState());return snapshot;}
 function mutate(fn, redraw = true) {
-  history.push(clone(workspace)); if (history.length > 40) history.shift(); future = [];
+  history.push(historySnapshot()); if (history.length > 40) history.shift(); future = [];
   fn(); mark(); if (redraw) render(); updateUndo();
 }
 function updateUndo() { $('#undo').disabled = !history.length; $('#redo').disabled = !future.length; }
 function undo(forward = false) {
   const source = forward ? future : history, destination = forward ? history : future;
   if (!source.length) return;
-  destination.push(clone(workspace)); workspace = source.pop(); useProject(); mark(); render();
+  destination.push(historySnapshot()); workspace = source.pop(); const state=historyViews.get(workspace); useProject(); mark();
+  if((view==='lined'&&linedDesk.refreshHistory(state))||(view==='shots'&&shotDesk.refreshHistory(state)))updateUndo();else render();
 }
 function normalize(p) {
   p._shots ||= []; p._shotSettings ||= {startTime:'07:00'};
@@ -138,7 +152,7 @@ function allScheduled() { return activeBoard()?.breakdownIds.flat() || []; }
 
 function render() {
   selectedText = ''; selectedRange=undefined; // Selections belong only to the displayed script.
-  scriptPDF.stop();
+  scriptPDF.stop();stripDrag.stop();
   elementActions.close();
   useProject();
   document.body.classList.toggle('view-shots',view==='shots');
@@ -165,12 +179,15 @@ function scriptSceneOptions() {
   return sceneList().filter(s=>`${s.scene} ${slug(s)} ${s.description}`.toLowerCase().includes(search.toLowerCase()))
     .map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('');
 }
+const breakdownContinuous=()=>project._breakdownSettings?.continuousScroll===true;
+const breakdownModeControl=()=>`<label class="breakdown-continuous-choice"><input id="breakdown-continuous" type="checkbox" ${breakdownContinuous()?'checked':''}>Continuous Scroll</label>`;
+function setBreakdownContinuous(value){mutate(()=>{project._breakdownSettings={...project._breakdownSettings,continuousScroll:value};});}
 function scriptPanel() {
-  const b = breakdown();
+  const b = breakdown(), filtered = sceneList().filter(s=>`${s.scene} ${slug(s)} ${s.description}`.toLowerCase().includes(search.toLowerCase()));
   return `<section class="panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▤</span>Script <span class="count">${sceneList().length} scenes</span></div><button class="text-button" data-action="import">Import script</button><button class="text-button" data-action="edit-script" ${b?.type==='scene'?'':'disabled'}>Edit text</button></div>
-    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button><select id="scene-picker" aria-label="Choose scene">${scriptSceneOptions()}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
+    <div class="script-toolbar"><input class="scene-search" id="scene-search" placeholder="Search scenes, sets, descriptions…" value="${esc(search)}" aria-label="Search scenes" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="icon-btn" data-action="prev" aria-label="Previous scene">‹</button>${!scriptPDF.document()?breakdownModeControl():''}<select id="scene-picker" aria-label="Choose scene">${filtered.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.scene)} · ${esc(prop(s,0))}</option>`).join('')}</select><button class="icon-btn" data-action="next" aria-label="Next scene">›</button></div>
     <div class="script-selection"><span>Select text in the script to tag a production element.</span><div class="tag-row"><select id="tag-category" aria-label="Tag category">${project.categories.filter(c=>c.ucid>=100).map(c=>`<option value="${c.ucid}">${esc(c.name)}</option>`).join('')}</select><button id="tag-selection">＋ Tag selection</button></div></div>
-    ${b?.type==='scene' && scriptPDF.document() ? scriptPDF.render() : `<div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${scriptHTML(b)}</article>`}</div>`}<div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
+    ${b?.type==='scene' && scriptPDF.document() ? scriptPDF.render() : `<div class="script-scroll">${!b ? emptyPanel('Import a screenplay or add your first scene.') : b.type==='banner' ? '<div class="empty-state">Select a scene to read its script.</div>' : `<article class="script-page" id="script-text">${breakdownContinuous()?sceneList().map(scene=>`<section class="script-scene" data-script-scene="${esc(scene.id)}">${scriptHTML(scene)}</section>`).join(''):scriptHTML(b)}</article>`}</div>`}<div class="panel-footer"><span>${esc(project._scriptFilename || 'Scene script')}</span><span>${b?`p. ${esc(b.scriptPage || '—')}`:''}</span></div></section>`;
 }
 function scriptHTML(b) {
   if(/\.pdf$/i.test(project._scriptFilename||'')||scriptPDF.document())return `<p class="script-pdf-fallback-note">Extracted scene text · original PDF layout unavailable here. Attach the original in Lined Script to read its pages.</p><pre class="script-transcript">${esc(b._scriptText||slug(b))}</pre>`;
@@ -241,7 +258,7 @@ function mutateBreakdownElements(fn) {
 function dayOrdinal(index) { return scheduleGroups().slice(0,index+1).filter(Array.isArray).length; }
 function scenarioSelect() { return `<select id="scenario-picker" aria-label="Schedule scenario">${project.stripboards.map((s,i)=>`<option value="${i}" ${i===scenarioIndex?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`; }
 function boardPanel(full=false) {
-  return `<section class="panel board-panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▦</span>Stripboard <span class="count">${allScheduled().length} strips</span></div><button class="text-button" data-action="calendar-settings">Calendar</button></div><div class="board-toolbar">${scenarioSelect()}<button data-action="new-scenario" title="Duplicate this scenario" aria-label="Duplicate scenario">⧉</button><button data-action="add-day">＋ Day</button><button data-action="add-banner">＋ Banner</button></div><div class="board-scroll">${boardHTML()}${full?'':boneyardHTML()}</div>${legend()}<div class="panel-footer"><span>Drag strips between days</span><span>${pages(totals(allScheduled()).pages)} pages scheduled</span></div></section>`;
+  return `<section class="panel board-panel"><div class="panel-header"><div class="panel-title"><span class="symbol">▦</span>Stripboard <span class="count">${allScheduled().length} strips</span></div><button class="text-button" data-action="calendar-settings">Calendar</button></div><div class="board-toolbar">${scenarioSelect()}<button data-action="new-scenario" title="Duplicate this scenario" aria-label="Duplicate scenario">⧉</button><button data-action="add-day">＋ Day</button><button data-action="add-banner">＋ Banner</button></div><div class="board-scroll"><div class="main-strip-board drop-zone" data-zone="main" data-index="0">${boardHTML()}</div>${full?'':boneyardHTML()}</div>${legend()}<div class="panel-footer"><span>Drag a strip or its handle · top half before / bottom half after</span><span>${pages(totals(allScheduled()).pages)} pages scheduled</span></div></section>`;
 }
 function legend() { return '<div class="board-legend"><span><i></i>INT / DAY</span><span class="ext"><i></i>EXT / DAY</span><span class="night"><i></i>NIGHT</span><span class="dusk"><i></i>DAWN / DUSK</span></div>'; }
 function boardHTML() {
@@ -250,12 +267,12 @@ function boardHTML() {
   return groups.map((group,i)=>{
     if (!Array.isArray(group)) return stripHTML(group,'main',i);
     const date=shootingDates[ordinal++], t=totals(group), conflict=availabilityConflicts(group,date);
-    return `<section class="day-block"><div class="day-header"><strong>DAY ${String(ordinal).padStart(2,'0')} <span> / ${esc(dateLabel(date))}</span></strong><div><button data-sort-day="${i}" title="Sort by set" aria-label="Sort day ${ordinal} by set">↕</button><button data-remove-day="${i}" title="Remove day; return scenes to Unscheduled" aria-label="Remove day ${ordinal}">×</button></div></div><div class="drop-zone" data-zone="day" data-index="${i}">${group.map((bid,n)=>stripHTML(bid,'day',i,n)).join('')}${group.length?'':'<div class="empty-drop">Drop scenes here</div>'}</div><div class="day-total ${conflict.length?'warn':''}">${conflict.length?`Unavailable: ${esc(conflict.join(', '))} · `:''}${t.scenes} scenes · ${pages(t.pages)} pages · ${minutes(t.duration)}</div></section>`;
+    return `<section class="day-block" data-board-position="${i}"><div class="day-header"><strong>DAY ${String(ordinal).padStart(2,'0')} <span> / ${esc(dateLabel(date))}</span></strong><div><button data-sort-day="${i}" title="Sort by set" aria-label="Sort day ${ordinal} by set">↕</button><button data-remove-day="${i}" title="Remove day; return scenes to Unscheduled" aria-label="Remove day ${ordinal}">×</button></div></div><div class="drop-zone" data-zone="day" data-index="${i}">${group.map((bid,n)=>stripHTML(bid,'day',i,n)).join('')}${group.length?'':'<div class="empty-drop">Drop scenes here</div>'}</div><div class="day-total ${conflict.length?'warn':''}">${conflict.length?`Unavailable: ${esc(conflict.join(', '))} · `:''}${t.scenes} scenes · ${pages(t.pages)} pages · ${minutes(t.duration)}</div></section>`;
   }).join('');
 }
 function stripHTML(bid, zone, index, position) {
   const b=breakdown(bid); if(!b) return '';
-  const grip=isIPadApp?`<button class="strip-move-button" data-move-strip="${esc(b.id)}" aria-label="Move ${b.type==='banner'?'banner':'scene '+esc(b.scene)}">↕</button>`:'<span class="grip">⠿</span>';
+  const grip=`<button class="strip-move-button strip-grab-handle" draggable="true" title="Drag to move; click for placement options" data-move-strip="${esc(b.id)}" aria-label="Move ${b.type==='banner'?'banner':'scene '+esc(b.scene)}">⠿</button>`;
   const attrs=`draggable="true" tabindex="0" data-strip="${esc(b.id)}" data-origin="${zone}" data-index="${index}" ${position!==undefined?`data-position="${position}"`:''}`;
   if(b.type==='banner') return `<div class="strip banner ${b.id===selected?'selected':''} ${validStripColor(b._stripColor)?'custom-color':''}" ${attrs} ${customStripAttrs(b)}>${grip}<div class="strip-heading">${esc(b.bannerText)}</div>${stripColorButton(b)}</div>`;
   return `<div class="strip ${stripClass(b)} ${b.id===selected?'selected':''} ${b._completed?'completed':''} ${validStripColor(b._stripColor)?'custom-color':''}" ${attrs} ${customStripAttrs(b)}>${grip}<span class="strip-number">${esc(b.scene)}</span><div><div class="strip-heading">${esc(slug(b))}</div><div class="strip-description">${esc(b.description || 'Add a scene synopsis')}</div><div class="strip-meta">CAST ${items(b,100).map(e=>esc(e.elementId || e.name)).join(', ') || '—'} ${b._completed?' · COMPLETE':''}</div></div><span class="strip-pages">${pages(b.pages)}</span>${stripColorButton(b)}</div>`;
@@ -273,7 +290,7 @@ function moveStripModal(bid){
 function stripColorButton(b){return `<button class="strip-color-button" data-color-strip="${esc(b.id)}" title="Change strip color" aria-label="Change color for ${b.type==='banner'?'banner':`scene ${esc(b.scene)}`}">◐</button>`;}
 function boneyardHTML() {
   const boards=activeScenario()?.boards || [];
-  return boards.slice(1).map((board,i)=>`<div class="boneyard-header"><span>${i===0?'UNSCHEDULED':esc(board.name.toUpperCase())}</span><span>${board.breakdownIds.flat().length} strips</span></div><div class="boneyard drop-zone" data-zone="board" data-index="${i+1}">${board.breakdownIds.flat().map((bid,n)=>stripHTML(bid,'board',i+1,n)).join('')}${board.breakdownIds.length?'':'<div class="empty-drop">Drop scenes here to unschedule</div>'}</div>`).join('');
+  return boards.slice(1).map((board,i)=>`<div class="boneyard-header" data-holding-index="${i+1}"><span>${i===0?'UNSCHEDULED':esc(board.name.toUpperCase())}</span><span>${board.breakdownIds.flat().length} strips</span></div><div class="boneyard drop-zone" data-zone="board" data-index="${i+1}">${board.breakdownIds.flat().map((bid,n)=>stripHTML(bid,'board',i+1,n)).join('')}${board.breakdownIds.length?'':'<div class="empty-drop">Drop scenes here to unschedule</div>'}</div>`).join('');
 }
 function scheduleView() {
   return `<div class="schedule-layout">${boardPanel(true)}<section class="panel"><div class="panel-header"><div class="panel-title">Holding board</div><span class="tiny">DRAG TO SCHEDULE</span></div><div class="board-scroll">${boneyardHTML()}</div><div class="panel-footer">Select a strip to open its breakdown.</div></section></div>`;
@@ -318,12 +335,11 @@ function moveScene(bid, zone, index, position) {
   target.splice(Math.max(0,at),0,bid);
 }
 function bindContent() {
+  if($('#breakdown-continuous'))$('#breakdown-continuous').onchange=e=>setBreakdownContinuous(e.target.checked);
   if(view==='shots')shotDesk.bind();
   if(view==='lined')linedDesk.bind();
   $$('[data-action]').forEach(b=>b.addEventListener('click',()=>action(b.dataset.action)));
   $('#scene-picker')?.addEventListener('change',e=>{selected=e.target.value;render();});
-  // Filtering changes only the picker options. Replacing a focused search
-  // field drops WebKit's keyboard/input session during native text entry.
   $('#scene-search')?.addEventListener('input',e=>{search=e.target.value;$('#scene-picker').innerHTML=scriptSceneOptions();});
   $('#scenario-picker')?.addEventListener('change',e=>{scenarioIndex=Number(e.target.value);render();});
   // Save text as it is entered. Avoid replacing the focused input on blur,
@@ -332,7 +348,7 @@ function bindContent() {
     let editing=false;
     const update=()=>{
       if(!input.checkValidity())return;
-      if(!editing){history.push(clone(workspace));if(history.length>40)history.shift();future=[];editing=true;}
+      if(!editing){history.push(historySnapshot());if(history.length>40)history.shift();future=[];editing=true;}
       const b=breakdown();if(!b)return;
       if(input.dataset.prop)setProp(b,Number(input.dataset.prop),input.value);
       else {let value=input.type==='checkbox'?input.checked:input.value;if(['pages','duration'].includes(input.dataset.field))value=Number(value)*(input.dataset.field==='duration'?60000:1);b[input.dataset.field]=value;}
@@ -360,21 +376,12 @@ function bindContent() {
   $('#script-text')?.addEventListener('mouseup',()=>{rememberScriptSelection();});
   $('#tag-selection')?.addEventListener('click',()=>{if(!selectedText)return toast('Select a name or object in the script first.');if(selectedText.length>120)return toast('Select a shorter name (up to 120 characters).');const text=selectedText;mutateBreakdownElements(()=>addElement(breakdown(),Number($('#tag-category').value),text));if(selectedRange?.startContainer.isConnected){const selection=getSelection();selection.removeAllRanges();selection.addRange(selectedRange);}toast(`Tagged “${text}”`);});
   $$('[data-color-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();stripColorModal(button.dataset.colorStrip);}));
-  $$('[data-move-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();moveStripModal(button.dataset.moveStrip);}));
+  $$('[data-move-strip]').forEach(button=>button.addEventListener('click',e=>{e.stopPropagation();if(!stripDrag.consumeClick(button.dataset.moveStrip,e))moveStripModal(button.dataset.moveStrip);}));
   $$('[data-strip]').forEach(strip=>{
-    strip.addEventListener('click',e=>{if(e.target.closest('[data-color-strip],[data-move-strip]'))return;selected=strip.dataset.strip;if(view==='schedule')view='workspace';render();});
+    strip.addEventListener('click',e=>{if(e.target.closest('[data-color-strip],[data-move-strip]')||stripDrag.consumeClick(strip.dataset.strip,e))return;selected=strip.dataset.strip;if(view==='schedule')view='workspace';render();});
     strip.addEventListener('keydown',e=>{if(e.target.closest('[data-color-strip],[data-move-strip]'))return;if(e.key==='Enter'){selected=strip.dataset.strip;view='workspace';render();}});
-    strip.addEventListener('dragstart',e=>{dragging=strip.dataset.strip;e.dataTransfer.setData('text/plain',dragging);e.dataTransfer.effectAllowed='move';});
-    strip.addEventListener('dragend',()=>{dragging=null;$$('.drag-over').forEach(el=>el.classList.remove('drag-over'));});
-    strip.addEventListener('dragover',e=>{if(!dragging)return;e.preventDefault();e.stopPropagation();strip.classList.add('drag-over');});
-    strip.addEventListener('dragleave',()=>strip.classList.remove('drag-over'));
-    strip.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();const bid=dragging;if(bid&&breakdown(bid))mutate(()=>moveScene(bid,strip.dataset.origin,Number(strip.dataset.index),strip.dataset.position===undefined?Number(strip.dataset.index):Number(strip.dataset.position)));dragging=null;});
   });
-  $$('[data-zone]').forEach(zone=>{
-    zone.addEventListener('dragover',e=>{if(!dragging)return;e.preventDefault();zone.classList.add('drag-over');});
-    zone.addEventListener('dragleave',e=>{if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over');});
-    zone.addEventListener('drop',e=>{e.preventDefault();const bid=dragging;if(bid&&breakdown(bid))mutate(()=>moveScene(bid,zone.dataset.zone,Number(zone.dataset.index)));dragging=null;});
-  });
+  stripDrag.bind($('#content'));
   $$('[data-remove-day]').forEach(button=>button.addEventListener('click',()=>mutate(()=>{const group=activeBoard().breakdownIds.splice(Number(button.dataset.removeDay),1)[0];boneyard().breakdownIds.push(...group);}))); 
   $$('[data-sort-day]').forEach(button=>button.addEventListener('click',()=>mutate(()=>activeBoard().breakdownIds[Number(button.dataset.sortDay)].sort((a,b)=>slug(breakdown(a)).localeCompare(slug(breakdown(b)),undefined,{numeric:true})))));
   $('#element-search')?.addEventListener('input',e=>{elementSearch=e.target.value;const caret=e.target.selectionStart;render();$('#element-search').focus();$('#element-search').setSelectionRange(caret,caret);});
@@ -387,7 +394,7 @@ function bindContent() {
       const value=key==='name'?input.value.trim():input.value||null;
       input.setCustomValidity(key==='name'&&!value?'Enter an element name.':'');
       if(!input.checkValidity()||element[key]===value)return;
-      if(!editing){history.push(clone(workspace));if(history.length>40)history.shift();future=[];editing=true;}
+      if(!editing){history.push(historySnapshot());if(history.length>40)history.shift();future=[];editing=true;}
       element[key]=value;mark();updateUndo();
     };
     input.addEventListener('input',update);
@@ -436,28 +443,57 @@ function textModal(title,label,initial,callback) {
   $('#modal-ok').onclick=submit;input.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
 }
 function confirmModal(title,message,callback) { modal(title,`<p>${esc(message)}</p>`,'<button id="modal-cancel">Cancel</button><button id="modal-ok" class="danger">Delete</button>');$('#modal-ok').onclick=()=>{callback();$('#modal').close();}; }
+let importSession;
 function importModal() {
-  modal('Bring your story in',`<p>Import creates a separate production, keeping your existing work. All parsing happens on this computer.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles.&#10;&#10;MAYA&#10;We're going to be late."></textarea><p class="tiny">Scene lengths and cast detection should be reviewed after import. Production Desk files and older JSON backups open as separate productions. Duplicate names are labeled as imported copies.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  if(document.querySelector('dialog[open]')){toast('Save or cancel the open dialog before importing.');return;}
+  modal('Import a production or script',`<p>Import adds a separate production and keeps your existing work. Production Desk files restore the complete production, including original PDFs, scripts, shots, schedules, elements and lined script.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles."></textarea><p class="tiny">All parsing happens on this computer. Older JSON backups and USS schedules are also supported. Duplicate names receive an imported copy suffix. Script imports need a review of scene lengths and cast.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  const session={cancelled:false,committing:false,busy:false};importSession=session;
+  const dialog=$('#modal');
+  const cancel=()=>{if(!session.committing)session.cancelled=true;};
+  dialog.onclose=()=>{if(!dialog.open)cancel();};
+  for(const control of [$('#modal-close'),$('#modal-cancel')])control.onclick=()=>{if(!session.committing){cancel();dialog.close();}};
+  dialog.oncancel=event=>{if(session.committing)event.preventDefault();else cancel();};
   const picker=document.createElement('button');picker.type='button';picker.textContent='Browse Files…';picker.id='browse-project-file';picker.setAttribute('aria-label','Browse Files…');
   $('#import-file').replaceWith(picker);
   let selectedFile;
-  picker.onclick=async()=>{try{const chosen=await window.webkit.messageHandlers.scheduler.postMessage({operation:'pickImport'});if(chosen){selectedFile=new File([Uint8Array.from(atob(chosen.base64),c=>c.charCodeAt(0))],chosen.filename);picker.textContent=chosen.filename;}}catch(e){$('#modal-error').textContent=e.message;}};
+  picker.onclick=async()=>{try{const chosen=await window.webkit.messageHandlers.scheduler.postMessage({operation:'pickImport'});if(chosen&&!session.cancelled&&dialog.open){selectedFile=new File([Uint8Array.from(atob(chosen.base64),c=>c.charCodeAt(0))],chosen.filename);picker.textContent=chosen.filename;}}catch(e){if(!session.cancelled)$('#modal-error').textContent=e.message;}};
   $('#import-submit').onclick=async()=>{
-    const button=$('#import-submit'), file=selectedFile, text=$('#paste-script').value;
+    const file=selectedFile,text=$('#paste-script').value;
     if(!file&&!text.trim()){ $('#modal-error').textContent='Choose a file or paste script text.';return; }
-    button.disabled=true;button.textContent=file?.name.toLowerCase().endsWith('.pdf')?'Reading PDF locally…':'Importing…';
-    try {
-      const result=await api('/api/import',file || text,{'X-Filename':encodeURIComponent(file?.name || 'Pasted script.txt')});
-      receiveImport(result);
-      $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');
-    }catch(e){$('#modal-error').textContent=e.message;button.disabled=false;button.textContent='Import locally';}
+    try{await importProjectFile(file,text,session);}catch(e){if(!session.cancelled)$('#modal-error').textContent=e.message;}
   };
 }
-function receiveImport(result) {
-  const incoming=result.workspace?.projects||[result.project];
-  if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
-  const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
-  mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
+async function importProjectFile(file,text='',session) {
+  if(!session){
+    if(document.querySelector('dialog[open]')&&!$('#import-submit'))throw Error('Save or cancel the open dialog before importing.');
+    if(!$('#modal').open)importModal();
+    session=importSession;
+  }
+  if(session.busy)return false;
+  session.busy=true;
+  const button=$('#import-submit');button.disabled=true;button.textContent='Saving current work…';
+  try{
+    document.activeElement?.blur?.();
+    if(!await window.slateDesktop.flush())throw Error('Your current work could not be saved. Retry saving before importing. Your production is unchanged.');
+    if(session.cancelled||!$('#modal').open||importSession!==session)return false;
+    button.textContent='Reading import…';
+    const result=await api('/api/import',file||text,{'X-Filename':encodeURIComponent(file?.name||'Pasted script.txt')});
+    if(session.cancelled||!$('#modal').open||importSession!==session)return false;
+    const incoming=result.workspace?.projects||[result.project];
+    if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
+    const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
+    // Cancellation is available throughout parsing. During the final atomic disk
+    // save, keep the dialog open so a cancellation cannot race a committed import.
+    session.committing=true;button.textContent='Saving imported production…';
+    for(const control of $$('#modal button,#modal input,#modal textarea'))control.disabled=true;
+    await api('/api/workspace',merged.workspace);
+    mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
+    clearTimeout(saveTimer);savedRevision=revision;saveStatus(savedLabel);
+    $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');return true;
+  }finally{
+    session.busy=false;session.committing=false;
+    if(!session.cancelled&&$('#modal').open){for(const control of $$('#modal button,#modal input,#modal textarea'))control.disabled=false;button.textContent='Import locally';}
+  }
 }
 async function saveProjectFile(destination='files') {
   document.activeElement?.blur?.();
@@ -466,7 +502,7 @@ async function saveProjectFile(destination='files') {
     const result=await api('/api/project-file',{workspace:{version:1,activeProject:snapshot.id,projects:[snapshot]},filename:name+'.productiondesk',destination});
     if(result.cancelled)return;
     if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=name+'.productiondesk';document.body.append(a);a.click();a.remove();toast('Choose where to save your Production Desk file.');}
-    else toast(destination==='share'?'Project shared.':'Project saved to Files.');
+    else toast(window.productionDeskMacStore?'Project saved.':destination==='share'?'Project shared.':'Project saved to Files.');
   }catch(e){toast('Could not save project: '+e.message);}
 }
 function stripColorModal(bid){
@@ -547,7 +583,7 @@ function availabilityModal(eid) {
   };
 }
 async function download(filename,data,type='application/json',encoding) {
-  try{const result=await api('/api/export',{filename,content:data,mime:type,encoding});if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Export file is ready.');return true;}
+  try{const result=await api('/api/export',{filename,content:data,mime:type,encoding});if(result.cancelled)return null;if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast(window.productionDeskMacStore?'Export saved.':'Export file is ready.');return true;}
   catch(e){toast('Export failed: '+e.message);return false;}
 }
 function exportModal() {
@@ -556,20 +592,27 @@ function exportModal() {
   $('#save-project-file').onclick=()=>saveProjectFile('files');
   $('#share-project-file').onclick=()=>saveProjectFile('share');
   $('#export-uss').onclick=()=>{const clean=value=>Array.isArray(value)?value.map(clean):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[k,clean(v)])):value;const output=clean(project);output.source='Production Desk — Local Film Scheduler';download(filename+'.uss',JSON.stringify({universalScheduleStandard:output},null,2));toast('USS file exported.');};
-  $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
+  $('#export-backup').onclick=async()=>{const filename='Production-Desk-backup-'+new Date().toISOString().slice(0,10)+'.json';try{const result=await api('/api/backup',{workspace:clone(workspace),filename});if(result.cancelled)return;if(!result.native){const a=document.createElement('a');a.href=result.url;a.download=filename;document.body.append(a);a.click();a.remove();}toast('Full backup with original PDFs is ready.');}catch(e){toast('Backup failed: '+e.message);}};
   $('#export-csv').onclick=()=>{const rows=[['Day','Date','Scene','INT/EXT','Set','Day/Night','Synopsis','Pages','Minutes','Cast','Location']];let day=0;const ds=dates(scheduleGroups().filter(Array.isArray).length);for(const g of scheduleGroups()){if(Array.isArray(g))day++;for(const bid of Array.isArray(g)?g:[g]){const b=breakdown(bid);if(!b)continue;rows.push([day||'',day?ds[day-1]:'',b.scene,prop(b,1),b.type==='banner'?b.bannerText:prop(b,0),prop(b,2),b.description,b.pages,(b.duration||0)/60000,prop(b,100),prop(b,6)]);}}const safe=v=>{const s=String(v??'');return /^[=+@\-\t\r]/.test(s)?"'"+s:s;};download(filename+'-schedule.csv',rows.map(row=>row.map(v=>'"'+safe(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');};
   $('#export-shots').onclick=()=>shotDesk.csv();
   $('#export-print').onclick=()=>{report='oneline';$('#modal').close();action('print');};
 }
-function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on a strip to insert above it. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
+function helpModal() {modal('Your local production desk',`<ol class="help-steps"><li><strong>Import a PDF or Final Draft script.</strong> Scene headings become editable breakdown sheets. Imports create separate productions.</li><li><strong>Break down each scene.</strong> Select script text to tag cast, props, wardrobe, or other elements. Fill in sets, locations, page eighths, and time estimates.</li><li><strong>Build the shooting board.</strong> Open Shooting schedule. Add days, then drag scenes into them. Drop on the top or bottom half of a strip to insert before or after it. The blue marker previews placement; Escape cancels. Click a grab handle for precise placement options. Use Move scene for a keyboard-friendly alternative. Click the ◐ button on a strip to choose a preset or custom color; Automatic restores its default time-of-day color.</li><li><strong>Plan around availability.</strong> Set the start date and days off in Production settings. Manage cast availability in Elements.</li><li><strong>Plan and track your shots.</strong> Open Shot list, choose a scene, and add numbered shots with camera setups and time estimates. Drag to reorder; track takes, actual time, and completion. Shots follow their scene’s shooting day.</li><li><strong>Line the original script.</strong> Open Lined script and attach the original PDF. Link coverage to shots, draw marks, add camera movements, and export a lined PDF. Full backups preserve editable marks and original PDFs.</li><li><strong>Save and share as files.</strong> Every change saves locally. Choose Save As to make a .productiondesk file, then Import it on another device. Full backup keeps every production.</li></ol><p>Undo: ⌘Z / Ctrl+Z · Redo: ⌘⇧Z / Ctrl+Shift+Z · Save: ⌘S / Ctrl+S.<br>Your local server must be running to use the app. No internet connection is needed.</p>`);}
 
-const scriptPDF=createScriptPDF({esc,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
-const linedDesk=createLinedDesk({esc,id,stamp,api,project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
-const shotDesk=createShotDesk({
+const stripDrag=createStripDrag({project:()=>project,scenario:activeScenario,label:bid=>{const b=breakdown(bid);return b?.type==='banner'?'banner '+b.bannerText:'scene '+(b?.scene||'?');},commit:(bid,boards)=>{
+  const positions=$$('.board-scroll').map(node=>[node.scrollTop,node.scrollLeft]),page=document.scrollingElement,top=page.scrollTop,left=page.scrollLeft;
+  mutate(()=>{activeScenario().boards.forEach((board,i)=>board.breakdownIds=boards[i]);selected=bid;});
+  $$('.board-scroll').forEach((node,i)=>{if(positions[i]){node.scrollTop=positions[i][0];node.scrollLeft=positions[i][1];}});page.scrollTop=top;page.scrollLeft=left;
+  $$('[data-strip]').find(node=>node.dataset.strip===bid)?.focus({preventScroll:true});toast('Strip moved. Undo restores its previous position.');
+}});
+const scriptPDF=createScriptPDF({esc,continuous:breakdownContinuous,modeControl:breakdownModeControl,project:()=>project,scene:()=>breakdown(),fallback:()=>scriptHTML(breakdown())});
+const linedDesk=createLinedDesk({esc,id,stamp,api,preferences:()=>appSettings.get(),project:()=>project,selectedScene:()=>selected,isActive:()=>view==='lined',mutate,render,toast,modal,download,edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}});
+const shotContext={
   esc,id,stamp,project:()=>project,selectedScene:()=>selected,slug,groups:scheduleGroups,dates,dateLabel,scenarioSelect,scenarioName:()=>activeScenario().name,
   mutate,render,toast,modal,confirm:confirmModal,download,
-  edit:(fn,begin)=>{if(begin){history.push(clone(workspace));if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
-});
+  edit:(fn,begin)=>{if(begin){history.push(historySnapshot());if(history.length>40)history.shift();future=[];}fn();mark();updateUndo();}
+};
+const shotDesk=createShotDesk({...shotContext,isActive:()=>view==='shots'});
 const appSettings=createAppSettings({api,modal,toast,isIPad:isIPadApp});
 const elementActions=createElementActions({project:()=>project,mutate,confirm:confirmModal,toast});
 $('#app-settings-open').onclick=()=>appSettings.open();
@@ -583,13 +626,13 @@ $('#navigation').addEventListener('click',e=>{const button=e.target.closest('[da
 $('#project-picker').onchange=e=>{mutate(()=>{workspace.activeProject=e.target.value;scenarioIndex=0;selected=undefined;search='';});};
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#save-status').onclick=()=>save();
 $('#save-as-open').onclick=()=>saveProjectFile('files');
+const importButton=document.createElement('button');importButton.id='import-open';importButton.textContent='Import…';importButton.onclick=importModal;$('.heading-actions').prepend(importButton);
 $('#settings-open').onclick=()=>settingsModal();$('#help-open').onclick=helpModal;$('#export-open').onclick=exportModal;$('#add-scene').onclick=()=>view==='lined'?linedDesk.newShot():view==='shots'?shotDesk.add():newScene();
 $('#new-open').onclick=()=>textModal('New production','Production title','Untitled production',async title=>{try{const p=await api('/api/new',{title});mutate(()=>{workspace.projects.push(p);workspace.activeProject=p.id;scenarioIndex=0;selected=undefined;view='workspace';});}catch(e){toast(e.message);}});
-document.addEventListener('keydown',e=>{const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!$('#modal').open){e.preventDefault();undo(e.shiftKey);}});
+document.addEventListener('keydown',e=>{const editing=isEditing(document.activeElement)||isEditing(e.target);if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(e.shiftKey)saveProjectFile();else save();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!editing&&!document.querySelector('dialog[open]')&&!e.isComposing){e.preventDefault();undo(e.shiftKey);}});
 window.addEventListener('beforeunload',e=>{if(savedRevision!==revision){e.preventDefault();e.returnValue='Your latest change is still saving.';}});
 if(isIPadApp){
   document.body.classList.add('ipad-app');
-  const importButton=document.createElement('button');importButton.id='import-open';importButton.textContent='Import…';importButton.onclick=importModal;$('.heading-actions').prepend(importButton);
   $('.brand-edition').textContent=window.SquidPlatform || (window.productionDeskTablet?'iPad':'iOS');
   // Keep instructions shared with the desktop while identifying native actions.
   const updateCopy=()=>{
@@ -600,8 +643,8 @@ if(isIPadApp){
   window.print=()=>nativePrint().catch(e=>toast('PDF export failed: '+e.message));
 
 }
-try {workspace=await api('/api/workspace');useProject();render();saveStatus(savedLabel);await appSettings.init();document.body.dataset.appReady='true';document.body.dataset.ready='true';}
-catch(e){$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;saveStatus(isIPadApp?'Local files unavailable':'Local server unavailable');$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Production Desk, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
+try {workspace=await api('/api/workspace');useProject();render();saveStatus(savedLabel);await appSettings.init();document.body.dataset.appReady='true';document.body.dataset.ready='true';editorReady(true);}
+catch(e){editorReady(false);$('#project-title').textContent='Could not open local workspace';$('#page-subtitle').textContent=e.message;saveStatus(isIPadApp?'Local files unavailable':'Local server unavailable');$('#content').innerHTML=isIPadApp?'<div class="panel empty-state">Your saved files have been preserved. In Files → On My iPad → Production Desk, keep workspace.json and workspace.previous.json safe before restoring a backup.</div>':'<div class="panel empty-state">Start the app with Start Production Desk.command, then reload this page. If the data file is damaged, recover data/workspace.previous.json before changing anything.</div>';}
 
 window.productionDeskSave=()=>window.slateDesktop.flush();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)window.slateDesktop.flush();});

@@ -112,6 +112,8 @@ export function validateUSS(p) {
     if(!['Essential','Preferred','Optional'].includes(shot.priority))fail('Unknown shot priority.');
     for(const [key,max] of [['setupMinutes',1440],['shootMinutes',1440],['actualMinutes',10080],['takes',10000]]){if(key==='actualMinutes'&&shot[key]===null)continue;if(!Number.isInteger(shot[key])||shot[key]<0||shot[key]>max)fail('Shot '+key+' must be a whole number from 0 through '+max+'.');}
   }
+  const order=p._shotShootingOrder===undefined?[]:p._shotShootingOrder;if(!Array.isArray(order)||order.some(id=>typeof id!=='string'||!id)||new Set(order).size!==order.length)fail('Shot shooting order must be an array of unique shot IDs.');
+  const viewing=p._breakdownSettings;if(viewing!=null&&(!object(viewing)||('continuousScroll' in viewing&&typeof viewing.continuousScroll!=='boolean')))fail('Invalid breakdown viewing settings: Continuous Scroll must be true or false.');
   const settings=p._shotSettings??{startTime:'07:00'};if(!object(settings)||typeof settings.startTime!=='string'||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(settings.startTime))fail('Shot start time must use HH:MM.');
   validateLining(p);
   return p;
@@ -148,7 +150,7 @@ export function validateLining(project){
    if(!['coverage','pen','highlighter','arrow','text'].includes(m.type)||!Number.isInteger(m.page)||!number(m.page,0,9999))fail('Invalid annotation tool or page.');
    if(!['page','document'].includes(m.space||'page')||(m.endPage!==undefined&&(!Number.isInteger(m.endPage)||!number(m.endPage,m.page,9999))))fail('Invalid annotation coordinate space or end page.');
    if(typeof m.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(m.color)||!number(m.width,.5,30)||!point(m.start))fail('Invalid annotation color, width or position.');
-   if(m.labelAt!==undefined&&!point(m.labelAt))fail('Invalid coverage label position.');
+   if(m.labelAt!==undefined&&!(Array.isArray(m.labelAt)&&m.labelAt.length===2&&number(m.labelAt[0],-.5,1.5)&&number(m.labelAt[1],0,1)))fail('Invalid coverage label position.');
    if(['coverage','arrow'].includes(m.type)&&!point(m.end))fail('Invalid annotation end position.');
    if(m.type==='coverage'){
     if((m.shotId!=null&&m.shotId!==''&&!shots.has(m.shotId))||!['solid','wavy'].includes(m.style)||m.start[0]!==m.end[0])fail('Invalid coverage shot or line style.');
