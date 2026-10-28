@@ -76,9 +76,20 @@ existing Production Desk Mac identity and are valid. The common standalone
 release configuration remains at build 37; Store build number is an explicit
 candidate override.
 
+The distribution installer export succeeded and its expanded payload passed
+the same 73-file/86-symbol audit, strict deep signature verification, exact
+profile/main/helper entitlement checks and source/archive resource comparison.
+Main app and PDF helper dSYMs match both architecture slices. Package is
+`windows-src/build/private-api-review/export-candidate/Production Desk.pkg`,
+24,400,574 bytes, SHA-256
+`0811fc7cd790c4ec398c8a4a033bc8bfd138a257eec03401a64502bcc4be9477`.
+`package-verification.json`, `package-signature.log` and
+`exported-package-binary-audit.json` record these checks. The 1,236 protected
+files remain unchanged since the pre-GUI snapshot (`protected-result.json`).
+
 Shared GUI/browser access is pending the parent task's slot. Still required:
 live ASC listing/version/build/release-setting verification, isolated final
-packaged WebKit/native app checks, final exported package verification,
+packaged WebKit/native app checks,
 upload, processing, build selection, factual review response and resubmission.
 No upload or resubmission has occurred at this checkpoint.
 
