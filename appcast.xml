@@ -4,17 +4,14 @@
         <title>Production Desk</title>
         <item>
             <title>1.5.16</title>
-            <pubDate>Sat, 24 Oct 2026 12:49:13 -0400</pubDate>
-            <sparkle:version>46</sparkle:version>
+            <pubDate>Wed, 28 Oct 2026 18:49:32 -0400</pubDate>
+            <sparkle:version>47</sparkle:version>
             <sparkle:shortVersionString>1.5.16</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h1>Production Desk 1.5.16 (46) for Mac</h1>
-<p>Remove the demo launcher, guide and bundled script. New workspaces start empty; existing productions and imported samples remain editable.</p>
-<p>Breakdown export now produces interoperable CSV with Unicode, quoted fields and clear columns. Complete .productiondesk files preserve breakdowns, tags, script/PDF attachments, shots, lined annotations, schedules and project settings.</p>
-<p>Includes the Mac updater startup and safe retry fix from 1.5.15 (45). Offline operation, signature validation and save-before-install remain in effect.</p>
+            <description><![CDATA[<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Production Desk 1.5.16 (47)</title></head><body><h1>Production Desk 1.5.16 (47)</h1><ul><li>Arrange your Production tools tabs in Settings using Move up and Move down.</li><li>Your order is saved on this device. Restore default order is easy to reach beside the heading.</li><li>Default order: Main breakdown, Lined script, Shot list, Shooting schedule, Reports, Elements.</li><li>Mouse, keyboard and touch controls preserve the active editor, drafts and saved productions.</li></ul></body></html>
 ]]></description>
-            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.16-46.zip" length="21300751" type="application/octet-stream" sparkle:edSignature="w9JYZ/qUdsx2xos1YZec1l851LXfKgJaEMLFjYasphpXf9jNyBOB0kICALCSnExYnc4S7NTkCo16w4ANSaAcCQ=="/>
+            <enclosure url="https://updates.squidproductions.org/Production-Desk-1.5.16-47.zip" length="21311982" type="application/octet-stream" sparkle:edSignature="GgZdpSvpiXF8qrXKX5kmG+KYO5cf3e6HujgQG2hn1k/g/Q8bO7pQXJvZTy9n+zXKrs0ciD44TqPTS7YA6n8EAQ=="/>
         </item>
     </channel>
 </rss>
