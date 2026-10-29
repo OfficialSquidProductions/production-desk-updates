@@ -203,7 +203,7 @@ test('Windows package includes the updater and existing release notes in future 
   const config = windowsRequire('./package.json');
   assert.ok(config.build.files.includes('updates.cjs'));
   const notes = path.resolve(__dirname, '../desktop/windows', config.build.releaseInfo.releaseNotesFile);
-  assert.equal(notes, path.resolve(__dirname, '../desktop/release-notes.txt')); assert.ok(fs.readFileSync(notes, 'utf8').trim());
+  assert.equal(notes, path.resolve(__dirname, '../desktop/windows/release-notes.txt')); assert.ok(fs.readFileSync(notes, 'utf8').trim());
   assert.equal(config.build.publish[0].url, 'https://github.com/OfficialSquidProductions/production-desk-updates/releases/latest/download/');
   assert.equal(config.build.win.verifyUpdateCodeSignature, false, 'Preserve existing unsigned Windows distribution contract');
 });
