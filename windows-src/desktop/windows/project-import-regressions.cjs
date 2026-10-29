@@ -7,28 +7,6 @@ module.exports = async function runProjectImportChecks(){
   const close=()=>{if($('#modal').open)$('#modal').close();};
   const failImport=async(value,pattern)=>{let error;try{await window.slateDesktop.importProjectFile(file(value));}catch(e){error=e;}expect(error&&pattern.test(error.message),'Missing clear import failure: '+error?.message);close();};
   try{
-    // The native file picker emits cancel on its input; that event bubbles into
-    // the containing dialog. Exercise real DOM propagation and the submit UI.
-    for(const dirty of [false,true])for(const text of ['INT. OFFICE - DAY\n\nA clock ticks.','INT. CAFÉ - DAY\n\nÉlodie sees 東京.\n\nEXT. GARDEN - NIGHT\n\nRain falls.']){
-      close();const baseline=await read();
-      if(dirty){
-        $('[data-view="workspace"]').click();
-        const mode=$('#breakdown-continuous');if(mode?.checked){mode.checked=false;mode.dispatchEvent(new Event('change',{bubbles:true}));}
-        const synopsis=$('[data-field="description"]');expect(synopsis,'Dirty import QA needs a scene synopsis field');
-        synopsis.value='Pending edit before picker cancellation';synopsis.dispatchEvent(new Event('input',{bubbles:true}));
-        // Submit synchronously below, before the editor's debounce can save.
-      }
-      $('#import-open').click();
-      for(let attempt=0;attempt<3;attempt++)$('#import-file').dispatchEvent(new Event('cancel',{bubbles:true}));
-      expect($('#modal').open,'File picker cancellation closed the import dialog');
-      $('#paste-script').value=text;$('#paste-script').dispatchEvent(new Event('input',{bubbles:true}));$('#import-submit').click();
-      const limit=Date.now()+15000;
-      while($('#modal').open){if($('#modal-error').textContent)throw Error($('#modal-error').textContent);if(Date.now()>limit)throw Error('Picker cancel then paste stalled at '+$('#import-submit').textContent);await new Promise(r=>setTimeout(r,20));}
-      const saved=await read();expect(saved.projects.length===baseline.projects.length+1,'Cancel then paste did not add exactly one production');
-      expect(active(saved).breakdowns.some(b=>b._scriptText.includes(text.includes('東京')?'東京':'clock')),'Cancel then paste lost screenplay text');
-      if(dirty)expect(saved.projects.find(p=>p.id===baseline.activeProject).breakdowns.some(b=>b.description==='Pending edit before picker cancellation'),'Import lost the pending edit');
-    }
-    checks.push('Repeated bubbling file-picker cancellation permits ASCII/Unicode paste in clean/dirty workspaces and saves existing edits');
     close();expect($('#save-as-open').nextElementSibling?.id==='import-open','Import is not beside Save As');
     const start=await read();$('#import-open').click();expect($('#modal').open&&$('#import-file').accept.includes('.productiondesk'),'Header Import cannot choose portable projects');$('#modal-cancel').click();expect(same(await read(),start),'Cancelled picker changed workspace');
     checks.push('Header Import and cancellation preserve existing productions');
@@ -78,6 +56,29 @@ module.exports = async function runProjectImportChecks(){
     const large=structuredClone(portable),lp=large.workspace.projects[0];lp.id=crypto.randomUUID();large.workspace.activeProject=lp.id;lp.project='Large import QA';const seed=lp._shots[0];lp._shots.push(...Array.from({length:2400},(_,i)=>({...seed,id:crypto.randomUUID(),number:'QA'+i,description:'Large portable QA '.repeat(12)})));
     await window.slateDesktop.importProjectFile(file(large));saved=await read();expect(active(saved)._shots.length===lp._shots.length&&same(active(saved),lp),'Large project lost shots or references');
     checks.push('Older breakdown-only project repair and 2,400 additional shots import/save intact');
+    // The native file picker emits cancel on its input; that event bubbles into
+    // the containing dialog. Exercise real DOM propagation and the submit UI.
+    for(const dirty of [false,true])for(const text of ['INT. OFFICE - DAY\n\nA clock ticks.','INT. CAFÉ - DAY\n\nÉlodie sees 東京.\n\nEXT. GARDEN - NIGHT\n\nRain falls.']){
+      close();const baseline=await read();
+      if(dirty){
+        $('[data-view="workspace"]').click();
+        const mode=$('#breakdown-continuous');if(mode?.checked){mode.checked=false;mode.dispatchEvent(new Event('change',{bubbles:true}));}
+        const synopsis=$('[data-field="description"]');expect(synopsis,'Dirty import QA needs a scene synopsis field');
+        synopsis.value='Pending edit before picker cancellation';synopsis.dispatchEvent(new Event('input',{bubbles:true}));
+        // Submit synchronously below, before the editor's debounce can save.
+      }
+      $('#import-open').click();
+      for(let attempt=0;attempt<3;attempt++)$('#import-file').dispatchEvent(new Event('cancel',{bubbles:true}));
+      expect($('#modal').open,'File picker cancellation closed the import dialog');
+      $('#paste-script').value=text;$('#paste-script').dispatchEvent(new Event('input',{bubbles:true}));$('#import-submit').click();
+      const limit=Date.now()+15000;
+      while($('#modal').open){if($('#modal-error').textContent)throw Error($('#modal-error').textContent);if(Date.now()>limit)throw Error('Picker cancel then paste stalled at '+$('#import-submit').textContent);await new Promise(r=>setTimeout(r,20));}
+      const saved=await read();expect(saved.projects.length===baseline.projects.length+1,'Cancel then paste did not add exactly one production');
+      expect(active(saved).breakdowns.some(b=>b._scriptText.includes(text.includes('東京')?'東京':'clock')),'Cancel then paste lost screenplay text');
+      if(dirty)expect(saved.projects.find(p=>p.id===baseline.activeProject).breakdowns.some(b=>b.description==='Pending edit before picker cancellation'),'Import lost the pending edit');
+    }
+    checks.push('Repeated bubbling file-picker cancellation permits ASCII/Unicode paste in clean/dirty workspaces and saves existing edits');
+    saved=await read();
     window.projectImportExpected=saved;
     return checks;
   }finally{window.fetch=originalFetch;HTMLAnchorElement.prototype.click=anchorClick;close();}
