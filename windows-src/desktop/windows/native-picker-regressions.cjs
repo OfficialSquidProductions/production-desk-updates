@@ -9,7 +9,7 @@ module.exports=async({win,output,flush,js,waitFor})=>{
   assert.equal(process.platform,'win32');
   assert.equal(process.env.GITHUB_ACTIONS,'true');
   const helper=path.join(output,'native-picker-escape.ps1');
-  fs.writeFileSync(helper, String.raw`param([int]$TargetPid,[string]$Evidence)
+  fs.writeFileSync(helper, String.raw`param([int]$TargetPid,[long]$OwnerHandle,[string]$Evidence)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,System.Windows.Forms,System.Drawing
 Add-Type @'
@@ -18,19 +18,25 @@ using System.Runtime.InteropServices;
 public class PickerNative {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, uint flags);
 }
 '@
-$condition=[System.Windows.Automation.AndCondition]::new(
-  [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ProcessIdProperty,$TargetPid),
-  [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty,'#32770'))
+$condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty,'#32770')
 $deadline=[DateTime]::UtcNow.AddSeconds(20)
 $dialog=$null
+$observed=@()
 while([DateTime]::UtcNow -lt $deadline){
-  $dialog=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children,$condition)
-  if($dialog -and -not $dialog.Current.IsOffscreen){break}
+  $windows=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
+  $observed=@($windows | ForEach-Object {@{name=$_.Current.Name;className=$_.Current.ClassName;processId=$_.Current.ProcessId;handle=$_.Current.NativeWindowHandle;owner=[PickerNative]::GetAncestor([IntPtr]$_.Current.NativeWindowHandle,3).ToInt64()}})
+  $candidates=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,$condition)
+  foreach($candidate in $candidates){
+    if(-not $candidate.Current.IsOffscreen -and [PickerNative]::GetAncestor([IntPtr]$candidate.Current.NativeWindowHandle,3).ToInt64() -eq $OwnerHandle){$dialog=$candidate;break}
+  }
+  if($dialog){break}
   Start-Sleep -Milliseconds 100
 }
-if(-not $dialog){throw 'No native #32770 file picker owned by the smoke process appeared'}
+$observed | ConvertTo-Json -Depth 4 | Set-Content ($Evidence+'-windows.json') -Encoding UTF8
+if(-not $dialog){throw 'No native #32770 picker owned by the smoke window appeared; see window diagnostics'}
 $handle=[IntPtr]$dialog.Current.NativeWindowHandle
 $record=@{processId=$dialog.Current.ProcessId;className=$dialog.Current.ClassName;name=$dialog.Current.Name;handle=$handle.ToInt64();interactive=[Environment]::UserInteractive;escapeSent=$false;closed=$false}
 try {
@@ -59,7 +65,7 @@ try {
     for(let attempt=0;attempt<3;attempt++){
       const evidence=path.join(output,`native-picker-${index}-${attempt}`);
       const done=new Promise((resolve,reject)=>{
-        const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-STA','-File',helper,'-TargetPid',String(process.pid),'-Evidence',evidence],{windowsHide:true});
+        const child=spawn('powershell.exe',['-NoProfile','-NonInteractive','-STA','-File',helper,'-TargetPid',String(process.pid),'-OwnerHandle',String(win.getNativeWindowHandle().readBigUInt64LE()),'-Evidence',evidence],{windowsHide:true});
         let error='';child.stderr.on('data',v=>error+=v);child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(Error('Native picker helper failed: '+code+' '+error)));
       });
       // userGesture opens Chromium's actual OS picker, not a mocked dialog.
