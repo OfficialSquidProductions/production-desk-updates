@@ -29,8 +29,24 @@ Validation:
   existing bundled pypdf 6.20.0 in an isolated test dependency directory.
 - `desktop/windows/project-import-regressions.cjs` additionally dispatches real
   bubbling DOM events on the file input and exercises submit/save for all four
-  clean/dirty ASCII/Unicode combinations. Native preview execution is pending
-  a coordinated desktop slot; no release or installed app has been updated.
+  clean/dirty ASCII/Unicode combinations.
+
+The original final tested commit is `9a7ab7d297b5dbf2d25f35f67b8baf4b172d8289`.
+[Windows CI run 40815229376](https://github.com/OfficialSquidProductions/production-desk-updates/actions/runs/40815229376)
+passed the actual native Open-dialog/Escape tests and packaged, installed and
+reinstalled smoke checks. Its picker helper runs only with `GITHUB_ACTIONS=true`,
+matches the smoke window's owned dialog and sends Escape only when that picker
+is foreground. It checks trusted cancellation before testing real clipboard
+imports and existing-production preservation.
+
+For publication, the patch is integrated onto current public main, retaining the
+Mac navigation/runtime source and immutable signed downloads. Windows now reads
+its own `desktop/windows/release.json` and changelog; version 1.5.17 does not
+modify Mac 1.5.16 (47), its signed feed or the Apple submission sources. The final
+CI run also exercises device tab ordering, failure handling, reset and renderer
+reload in the Windows package. Publication requires the final integrated commit's
+checks to pass. CI proves the tested Windows environment; local Code Integrity
+acceptance on another PC is a separate result and has not been claimed.
 
 The native regression complements the modeled DOM unit tests: the latter verify
 session/save behavior without claiming to exercise an actual Windows picker.

@@ -66,10 +66,10 @@ jobs:
         run: |
           python tools/check_windows_release.py --repository "${{ github.repository }}" --event "${{ github.event_name }}" --ref "${{ github.ref }}" --require-newer
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $version = (Get-Content desktop/release.json | ConvertFrom-Json).version
+          $version = (Get-Content desktop/windows/release.json | ConvertFrom-Json).version
           $tag = "windows-$version-build-${{ github.run_number }}"
           $exe = 'dist/windows/Production-Desk-Windows-Setup.exe'
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
           "$hash  Production-Desk-Windows-Setup.exe" | Out-File dist/windows/Production-Desk-Windows-Setup.sha256 -Encoding ascii
-          gh release create $tag $exe dist/windows/Production-Desk-Windows-Setup.sha256 dist/windows/latest.yml dist/windows/Production-Desk-Windows-Setup.exe.blockmap --repo ${{ github.repository }} --target ${{ github.sha }} --title "Production Desk $version for Windows" --notes-file desktop/release-notes.txt --latest
+          gh release create $tag $exe dist/windows/Production-Desk-Windows-Setup.sha256 dist/windows/latest.yml dist/windows/Production-Desk-Windows-Setup.exe.blockmap --repo ${{ github.repository }} --target ${{ github.sha }} --title "Production Desk $version for Windows" --notes-file desktop/windows/release-notes.txt --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

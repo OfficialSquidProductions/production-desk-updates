@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     if sys.platform != 'win32':
         raise SystemExit('Run this builder on Windows x64, or use the Windows GitHub Actions workflow.')
-    release = json.loads((ROOT / 'desktop/release.json').read_text())
+    from check_windows_release import release_config
+    release = release_config()
     package = ROOT / 'desktop/windows/package.json'
     config = json.loads(package.read_text())
     config['version'] = release['version']

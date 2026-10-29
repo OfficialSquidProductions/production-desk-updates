@@ -1,6 +1,6 @@
 {
   "name": "production-desk",
-  "version": "1.5.16",
+  "version": "1.5.17",
   "description": "Offline film scheduling, script breakdowns and shot lists",
   "author": "Squid Productions",
   "private": true,
@@ -33,6 +33,7 @@
       "lined-controls-regressions.cjs",
       "shot-navigation-regressions.cjs",
       "schedule-drag-regressions.cjs",
+      "navigation-order-regressions.cjs",
       "project-import-regressions.cjs",
       "native-picker-regressions.cjs",
       "export-regressions.cjs",
@@ -51,7 +52,7 @@
       }
     ],
     "releaseInfo": {
-      "releaseNotesFile": "../release-notes.txt"
+      "releaseNotesFile": "release-notes.txt"
     },
     "win": {
       "target": "nsis",

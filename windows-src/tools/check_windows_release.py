@@ -11,6 +11,17 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def release_config(root=None):
+    root = Path(root) if root is not None else ROOT
+    specific = root / 'desktop/windows/release.json'
+    # Keep older checkouts usable without tying future Windows versions to Mac.
+    source = specific if specific.exists() else root / 'desktop/release.json'
+    config = json.loads(source.read_text())
+    if not isinstance(config, dict) or not isinstance(config.get('version'), str):
+        raise ValueError('Windows release metadata requires a version string.')
+    return config
+
+
 def version_tuple(value):
     if not isinstance(value, str) or not re.fullmatch(r'(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)', value):
         raise ValueError('Windows release version must be major.minor.patch.')
@@ -57,7 +68,7 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--require-newer', action='store_true')
     args = parser.parse_args()
-    config = json.loads((ROOT / 'desktop/release.json').read_text())
+    config = release_config()
     candidate = config['version']
     if config.get('channel') == 'beta':
         if args.require_newer:
@@ -73,7 +84,7 @@ def main():
         previous = latest_version(args.repository)
         publish = should_publish(candidate, previous)
     if args.require_newer and not publish:
-        raise ValueError('Increase desktop/release.json version before publishing another Windows installer.')
+        raise ValueError('Increase desktop/windows/release.json version before publishing another Windows installer.')
     if args.output:
         with args.output.open('a', encoding='utf-8') as output:
             output.write('publish=' + str(publish).lower() + '\n')

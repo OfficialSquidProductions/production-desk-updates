@@ -1,0 +1,5 @@
+Production Desk 1.5.17 for Windows
+
+Fix importing pasted scripts after cancelling the file picker. Pressing Escape in the Open dialog leaves the import session usable, including ASCII and Unicode scripts and unsaved edits. Existing projects, original PDFs and portable backups are preserved.
+
+Includes customizable navigation tabs in Settings. Move tabs up or down, or restore Main breakdown, Lined script, Shot list, Shooting schedule, Reports, Elements. Your chosen order is saved on this device.
