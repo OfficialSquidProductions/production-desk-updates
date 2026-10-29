@@ -47,6 +47,8 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: python tools/build_windows.py
       - name: Test packaged app, silent installation and upgrade preservation
+        env:
+          PRODUCTION_DESK_NATIVE_PICKER_QA: '1'
         run: python tools/check_windows.py
       - uses: actions/upload-artifact@v4
         if: always()

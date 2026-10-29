@@ -198,6 +198,7 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   await screenshot('original-pdf-breakdown.png');
   checks.push(...await runShared('./shot-order-regressions.cjs',[],true));
   await screenshot('shot-shooting-order.png');
+  if(process.env.PRODUCTION_DESK_NATIVE_PICKER_QA==='1')checks.push(...await require('./native-picker-regressions.cjs')({win,output,flush,js,waitFor}));
   assert.equal((await post('/api/workspace',JSON.stringify(linedOriginal))).status,200);
   return {passed:true, checks, version:require('./package.json').version};
 };
