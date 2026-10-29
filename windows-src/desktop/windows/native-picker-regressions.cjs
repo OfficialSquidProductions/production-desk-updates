@@ -40,7 +40,11 @@ if(-not $dialog){throw 'No native #32770 picker owned by the smoke window appear
 $handle=[IntPtr]$dialog.Current.NativeWindowHandle
 $record=@{processId=$dialog.Current.ProcessId;className=$dialog.Current.ClassName;name=$dialog.Current.Name;handle=$handle.ToInt64();interactive=[Environment]::UserInteractive;escapeSent=$false;closed=$false}
 try {
-  $dialog.SetFocus()
+  if([PickerNative]::GetForegroundWindow() -ne $handle){
+    $focusable=$dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::IsKeyboardFocusableProperty,$true))
+    if(-not $focusable){throw 'Native picker has no focusable child'}
+    $focusable.SetFocus()
+  }
   if([PickerNative]::GetForegroundWindow() -ne $handle){throw 'Native picker is not foreground; refusing to send Escape'}
   $rect=$dialog.Current.BoundingRectangle
   $bitmap=[System.Drawing.Bitmap]::new([int]$rect.Width,[int]$rect.Height)
