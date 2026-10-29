@@ -11,7 +11,13 @@ module.exports = async function runProjectImportChecks(){
     // the containing dialog. Exercise real DOM propagation and the submit UI.
     for(const dirty of [false,true])for(const text of ['INT. OFFICE - DAY\n\nA clock ticks.','INT. CAFÉ - DAY\n\nÉlodie sees 東京.\n\nEXT. GARDEN - NIGHT\n\nRain falls.']){
       close();const baseline=await read();
-      if(dirty){mutate(()=>{project.description='Pending edit before picker cancellation';},false);clearTimeout(saveTimer);}
+      if(dirty){
+        $('[data-view="workspace"]').click();
+        const mode=$('#breakdown-continuous');if(mode?.checked){mode.checked=false;mode.dispatchEvent(new Event('change',{bubbles:true}));}
+        const synopsis=$('[data-field="description"]');expect(synopsis,'Dirty import QA needs a scene synopsis field');
+        synopsis.value='Pending edit before picker cancellation';synopsis.dispatchEvent(new Event('input',{bubbles:true}));
+        // Submit synchronously below, before the editor's debounce can save.
+      }
       $('#import-open').click();
       for(let attempt=0;attempt<3;attempt++)$('#import-file').dispatchEvent(new Event('cancel',{bubbles:true}));
       expect($('#modal').open,'File picker cancellation closed the import dialog');
@@ -20,7 +26,7 @@ module.exports = async function runProjectImportChecks(){
       while($('#modal').open){if($('#modal-error').textContent)throw Error($('#modal-error').textContent);if(Date.now()>limit)throw Error('Picker cancel then paste stalled at '+$('#import-submit').textContent);await new Promise(r=>setTimeout(r,20));}
       const saved=await read();expect(saved.projects.length===baseline.projects.length+1,'Cancel then paste did not add exactly one production');
       expect(active(saved).breakdowns.some(b=>b._scriptText.includes(text.includes('東京')?'東京':'clock')),'Cancel then paste lost screenplay text');
-      if(dirty)expect(saved.projects.find(p=>p.id===baseline.activeProject).description==='Pending edit before picker cancellation','Import lost the pending edit');
+      if(dirty)expect(saved.projects.find(p=>p.id===baseline.activeProject).breakdowns.some(b=>b.description==='Pending edit before picker cancellation'),'Import lost the pending edit');
     }
     checks.push('Repeated bubbling file-picker cancellation permits ASCII/Unicode paste in clean/dirty workspaces and saves existing edits');
     close();expect($('#save-as-open').nextElementSibling?.id==='import-open','Import is not beside Save As');
