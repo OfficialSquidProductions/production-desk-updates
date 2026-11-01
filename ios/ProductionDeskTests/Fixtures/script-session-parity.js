@@ -17,7 +17,7 @@ async function(){
    await window.slateDesktop.importProjectFile(new File([script],'Script.fountain'));
    const w=await workspace(),p=await current();expect(w.projects.length===before.projects.length&&p.id===seed.id&&p.project===seed.project,'Script made a separate production or renamed the current one');expect(p.breakdowns.length===1,'Repeated script duplicated scenes');
  }
- // Paste uses the same current-session path after repeated picker cancellation.
+ // Paste uses the same current-session path; native picker cancellation is covered by UIKit UI tests.
  window.slateDesktop.importScript();// Mobile cancellation uses UIDocumentPicker; touch cancellation is tested separately.
  $('#paste-script').value=script.replace('clock ticks','revised clock ticks');$('#import-submit').click();await wait(()=>!$('#modal').open);
  let p=await current();const sceneID=p.breakdowns[0].id;expect(p.breakdowns[0]._scriptText.includes('revised'),'Pasted revision was not loaded');
@@ -45,7 +45,7 @@ async function(){
  expect(!$('#script-text').classList.contains('script-pdf-pages')&&$('#script-text').textContent.includes('text revision is visible'),'Text reimport displayed an older PDF instead of the new script');
  p=await current();expect(p._linedScript.documents[0].marks.length===marks.length,'Text reimport discarded older PDF annotations');
  await window.slateDesktop.importProjectFile(new File([raw],'Script.pdf',{type:'application/pdf'}));
- checks.push('Text, Fountain, Final Draft, paste, repeated picker cancellation and repeated PDF imports retain current production identity, scene IDs, shot links and annotations; other productions unchanged');
+ checks.push('Text, Fountain, Final Draft, paste and repeated PDF imports retain current production identity, scene IDs, shot links and annotations; other productions unchanged');
  $('[data-view="lined"]').click();await wait(()=>!!$('#lined-overlay')?.onpointerdown);
  $('#lined-overlay').setPointerCapture=()=>{};$('[data-lined-tool="select"]').click();$('#lined-overlay [data-lined-mark="'+marks.at(-1).id+'"]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:9,clientX:0,clientY:0}));$('#lined-overlay').dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:9}));
  edit('#lined-size','Medium close-up');edit('#lined-movement','Slow dolly toward the door');

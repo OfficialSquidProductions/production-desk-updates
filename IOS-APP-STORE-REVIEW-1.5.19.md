@@ -26,9 +26,11 @@ of a long description. PDFKit text extraction alone cannot inspect that overlay.
 Five iPhone native UI tests pass: repeated inside/backdrop/X touch behavior for
 both Settings dialogs; JSON/PDF share cancellation/reopening; portable Save As,
 import and share cancellation; synthetic script editing and native Files save/
-import; navigation-order changes and cold launch. The matching iPad Settings
-touch test passes. Additional iPad Files and navigation touch checks are recorded
-in the ignored evidence folder as their run completes; do not claim unrun tests.
+import; navigation-order changes and cold launch. Three matching iPad touch tests pass: repeated Settings backdrop/X/inside
+behavior, synthetic script editing with a complete native Files save/import
+round trip, and navigation-order/cold-launch persistence. The Files test was
+slow because XCTest repeatedly waited for OS animation-idle notifications,
+but it completed successfully; it is not counted as an unfinished check.
 Tests explicitly seed independent fictional productions because script imports
 now preserve the current production. Asynchronous test controllers are retained
 through their checks; JSON comparisons use stable keys. Real user apps/projects
@@ -42,13 +44,21 @@ Sparkle/Python updater payload or incoming URL handler. IPA SHA-256:
 `d67a3db18726079817c6330904d04a4d35e3ad422192bf3b95c59d34159eb85f`.
 No signing/profile/account changes were made.
 
-Publication blocker: automatic approval review rejected the App Store Connect
+Publication blockers: automatic approval review rejected the App Store Connect
 New Version > Create action for 1.5.19, citing the earlier App Store hold despite
 the later delegated user instruction lifting it. The create action was denied;
 no iOS binary upload or submission was attempted after that denial, and no
 workaround was used. The existing live iOS listing remains unchanged. The
-local, signed candidate is reviewable and ready for the remaining authorized
-publication steps once this denial is resolved. Preserve Free pricing, factual
+local, signed candidate is reviewable and ready for the remaining publication
+steps once this denial is resolved. Automatic approval review separately denied
+pushing the iOS changes/review evidence to remote main, citing the earlier
+Mac-GitHub-only scope. That combined commit/push command did not execute; the
+changes were then preserved in a local commit without a remote push. Neither
+denied operation was retried or bypassed. Renewed human confirmation is needed
+for iOS version creation, binary upload/submission and the main-branch source push. Preserve Free pricing, factual
 privacy declarations, existing listing and automatic-after-approval behavior.
 
 Evidence: `windows-src/build/store-20261101` (ignored local test artifacts).
+The completed suites are `iphone-final.xcresult`, `iphone-touch.xcresult`,
+`ipad-unit.xcresult` and `ipad-touch.xcresult`. Both disposable Simulators were
+shut down after verification. No test remains running.
