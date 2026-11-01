@@ -1,4 +1,4 @@
-Production Desk 1.5.18 (48) for Mac
+Production Desk 1.5.18 (49) for Mac
 
 Scripts now load into your current production instead of creating an imported copy. Repeated imports preserve matching scene IDs, breakdown edits, shots, schedule positions and original PDF annotations.
 

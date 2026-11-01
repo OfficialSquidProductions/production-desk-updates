@@ -1,4 +1,4 @@
-# Mac 1.5.18 (48)
+# Mac 1.5.18 (49)
 
 Scripts import into the active production. Matching scene numbers retain stable IDs, breakdown edits, shot links and schedule positions; new scenes enter each schedule's boneyard. Unmentioned scenes and older original-PDF revisions/annotations are retained. Complete `.productiondesk`, backup and USS imports continue to create independent productions. Script parsing, cancellation, prior-save and final atomic-save gates remain in place. Text imported after a PDF displays the new text without discarding older lining.
 
