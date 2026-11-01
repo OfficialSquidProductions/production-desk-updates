@@ -63,3 +63,48 @@ export function mergeProductions(current, incoming, activeID) {
   if(new TextEncoder().encode(JSON.stringify(result)).length>40*1024*1024)throw Error('There is not enough workspace capacity to import this production (40 MB limit). Your current work is unchanged.');
   return {workspace:result,imported};
 }
+
+// Scripts belong to the open production. Match scene numbers so reimporting a
+// revision keeps scene IDs, shot links, breakdown work and schedule positions.
+export function loadScriptIntoProduction(current, incoming) {
+  const result=portableWorkspace(current);
+  const target=result.projects.find(p=>p.id===result.activeProject)||result.projects[0];
+  const categories=new Map(),elements=new Map();
+  for(const category of incoming.categories){
+    let existing=target.categories.find(c=>c.ucid===category.ucid);
+    if(!existing){existing=structuredClone(category);target.categories.push(existing);}
+    categories.set(category.id,existing.id);
+  }
+  for(const element of incoming.elements){
+    const category=categories.get(element.category);
+    let existing=target.elements.find(e=>e.category===category&&e.name.toLocaleLowerCase()===element.name.toLocaleLowerCase());
+    if(!existing){existing={...structuredClone(element),category};target.elements.push(existing);}
+    elements.set(element.id,existing.id);
+  }
+  const matched=new Set();
+  for(const scene of incoming.breakdowns){
+    const existing=target.breakdowns.find(b=>b.type==='scene'&&b.scene===scene.scene&&!matched.has(b.id));
+    if(existing){
+      matched.add(existing.id);existing._scriptText=scene._scriptText;existing.scriptPage=scene.scriptPage;
+      existing._needsReview=true;
+      existing.elements=[...new Set([...existing.elements,...scene.elements.map(e=>elements.get(e))])];
+    }else{
+      const added={...structuredClone(scene),elements:scene.elements.map(e=>elements.get(e))};
+      target.breakdowns.push(added);matched.add(added.id);
+      for(const schedule of target.stripboards)schedule.boards[1].breakdownIds.push(added.id);
+    }
+  }
+  for(const key of ['_scriptFilename','_importNotes'])target[key]=incoming[key];
+  if(incoming._sourceScript)target._sourceScript=structuredClone(incoming._sourceScript);else delete target._sourceScript;
+  // Retain old PDF revisions for lining, but show the newly imported text.
+  target._scriptTextOnly=!incoming._linedScript?.activePdf;
+  if(incoming._linedScript){
+    target._linedScript||={activePdf:null,documents:[]};
+    for(const doc of incoming._linedScript.documents)if(!target._linedScript.documents.some(d=>d.sha256===doc.sha256))target._linedScript.documents.push(structuredClone(doc));
+    target._linedScript.activePdf=incoming._linedScript.activePdf;
+  }
+  result.activeProject=target.id;
+  validateWorkspace(result);
+  if(new TextEncoder().encode(JSON.stringify(result)).length>40*1024*1024)throw Error('There is not enough workspace capacity to load this script (40 MB limit). Your current work is unchanged.');
+  return {workspace:result};
+}

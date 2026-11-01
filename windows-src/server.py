@@ -171,7 +171,7 @@ class Handler(SimpleHTTPRequestHandler):
             value = {}
         theme = value.get('theme') if isinstance(value, dict) else None
         output = {'theme': theme if theme in ('light', 'dark') else 'light'}
-        for key in ('linedKeyBinds', 'linedLabelOpacity', 'navigationOrder'):
+        for key in ('linedKeyBinds', 'linedLabelOpacity', 'linedShowMovement', 'linedShowDescription', 'navigationOrder'):
             if isinstance(value, dict) and key in value:
                 try:
                     output.update(validate_preferences({key: value[key]}))
@@ -433,7 +433,7 @@ class Handler(SimpleHTTPRequestHandler):
                     if filename.lower().endswith('.pdf'):
                         document = store_pdf(self.server.datafile, raw, filename)
                         project['_linedScript'] = {'activePdf': document['sha256'], 'documents': [document]}
-                    self.reply({"project": project})
+                    self.reply({"project": project, "kind": "script"})
             else:
                 self.reply({"error": "Not found"}, 404)
         except (ValueError, KeyError, TypeError, UnicodeError, RecursionError, subprocess.TimeoutExpired) as e:

@@ -39,7 +39,9 @@ module.exports = async function runLinedChecks(fixture) {
   $('#lined-note').value='Start on the door slam';$('#lined-note').dispatchEvent(new Event('input',{bubbles:true}));
   $('#lined-style').value='wavy';$('#lined-style').dispatchEvent(new Event('change',{bubbles:true}));
   let project=await saved();expect(project._shots.find(s=>s.id===current[0].shotId).movement==='Track left, then push in','Movement was not linked to the shot list');
-  expect($('#lined-overlay').textContent.includes('Track left, then push in'),'Movement label did not update');
+  expect($('#lined-overlay').textContent.includes('Shot Size: Medium'),'Shot Size label did not update');
+  $('#app-settings-open').click();if(!$('#lined-show-movement').checked)$('#lined-show-movement').click();await wait(()=>!$('#lined-show-movement').disabled);$('#modal-close').click();
+  expect([...$('#lined-overlay').querySelectorAll('text')].map(e=>e.textContent).join(' ').includes('Track left, then push in'),'Optional movement label did not update');
   $('[data-view="shots"]').click();$(`[data-shot-select="${current[0].shotId}"]`).click();
   for(const [key,value] of Object.entries({description:'Lined camera setup',movement:'Track left, then push in',camera:'B',lens:'50',size:'Medium',equipment:'Dolly'}))expect($(`[data-shot-field="${key}"]`).value===value,'Shot list lost coverage '+key);
   expect($('.shot-coverage').textContent.includes('p. 1')&&$('.shot-coverage').textContent.includes('Start on the door slam'),'Coverage references and timing notes are missing from the shot list');

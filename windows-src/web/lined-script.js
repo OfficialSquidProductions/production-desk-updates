@@ -1,5 +1,5 @@
 import {primitivesForPage,annotationBounds,expandPageBounds} from './lined-export.js';
-import {normalizeShotNumber,shotIdentifier,shotNumberKey} from './shot-identifiers.js';
+import {normalizeShotNumber,shotIdentifier,shotNumberKey,nextLinedShotNumber,rememberLinedShotNumber} from './shot-identifiers.js';
 import {LINED_ACTIONS,DEFAULT_BINDS,eventBinding,isEditing} from './lined-shortcuts.js';
 import {confirmLinkedDelete,createDeleteMenu} from './linked-actions.js';
 // Original pages remain immutable. Editable marks use normalized page or document coordinates.
@@ -28,6 +28,12 @@ export function coverageSummary(project,shotId){
     .map(m=>`${document.filename} · ${m.endPage>m.page?'pp. '+(m.page+1)+'–'+(m.endPage+1):'p. '+(m.page+1)} · ${m.style==='wavy'?'Off camera':'On camera'}${m.note?' · '+m.note:''}`));
 }
 const shotFields=['description','movement','camera','lens','size','equipment'];
+export function coverageDetails(details={},preferences={}){
+  return [details.size&&'Shot Size: '+details.size,
+    preferences.linedShowMovement&&details.movement&&'Camera movement: '+details.movement,
+    preferences.linedShowDescription&&details.description&&details.description].filter(Boolean).join('\n');
+}
+
 function wrap(text,columns){
   const output=[];
   for(const paragraph of String(text||'').split('\n')){
@@ -138,7 +144,7 @@ export function createLinedDesk(c){
   const sortedShots=()=>p()._shots.filter(s=>p().breakdowns.some(b=>b.type==='scene'&&b.id===s.sceneId)).slice().sort((a,b)=>numberLabel(a).localeCompare(numberLabel(b),undefined,{numeric:true,sensitivity:'base'})||a.id.localeCompare(b.id));
   const options=value=>sortedShots().map(s=>`<option value="${esc(s.id)}" ${s.id===value?'selected':''}>${esc(label(s)+' · '+s.description)}</option>`).join('');
   const numberKey=(value,sceneId)=>shotNumberKey(value,p().breakdowns.find(b=>b.id===sceneId)?.scene);
-  function nextNumber(sceneId){const used=new Set(p()._shots.filter(s=>s.sceneId===sceneId).map(s=>numberKey(s.number,sceneId)));let n=1;while(used.has('.'+n))n++;return '.'+n;}
+  const nextNumber=sceneId=>nextLinedShotNumber(p(),sceneId);
   function makeShot(sceneId,number,seed={}){return {id:id(),created:stamp(),sceneId,number,description:seed.description||'Coverage',movement:seed.movement||'',size:seed.size||'Wide',camera:seed.camera||'A',lens:seed.lens||'',equipment:seed.equipment||'',notes:'',circleTake:'',priority:'Essential',status:'Planned',setupMinutes:10,shootMinutes:15,actualMinutes:null,takes:0};}
   function defaultScene(){return p().breakdowns.find(b=>b.type==='scene'&&b.id===c.selectedScene())||p().breakdowns.find(b=>b.type==='scene');}
   function render(){sync();return `<section class="panel lined-desk"><div class="lined-top"><div><h2>Lined script</h2><p>Original PDF pages · shot-linked coverage · local annotations</p></div><div class="lined-file-actions"><button id="lined-attach">${doc()?'Add PDF revision':'Attach original PDF'}</button><input id="lined-file" type="file" accept="application/pdf,.pdf" hidden><button id="lined-export" class="primary" ${doc()?'':'disabled'}>Export lined PDF</button></div></div>${doc()?`<div class="lined-document"><label>PDF revision<select id="lined-document">${lining().documents.map(d=>`<option value="${d.sha256}" ${d.sha256===sha?'selected':''}>${esc(d.filename)}</option>`).join('')}</select></label><div class="lined-pagination"><label class="lined-continuous-choice"><input id="lined-continuous" type="checkbox" ${continuous?'checked':''}>Continuous scroll</label><button id="lined-prev" aria-label="Previous PDF page">‹</button><span id="lined-pages">Loading PDF…</span><button id="lined-next" aria-label="Next PDF page">›</button><label>Zoom<select id="lined-zoom">${[.5,.75,1,1.25,1.5,2].map(z=>`<option value="${z}" ${z===zoom?'selected':''}>${Math.round(z*100)}%</option>`).join('')}</select></label></div></div><div class="lined-toolbar" role="toolbar" aria-label="Script annotation tools">${[['select','↖ Select'],['coverage','│ Coverage'],['pen','✎ Pen'],['highlighter','▰ Highlight'],['arrow','↗ Arrow'],['text','T Note']].map(([key,name])=>`<button data-lined-tool="${key}" aria-pressed="${key===tool}">${name}</button>`).join('')}<label>Color<input id="lined-color" type="color" value="${color}"></label><label>Width<select id="lined-width">${[1,2,3,5,10,14,24].map(w=>`<option ${width===w?'selected':''}>${w}</option>`).join('')}</select></label></div><div class="lined-workspace"><div class="lined-scroll" id="lined-scroll"><div id="lined-stage" aria-label="Original script PDF"><p class="lined-loading">Opening original PDF…</p></div></div><aside id="lined-inspector" class="lined-inspector"></aside></div>`:`<div class="lined-empty"><div class="lined-empty-icon">▧</div><h3>Line the original pages.</h3><p>Attach your screenplay PDF to draw coverage lines, link shots, and write camera directions.</p><p>New PDF script imports keep their original pages automatically. For an older production, attach its original PDF here.</p><button id="lined-empty-attach" class="primary">Choose original PDF</button>${p().breakdowns.some(b=>b._scriptText)?'<p>Or use the imported script text to create a scrollable copy.</p><button id="lined-from-text">Create from script text</button>':''}<p class="tiny">PDFs stay on this computer and travel with full Production Desk backups.</p></div>`}<p id="lined-status" class="lined-status" role="status"></p></section>`;}
@@ -211,7 +217,7 @@ export function createLinedDesk(c){
     return [m.draft?.number?'Unlinked '+m.draft.number:'Unlinked coverage',m.draft?.camera?'Camera '+m.draft.camera:''].filter(Boolean).join(' · ');
   }
   function primitives(m){
-    const s=shot(m.shotId||null),movement=m.type==='coverage'?(s?.movement||m.draft?.movement):'';
+    const s=shot(m.shotId||null),movement=m.type==='coverage'?coverageDetails(s||m.draft,preferences()):'';
     const options={gutters:GUTTER,opacity:preferences().linedLabelOpacity};
     if(continuous)return documentPrimitives(m,layout,coverageLabel(m),movement,options);
     if(m.space==='document'){const item=layout.pages[page];return translatePrimitives(documentPrimitives(m,layout,coverageLabel(m),movement,options),-item.left,-item.top);}
@@ -320,7 +326,7 @@ export function createLinedDesk(c){
       if(project._shots.some(s=>s.sceneId===sceneId&&numberKey(s.number,sceneId)===numberKey(number,sceneId))){$('#modal-error').textContent='This scene already has that shot number.';return;}
       if(project!==p()||document!==doc()||(target&&!document.marks.includes(target))){$('#modal-error').textContent='The selected coverage changed. Close this dialog and try again.';return;}
       const value={id:id(),created:stamp(),sceneId,number,description,movement:$('#lined-new-movement').value,size:$('#lined-new-size').value||'Wide',camera:$('#lined-new-camera').value||'A',lens:$('#lined-new-lens').value,equipment:$('#lined-new-equipment').value,notes:'',circleTake:'',priority:'Essential',status:'Planned',setupMinutes:10,shootMinutes:15,actualMinutes:null,takes:0};
-      c.mutate(()=>{project._shots.push(value);shotId=value.id;if(target){target.shotId=value.id;delete target.draft;}},false);
+      c.mutate(()=>{project._shots.push(value);rememberLinedShotNumber(project,value);shotId=value.id;if(target){target.shotId=value.id;delete target.draft;}},false);
       $('#modal').close();renderInspector();drawOverlay();
     };
   }
@@ -334,7 +340,7 @@ export function createLinedDesk(c){
       if(project!==p()||!project._shots.includes(target)){$('#modal-error').textContent='The shot changed. Close this dialog and try again.';return;}
       const collision=project._shots.find(s=>s.id!==target.id&&s.sceneId===target.sceneId&&numberKey(s.number,s.sceneId)===numberKey(number,target.sceneId));
       if(collision&&!$('#lined-renumber-swap').checked){$('#modal-error').textContent='That number belongs to '+numberLabel(collision)+'. Choose another number or enable swapping.';return;}
-      c.mutate(()=>{if(collision)collision.number=target.number;target.number=number;},false);$('#modal').close();drawOverlay();renderInspector();
+      c.mutate(()=>{if(collision)collision.number=target.number;target.number=number;rememberLinedShotNumber(project,target);},false);$('#modal').close();drawOverlay();renderInspector();
     };
     $('#lined-renumber-value').select();
   }
@@ -405,7 +411,7 @@ export function createLinedDesk(c){
       if(JSON.stringify(value)!==JSON.stringify(current.original)||current.kind==='create')c.mutate(()=>{if(current.kind==='create'){
         if(value.type==='coverage'){
           const scene=defaultScene();
-          if(scene){const created=makeShot(scene.id,nextNumber(scene.id),{description:`Coverage · ${doc().filename} · p. ${value.page+1}`});p()._shots.push(created);value.shotId=created.id;shotId=created.id;}
+          if(scene){const created=makeShot(scene.id,nextNumber(scene.id),{description:`Coverage · ${doc().filename} · p. ${value.page+1}`});p()._shots.push(created);rememberLinedShotNumber(p(),created);value.shotId=created.id;shotId=created.id;}
           else value.draft={};
         }
         doc().marks.push(value);
@@ -459,7 +465,7 @@ export function createLinedDesk(c){
       try{await check.promise;}finally{await check.destroy();}
       const response=await c.api('/api/pdf',file,{'X-Filename':encodeURIComponent(file.name)});
       if(project.id!==p().id){c.toast('PDF uploaded. Return to the original production to attach it.');return;}
-      c.mutate(()=>{project._linedScript||={activePdf:null,documents:[]};if(!project._linedScript.documents.some(d=>d.sha256===response.document.sha256))project._linedScript.documents.push(response.document);project._linedScript.activePdf=response.document.sha256;});
+      c.mutate(()=>{project._linedScript||={activePdf:null,documents:[]};if(!project._linedScript.documents.some(d=>d.sha256===response.document.sha256))project._linedScript.documents.push(response.document);project._linedScript.activePdf=response.document.sha256;project._scriptTextOnly=false;});
     }catch(error){setStatus(error.name==='PasswordException'?'Use an unencrypted PDF for lining.':error.message,true);}finally{busy=false;}
   }
   async function exportPDF(){
@@ -468,7 +474,7 @@ export function createLinedDesk(c){
       const {pdf:file,bytes}=await load(current.sha256),{PDFDocument,degrees}=window.PDFLib;
       const output=await PDFDocument.load(bytes.slice(),{updateMetadata:false});
       const exportLayout=await documentLayout(file);
-      const all=current.marks.flatMap(m=>{const shot=project._shots.find(s=>s.id===m.shotId);return documentPrimitives(m,exportLayout,coverageLabel(m,project),m.type==='coverage'?(shot?.movement||m.draft?.movement):'',{gutters:GUTTER,opacity:preferences().linedLabelOpacity,fitHeight:false}).map(item=>({...item,sourcePage:m.space==='document'?null:m.page}));});
+      const all=current.marks.flatMap(m=>{const shot=project._shots.find(s=>s.id===m.shotId);return documentPrimitives(m,exportLayout,coverageLabel(m,project),m.type==='coverage'?coverageDetails(shot||m.draft,preferences()):'',{gutters:GUTTER,opacity:preferences().linedLabelOpacity,fitHeight:false}).map(item=>({...item,sourcePage:m.space==='document'?null:m.page}));});
       for(let index=0;index<file.numPages;index++){
         const primitives=primitivesForPage(all,exportLayout,index);if(!primitives.length)continue;
         const source=await file.getPage(index+1),view=source.getViewport({scale:1}),bounds=annotationBounds(primitives,view.width,view.height);
@@ -489,7 +495,7 @@ export function createLinedDesk(c){
   function bind(){
     gesture=null;$('#lined-attach').onclick=()=>$('#lined-file').click();$('#lined-empty-attach')?.addEventListener('click',()=>$('#lined-file').click());$('#lined-file').onchange=e=>attach(e.target.files[0]);$('#lined-export').onclick=exportPDF;
     if(!doc()){$('#lined-from-text')?.addEventListener('click',fromScriptText);updateShortcutTitles();return;}
-    $('#lined-document').onchange=e=>{c.mutate(()=>lining().activePdf=e.target.value);};
+    $('#lined-document').onchange=e=>{c.mutate(()=>{lining().activePdf=e.target.value;p()._scriptTextOnly=false;});};
     $('#lined-continuous').onchange=e=>{continuous=e.target.checked;try{localStorage.setItem('productionDeskContinuousScript',String(continuous));}catch{}selectedId=undefined;renderPage();};
     $('#lined-prev').onclick=()=>{page--;selectedId=undefined;renderPage();};$('#lined-next').onclick=()=>{page++;selectedId=undefined;renderPage();};$('#lined-zoom').onchange=e=>{const state=captureState(),old=zoom;zoom=Number(e.target.value);state.top*=zoom/old;state.left*=zoom/old;renderPage(state);};
     document.querySelectorAll('[data-lined-tool]').forEach(button=>button.onclick=()=>{tool=button.dataset.linedTool;document.querySelectorAll('[data-lined-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));if(tool==='highlighter'){color='#FFD54F';width=14;}else if(width===14)width=2;$('#lined-color').value=color;$('#lined-width').value=width;if($('#lined-overlay'))$('#lined-overlay').dataset.tool=tool;});

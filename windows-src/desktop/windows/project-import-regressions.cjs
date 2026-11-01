@@ -73,7 +73,7 @@ module.exports = async function runProjectImportChecks(){
       $('#paste-script').value=text;$('#paste-script').dispatchEvent(new Event('input',{bubbles:true}));$('#import-submit').click();
       const limit=Date.now()+15000;
       while($('#modal').open){if($('#modal-error').textContent)throw Error($('#modal-error').textContent);if(Date.now()>limit)throw Error('Picker cancel then paste stalled at '+$('#import-submit').textContent);await new Promise(r=>setTimeout(r,20));}
-      const saved=await read();expect(saved.projects.length===baseline.projects.length+1,'Cancel then paste did not add exactly one production');
+      const saved=await read();expect(saved.projects.length===baseline.projects.length&&saved.activeProject===baseline.activeProject,'Cancel then paste did not retain the current production');
       expect(active(saved).breakdowns.some(b=>b._scriptText.includes(text.includes('東京')?'東京':'clock')),'Cancel then paste lost screenplay text');
       if(dirty)expect(saved.projects.find(p=>p.id===baseline.activeProject).breakdowns.some(b=>b.description==='Pending edit before picker cancellation'),'Import lost the pending edit');
     }

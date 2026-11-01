@@ -15,6 +15,11 @@ def validate_preferences(value):
     if not isinstance(value, dict):
         raise ValueError('Invalid app settings.')
     output = {}
+    for key in ('linedShowMovement', 'linedShowDescription'):
+        if key in value:
+            if type(value[key]) is not bool:
+                raise ValueError('Lined Script annotation options must be true or false.')
+            output[key] = value[key]
     if 'navigationOrder' in value:
         order = value['navigationOrder']
         if not isinstance(order, list) or len(order) != len(NAVIGATION_TABS) or any(type(tab) is not str for tab in order) or set(order) != set(NAVIGATION_TABS):

@@ -15,6 +15,8 @@ module.exports = async function runScriptPDFChecks() {
   page=pdf.addPage([612,792]);page.drawRectangle({x:72,y:200,width:400,height:400,color:rgb(.1,.2,.35)});
   page=pdf.addPage([612,792]);page.setRotation(degrees(90));line(page,'3 INT. ROTATED TEST ROOM - DAY',72,720);line(page,'Rotated original text.',72,690);
   const bytes=await pdf.save();
+  const {emptyProject}=await import('/film-native.js');const clean=emptyProject('Isolated script regression');
+  await window.slateDesktop.importProjectFile(new File([JSON.stringify({version:1,activeProject:clean.id,projects:[clean]})],'Script-regression.json'));
   $('[data-view="workspace"]').click();window.slateDesktop.importScript();
   const transfer=new DataTransfer();transfer.items.add(new File([bytes],'Original-screenplay-regression.pdf',{type:'application/pdf'}));$('#import-file').files=transfer.files;$('#import-submit').click();
   await wait(()=>!$('#modal').open);expect($('#script-text').classList.contains('script-pdf-pages'),'Original PDF not displayed; inferred dialogue: '+[...document.querySelectorAll('#script-text .dialogue')].map(e=>e.textContent).join(' | '));await wait(()=>$('#script-text')?.dataset.ready==='true');

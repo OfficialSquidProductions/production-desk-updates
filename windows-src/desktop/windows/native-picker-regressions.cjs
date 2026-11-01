@@ -90,9 +90,10 @@ try {
     await waitFor(`!document.querySelector('#modal').open`);
     assert.equal(await flush(),true);
     const after=await js(`fetch('/api/workspace').then(r=>r.json())`);
-    assert.equal(after.projects.length,before.projects.length+1);
-    assert.deepEqual(after.projects.slice(0,-1),before.projects,'Paste import changed previous productions');
-    assert.ok(after.projects.at(-1).breakdowns.some(b=>b._scriptText.includes(index?'東京':'clock')));
+    assert.equal(after.projects.length,before.projects.length);
+    assert.equal(after.activeProject,before.activeProject);
+    assert.deepEqual(after.projects.filter(p=>p.id!==after.activeProject),before.projects.filter(p=>p.id!==before.activeProject),'Paste import changed other productions');
+    assert.ok(after.projects.find(p=>p.id===after.activeProject).breakdowns.some(b=>b._scriptText.includes(index?'東京':'clock')));
     records.push({text,events:await js('window.nativePickerEvents'),preserved:true,imported:true});
     fs.writeFileSync(path.join(output,'native-picker-result.json'),JSON.stringify({passed:true,cases:records},null,2));
   }

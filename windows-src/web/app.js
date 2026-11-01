@@ -1,6 +1,6 @@
 import {createStripDrag} from './strip-drag.js';
 import {createScriptPDF} from './script-pdf.js';
-import {mergeProductions} from './project-file.js';
+import {mergeProductions,loadScriptIntoProduction} from './project-file.js';
 import {breakdownCSV} from './breakdown-csv.js';
 import {STRIP_PALETTE, validStripColor, stripTextColor, applyStripColors} from './strip-colors.js';
 import {createShotDesk} from './shots.js';
@@ -442,7 +442,7 @@ function confirmModal(title,message,callback) { modal(title,`<p>${esc(message)}<
 let importSession;
 function importModal() {
   if(document.querySelector('dialog[open]')){toast('Save or cancel the open dialog before importing.');return;}
-  modal('Import a production or script',`<p>Import adds a separate production and keeps your existing work. Production Desk files restore the complete production, including original PDFs, scripts, shots, schedules, elements and lined script.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles."></textarea><p class="tiny">All parsing happens on this computer. Older JSON backups and USS schedules are also supported. Duplicate names receive an imported copy suffix. Script imports need a review of scene lengths and cast.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
+  modal('Import a production or script',`<p>Scripts load into the current production. Existing scene numbers keep their shot links, breakdowns and schedule positions. Production Desk project files, backups and USS schedules import as separate productions.</p><label class="file-drop"><strong>Choose a project, script or schedule</strong><span>Production Desk · PDF · Final Draft · Fountain · TXT · USS</span><input type="file" id="import-file" accept=".productiondesk,.pdf,.fdx,.fountain,.txt,.uss,.json"><span>PDFs need selectable text. Scans require a text layer.</span></label><div class="or-divider">OR PASTE A SCREENPLAY</div><textarea id="paste-script" class="paste-script" placeholder="INT. KITCHEN - DAY&#10;&#10;The kettle whistles."></textarea><p class="tiny">All parsing happens on this computer. Older JSON backups and USS schedules are also supported. Complete production imports with duplicate names receive an imported copy suffix. Review script scene lengths and cast after importing.</p>`,'<button id="modal-cancel">Cancel</button><button id="import-submit" class="primary">Import locally</button>');
   const session={cancelled:false,committing:false,busy:false};importSession=session;
   const dialog=$('#modal');
   const cancel=()=>{if(!session.committing)session.cancelled=true;};
@@ -478,7 +478,8 @@ async function importProjectFile(file,text='',session) {
     if(session.cancelled||!$('#modal').open||importSession!==session)return false;
     const incoming=result.workspace?.projects||[result.project];
     if(!incoming.length||!incoming[0])throw Error('This file has no productions.');
-    const merged=mergeProductions(workspace,incoming,result.workspace?.activeProject);
+    const isScript=result.kind==='script';
+    const merged=isScript?loadScriptIntoProduction(workspace,result.project):mergeProductions(workspace,incoming,result.workspace?.activeProject);
     // Cancellation is available throughout parsing. During the final atomic disk
     // save, keep the dialog open so a cancellation cannot race a committed import.
     session.committing=true;button.textContent='Saving imported production…';
@@ -486,7 +487,7 @@ async function importProjectFile(file,text='',session) {
     await api('/api/workspace',merged.workspace);
     mutate(()=>{workspace=merged.workspace;scenarioIndex=0;selected=undefined;view='workspace';});
     clearTimeout(saveTimer);savedRevision=revision;saveStatus(savedLabel);
-    $('#modal').close();toast('Imported a separate production. Your existing work is preserved.');return true;
+    $('#modal').close();toast(isScript?'Script loaded into the current production.':'Imported a separate production. Your existing work is preserved.');return true;
   }finally{
     session.busy=false;session.committing=false;
     if(!session.cancelled&&$('#modal').open){for(const control of $$('#modal button,#modal input,#modal textarea'))control.disabled=false;button.textContent='Import locally';}

@@ -3,7 +3,7 @@ import {resetLinkedDeleteWarnings} from './linked-actions.js';
 import {navigationOrder,applyNavigationOrder,navigationOrderSettings} from './navigation-order.js';
 export function createAppSettings({api,modal,toast,isIPad}) {
   let preferences={theme:'light'};
-  const get=()=>({...preferences,navigationOrder:navigationOrder(preferences.navigationOrder),linedKeyBinds:{...DEFAULT_BINDS,...preferences.linedKeyBinds},linedLabelOpacity:preferences.linedLabelOpacity??.94});
+  const get=()=>({...preferences,navigationOrder:navigationOrder(preferences.navigationOrder),linedKeyBinds:{...DEFAULT_BINDS,...preferences.linedKeyBinds},linedShowMovement:preferences.linedShowMovement??false,linedShowDescription:preferences.linedShowDescription??false,linedLabelOpacity:preferences.linedLabelOpacity??.94});
   const notify=changes=>{
     applyNavigationOrder(document.querySelector('#navigation'),get().navigationOrder);
     // Navigation-only changes must not redraw the active editor or its overlay.
@@ -63,8 +63,12 @@ export function createAppSettings({api,modal,toast,isIPad}) {
     deletion.innerHTML='<h3>Deletion warnings</h3><p>Show confirmations again when deleting linked shots and coverage lines.</p><button id="reset-delete-warnings">Reset deletion warnings</button>';
     $('#app-settings').append(deletion);
     const lined=document.createElement('section');lined.className='settings-section lined-settings';
-    lined.innerHTML='<h3>Lined Script</h3><div class="settings-actions"><button id="lined-key-binds">Key Binds</button></div><div class="lined-opacity-control"><label class="field" for="lined-label-opacity">Information box opacity <output id="lined-opacity-value"></output></label><input id="lined-label-opacity" type="range" min="15" max="100" step="1"></div><p>Drag boxes into either page gutter. A connector identifies the owning coverage line. Lined PDF exports include gutter boxes and expand only pages that need extra room.</p>';
+    lined.innerHTML='<h3>Lined Script</h3><p>Annotation boxes always show shot number, camera and Shot Size.</p><label class="field"><span><input id="lined-show-movement" type="checkbox"> Show camera movement in annotations</span></label><label class="field"><span><input id="lined-show-description" type="checkbox"> Show shot descriptions in annotations</span></label><div class="settings-actions"><button id="lined-key-binds">Key Binds</button></div><div class="lined-opacity-control"><label class="field" for="lined-label-opacity">Information box opacity <output id="lined-opacity-value"></output></label><input id="lined-label-opacity" type="range" min="15" max="100" step="1"></div><p>Drag boxes into either page gutter. A connector identifies the owning coverage line. Lined PDF exports include gutter boxes and expand only pages that need extra room.</p>';
     $('#app-settings').append(lined);$('#lined-key-binds').onclick=keyBinds;
+    for(const [selector,key] of [['#lined-show-movement','linedShowMovement'],['#lined-show-description','linedShowDescription']]){
+      const input=$(selector);input.checked=get()[key];
+      input.onchange=async()=>{input.disabled=true;try{await persist({[key]:input.checked});$('#settings-status').textContent='Annotation fields saved. These options also apply to exported lined PDFs.';}catch(error){input.checked=get()[key];$('#settings-status').textContent='Annotation fields could not be saved: '+error.message;}finally{input.disabled=false;}};
+    }
     const opacity=$('#lined-label-opacity'),output=$('#lined-opacity-value');
     opacity.value=Math.round(get().linedLabelOpacity*100);output.textContent=opacity.value+'%';
     opacity.oninput=()=>output.textContent=opacity.value+'%';

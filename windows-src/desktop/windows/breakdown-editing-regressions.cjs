@@ -11,6 +11,8 @@ module.exports = async function runBreakdownEditingChecks() {
       : await(await fetch('/api/workspace')).json();
     return w.projects.find(p=>p.id===w.activeProject);
   };
+  const {emptyProject}=await import('/film-native.js');const clean=emptyProject('Isolated script regression');
+  await window.slateDesktop.importProjectFile(new File([JSON.stringify({version:1,activeProject:clean.id,projects:[clean]})],'Script-regression.json'));
   $('[data-view="workspace"]').click();window.slateDesktop.importScript();
   $('#paste-script').value='1 INT. FIRST ROOM - DAY\n\nLeave this scene alone.\n\n2 EXT. SECOND ROOM - NIGHT\n\n'+Array.from({length:150},(_,i)=>`The camera passes the copper lantern at marker ${i}.`).join('\n\n');
   $('#import-submit').click();await wait(()=>!$('#modal').open);

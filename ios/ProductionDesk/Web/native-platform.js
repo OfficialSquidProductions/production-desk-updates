@@ -14,9 +14,9 @@ export async function nativeAPI(path,data,headers={}){
  case '/api/import':{
   const filename=decodeURIComponent(headers['X-Filename']||'script.txt').split(/[\\/]/).pop(),pdf=/\.pdf$/i.test(filename),limit=(/\.(json|productiondesk)$/i.test(filename)?200:40)*1024*1024;
   if((data instanceof Blob&&data.size>limit)||(typeof data==='string'&&new TextEncoder().encode(data).length>limit))throw Error('The selected file is too large. PDFs/scripts support 40 MB; full backups support 200 MB.');
-  if(pdf){const base64=encode(new Uint8Array(await data.arrayBuffer())),text=await send({operation:'pdf',base64}),document=await send({operation:'storePDF',base64,filename}),project=importScript(text,filename);project._linedScript={activePdf:document.sha256,documents:[document]};return {project};}
+  if(pdf){const base64=encode(new Uint8Array(await data.arrayBuffer())),text=await send({operation:'pdf',base64}),document=await send({operation:'storePDF',base64,filename}),project=importScript(text,filename);project._linedScript={activePdf:document.sha256,documents:[document]};return {project,kind:'script'};}
   const text=(typeof data==='string'?data:await data.text()).replace(/^\uFEFF/,'');
-  if(!/\.(uss|json|productiondesk)$/i.test(filename)){const project=importScript(text,filename);project._sourceScript={filename,text};return {project};}
+  if(!/\.(uss|json|productiondesk)$/i.test(filename)){const project=importScript(text,filename);project._sourceScript={filename,text};return {project,kind:'script'};}
   let value;try{value=JSON.parse(text);}catch{throw Error('This file is corrupt or is not valid Production Desk JSON.');}
   const portable=/\.productiondesk$/i.test(filename)||value?.format!==undefined;
   const result=portable?{workspace:readProjectFile(value)}:importBackup(text);

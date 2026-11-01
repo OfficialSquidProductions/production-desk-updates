@@ -78,6 +78,17 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(json.loads(self.path.read_text()), expected)
         self.assertFalse(self.server.datafile.exists())
 
+    def test_annotation_field_toggles_persist_and_validate(self):
+        value = {'linedShowMovement': True, 'linedShowDescription': True}
+        self.assertEqual(self.request(value=value)[0], 200)
+        self.assertEqual(self.request()[1]['preferences'], dict(theme='light', **value))
+        before = self.path.read_bytes()
+        for key in value:
+            for invalid in [None, 0, 1, 'true', [], {}]:
+                self.assertEqual(self.request(value={key: invalid})[0], 400)
+                self.assertEqual(self.path.read_bytes(), before)
+        self.assertFalse(self.server.datafile.exists())
+
     def test_invalid_lined_settings_are_atomic(self):
         self.request(value={'theme':'dark', 'linedLabelOpacity':.5})
         before = self.path.read_bytes()

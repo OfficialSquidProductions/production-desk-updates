@@ -3,7 +3,7 @@
 export function createScriptPDF(c) {
   let library, cached, state, zoom='fit';
   const positions=new Map();
-  const document=()=>c.project()?._linedScript?.documents.find(d=>d.sha256===c.project()._linedScript.activePdf);
+  const document=()=>c.project()?._scriptTextOnly?undefined:c.project()?._linedScript?.documents.find(d=>d.sha256===c.project()._linedScript.activePdf);
   const key=()=>[c.project().id,document()?.sha256,c.scene()?.id,c.continuous()?'continuous':'page'].join(':');
   const esc=c.esc;
   function stop() {

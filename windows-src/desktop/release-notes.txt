@@ -1,7 +1,9 @@
-Production Desk 1.5.16 (47) for Mac
+Production Desk 1.5.18 (48) for Mac
 
-Arrange your Production tools tabs in Settings with Move up and Move down. Your chosen order is saved on this device.
+Scripts now load into your current production instead of creating an imported copy. Repeated imports preserve matching scene IDs, breakdown edits, shots, schedule positions and original PDF annotations.
 
-The default order is Main breakdown, Lined script, Shot list, Shooting schedule, Reports, Elements. Restore default order is beside the heading and works with mouse, keyboard or touch.
+Lined Script annotation boxes show Shot Size by default. Settings now includes checkboxes for camera movement and shot descriptions; enabled fields also appear in exported lined PDFs, including long descriptions.
 
-Changing tab order preserves the active editor, drafts and saved productions. Portable project files keep their existing format.
+Renumbering a shot resets the next automatic number. Change 4.3 to 7.1 to continue with 7.2 and 7.3; change again to 3.2 to continue with 3.3 and 3.4. The baseline is saved with the production.
+
+This update is for the direct-download Mac version only. Windows and App Store releases are held for further testing.
