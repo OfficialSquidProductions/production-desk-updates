@@ -198,6 +198,10 @@ module.exports = async ({win, origin, dataFolder, output, flush, readEmailDraft}
   await screenshot('original-pdf-breakdown.png');
   checks.push(...await runShared('./shot-order-regressions.cjs',[],true));
   await screenshot('shot-shooting-order.png');
+  checks.push(...await runShared('./script-session-regressions.cjs',[],true));
+  for(const [index,encoded] of (await js('window.scriptFixExports.map(value=>value.content)')).entries())fs.writeFileSync(path.join(output,'session-annotations-'+index+'.pdf'),Buffer.from(encoded,'base64'));
+  checks.push(...await runShared('./settings-dialog-regressions.cjs'));
+  await screenshot('settings-and-script-fixes.png');
   if(process.env.PRODUCTION_DESK_NATIVE_PICKER_QA==='1')checks.push(...await require('./native-picker-regressions.cjs')({win,output,flush,js,waitFor}));
   checks.push(...await runShared('./navigation-order-regressions.cjs',[{leaveCustom:true}]));
   await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});

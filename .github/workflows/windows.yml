@@ -41,7 +41,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/import-cancellation.cjs tests/breakdown-csv.cjs tests/project-file-purity.cjs tests/lined-export.cjs tests/schedule-drag.cjs tests/shot-shooting-order.cjs tests/support-errors.cjs tests/platform-branding.cjs tests/mac-store-exports.cjs tests/navigation-order.cjs
+          node --test tests/import-cancellation.cjs tests/breakdown-csv.cjs tests/project-file-purity.cjs tests/lined-export.cjs tests/schedule-drag.cjs tests/shot-shooting-order.cjs tests/support-errors.cjs tests/platform-branding.cjs tests/mac-store-exports.cjs tests/navigation-order.cjs tests/script-import-numbering.cjs
       - name: Build complete offline EXE installer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -59,6 +59,15 @@ jobs:
             windows-src/build/windows-check/*.png
             windows-src/build/windows-check/*.pdf
             windows-src/build/windows-check/smoke-user-data/server.log
+      - uses: actions/upload-artifact@v4
+        if: success() && github.ref != 'refs/heads/main'
+        with:
+          name: windows-installer-qa
+          path: |
+            windows-src/dist/windows/Production-Desk-Windows-Setup.exe
+            windows-src/dist/windows/Production-Desk-Windows-Setup.exe.blockmap
+            windows-src/dist/windows/latest.yml
+          if-no-files-found: error
       - name: Publish verified installer
         if: steps.release.outputs.publish == 'true'
         env:

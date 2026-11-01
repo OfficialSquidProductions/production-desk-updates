@@ -1,5 +1,9 @@
-Production Desk 1.5.17 for Windows
+Production Desk 1.5.19 for Windows
 
-Fix importing pasted scripts after cancelling the file picker. Pressing Escape in the Open dialog leaves the import session usable, including ASCII and Unicode scripts and unsaved edits. Existing projects, original PDFs and portable backups are preserved.
+Scripts load into the current production instead of creating an imported copy. Repeated imports preserve scene identity, shot links, breakdown work, schedules and original PDF annotations.
 
-Includes customizable navigation tabs in Settings. Move tabs up or down, or restore Main breakdown, Lined script, Shot list, Shooting schedule, Reports, Elements. Your chosen order is saved on this device.
+Lined script annotation boxes show the shot-size value. Settings can include camera movement and shot descriptions on-screen and in exported lined PDFs, including long descriptions. Renumbering resets the automatic sequence: 7.1 continues 7.2/7.3; a later 3.2 continues 3.3/3.4.
+
+Settings and Production settings close from the outside backdrop or X without click-through. Settings spacing and checkbox alignment are clearer. Global preferences autosave; production drafts still commit with Save.
+
+Includes the prior native file-picker cancellation and customizable navigation fixes. Existing projects and portable backups remain compatible.
