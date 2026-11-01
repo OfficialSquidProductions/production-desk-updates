@@ -48,7 +48,7 @@ module.exports = async function(){
  $('#lined-overlay').setPointerCapture=()=>{};$('[data-lined-tool="select"]').click();$('#lined-overlay [data-lined-mark="'+marks.at(-1).id+'"]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:9,clientX:0,clientY:0}));$('#lined-overlay').dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:9}));
  edit('#lined-size','Medium close-up');edit('#lined-movement','Slow dolly toward the door');
  const description='Maya reads the note, watches the door, and hides the key. '.repeat(18).trim()+' DESCRIPTION END';edit('#lined-description',description);
- expect($('#lined-overlay').textContent.includes('Shot Size: Medium close-up'),'Default box omitted Shot Size');expect(!$('#lined-overlay').textContent.includes('Slow dolly'),'Movement should default off');expect(!$('#lined-overlay').textContent.includes('DESCRIPTION END'),'Description should default off');
+ expect($('#lined-overlay').textContent.includes('Medium close-up')&&!$('#lined-overlay').textContent.includes('Shot Size:'),'Default box omitted Shot Size');expect(!$('#lined-overlay').textContent.includes('Slow dolly'),'Movement should default off');expect(!$('#lined-overlay').textContent.includes('DESCRIPTION END'),'Description should default off');
  window.scriptFixExports=[];const originalFetch=window.fetch;
  window.fetch=async(url,options)=>{
    if(String(url)==='/api/export'){const data=JSON.parse(options.body);window.scriptFixExports.push(data);return new Response('{"native":true}',{status:200,headers:{'Content-Type':'application/json'}});}

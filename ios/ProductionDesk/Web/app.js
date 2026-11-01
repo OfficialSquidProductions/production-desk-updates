@@ -430,8 +430,23 @@ function action(name) {
   if(name==='print'){ $('#print-area').innerHTML=`<h1>${esc(project.project || project.name)}</h1><p>${esc(activeScenario().name)} · ${report==='dood'?'Cast workdays':report==='breakdowns'?'Scene breakdowns':'One-line shooting schedule'}</p>${reportHTML()}`;applyStripColors($('#print-area'));window.print(); }
 }
 
-function modal(title, body, footer='') {
+function modal(title, body, footer='', {dismissOnBackdrop=false}={}) {
   $('#modal-content').innerHTML=`<div class="modal-header"><h2>${title}</h2><button id="modal-close" aria-label="Close dialog">×</button></div><div class="modal-body">${body}<div id="modal-error" class="modal-error" role="alert"></div></div>${footer?`<div class="modal-footer">${footer}</div>`:''}`;
+  const dialog=$('#modal');
+  let backdropPress=false;
+  const outside=event=>{
+    if(event.target!==dialog)return false;
+    const box=dialog.getBoundingClientRect();
+    return event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom;
+  };
+  dialog.onpointerdown=event=>{backdropPress=dismissOnBackdrop&&event.button===0&&outside(event);};
+  dialog.onpointercancel=()=>{backdropPress=false;};
+  // Keep the modal in the top layer until its click is consumed. Closing on
+  // pointerdown could let the release/click activate a control underneath.
+  dialog.onclick=event=>{
+    const dismiss=backdropPress&&outside(event);backdropPress=false;
+    if(dismiss){event.preventDefault();event.stopImmediatePropagation();dialog.close();}
+  };
   $('#modal-close').onclick=()=>$('#modal').close();
   if(!$('#modal').open)$('#modal').showModal();
   $('#modal-cancel')?.addEventListener('click',()=>$('#modal').close());
@@ -536,7 +551,7 @@ function newElementModal() {
 }
 function settingsModal() {
   const c=calendar(),start=c?.events.find(e=>e.type==='start')?.date.slice(0,10) || '';
-  modal('Production settings',`<div class="form-grid">${field('Production title','title',project.project || project.name,'text',true)}${field('Schedule name','schedule-name',project.name)}${field('Author','author',project.author)}${field('Company','company',project.company)}${field('First shooting date','start-date',start,'date')}</div><div class="section-label">WEEKLY DAYS OFF</div><div class="weekday-row">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,i)=>`<label><input type="checkbox" name="days-off" value="${i}" ${(c?.daysOff || []).includes(i)?'checked':''}>${day}</label>`).join('')}</div><div class="section-label">ADDITIONAL DAYS OFF</div><p class="tiny">Add holidays or turnaround days, one date per line (YYYY-MM-DD).</p><textarea id="calendar-days" rows="3" placeholder="2026-12-25">${esc((c?.events || []).filter(e=>e.type==='dayOff').map(e=>e.date.slice(0,10)).join('\n'))}</textarea>`,'<button id="modal-cancel">Cancel</button><button class="primary" id="settings-submit">Save settings</button>');
+  modal('Production settings',`<div class="form-grid">${field('Production title','title',project.project || project.name,'text',true)}${field('Schedule name','schedule-name',project.name)}${field('Author','author',project.author)}${field('Company','company',project.company)}${field('First shooting date','start-date',start,'date')}</div><div class="section-label">WEEKLY DAYS OFF</div><div class="weekday-row">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,i)=>`<label><input type="checkbox" name="days-off" value="${i}" ${(c?.daysOff || []).includes(i)?'checked':''}>${day}</label>`).join('')}</div><div class="section-label">ADDITIONAL DAYS OFF</div><p class="tiny">Add holidays or turnaround days, one date per line (YYYY-MM-DD).</p><textarea id="calendar-days" rows="3" placeholder="2026-12-25">${esc((c?.events || []).filter(e=>e.type==='dayOff').map(e=>e.date.slice(0,10)).join('\n'))}</textarea>`,'<button id="modal-cancel">Cancel</button><button class="primary" id="settings-submit">Save settings</button>',{dismissOnBackdrop:true});
   $('#settings-submit').onclick=()=>{
     const title=$('[data-field="title"]').value.trim(),startValue=$('[data-field="start-date"]').value,off=$$('[name="days-off"]:checked').map(x=>Number(x.value));
     const extra=$('#calendar-days').value.split(/\s+/).filter(Boolean);

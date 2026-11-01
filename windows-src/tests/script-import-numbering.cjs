@@ -23,3 +23,12 @@ test('manual full-number baselines continue after reload, repeated changes and o
  p=JSON.parse(JSON.stringify(p));shot.number='3.2';remember(p,shot);assert.equal(next(p,'scene4'),'3.3');add(next(p,'scene4'));assert.equal(next(p,'scene4'),'3.4');
  p._shots.push({sceneId:'scene4',number:'3.4'});assert.equal(next(p,'scene4'),'3.5');assert.equal(next(p,'scene3'),'.1');
 });
+
+test('annotation fields use the bare shot-size value and keep independent optional fields',async()=>{
+ const {coverageDetails}=await moduleAt('lined-script.js');
+ const details={size:'Medium',movement:'Dolly in',description:'Find the key'};
+ assert.equal(coverageDetails(details),'Medium');
+ assert.equal(coverageDetails(details,{linedShowMovement:true}),'Medium\nCamera movement: Dolly in');
+ assert.equal(coverageDetails(details,{linedShowDescription:true}),'Medium\nFind the key');
+ assert.equal(coverageDetails(details,{linedShowMovement:true,linedShowDescription:true}),'Medium\nCamera movement: Dolly in\nFind the key');
+});

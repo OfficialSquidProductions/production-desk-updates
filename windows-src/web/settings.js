@@ -56,7 +56,7 @@ export function createAppSettings({api,modal,toast,isIPad}) {
     refresh();
   }
   function open(){
-    modal('Settings',`<div id="app-settings"><section class="settings-section"><h3>Appearance</h3><p>Choose how Production Desk looks on this device.</p><div class="theme-options" role="group" aria-label="Appearance"><button data-theme-choice="light" aria-pressed="${preferences.theme==='light'}"><span>☀</span>Light</button><button data-theme-choice="dark" aria-pressed="${preferences.theme==='dark'}"><span>☾</span>Dark</button></div></section><p id="settings-status" role="status"></p></div>`);
+    modal('Settings',`<div id="app-settings"><section class="settings-section"><h3>Appearance</h3><p>Choose how Production Desk looks on this device.</p><div class="theme-options" role="group" aria-label="Appearance"><button data-theme-choice="light" aria-pressed="${preferences.theme==='light'}"><span>☀</span>Light</button><button data-theme-choice="dark" aria-pressed="${preferences.theme==='dark'}"><span>☾</span>Dark</button></div></section><p id="settings-status" role="status"></p></div>`,'',{dismissOnBackdrop:true});
     $('#app-settings').insertBefore(navigationOrderSettings({get,persist}),$('#settings-status'));
     window.productionDeskSupport?.attachSettings($('#app-settings'));
     const deletion=document.createElement('section');deletion.className='settings-section';
@@ -67,13 +67,13 @@ export function createAppSettings({api,modal,toast,isIPad}) {
     $('#app-settings').append(lined);$('#lined-key-binds').onclick=keyBinds;
     for(const [selector,key] of [['#lined-show-movement','linedShowMovement'],['#lined-show-description','linedShowDescription']]){
       const input=$(selector);input.checked=get()[key];
-      input.onchange=async()=>{input.disabled=true;try{await persist({[key]:input.checked});$('#settings-status').textContent='Annotation fields saved. These options also apply to exported lined PDFs.';}catch(error){input.checked=get()[key];$('#settings-status').textContent='Annotation fields could not be saved: '+error.message;}finally{input.disabled=false;}};
+      input.onchange=async()=>{input.disabled=true;try{await persist({[key]:input.checked});message.textContent='Annotation fields saved. These options also apply to exported lined PDFs.';}catch(error){input.checked=get()[key];message.textContent='Annotation fields could not be saved: '+error.message;}finally{input.disabled=false;}};
     }
     const opacity=$('#lined-label-opacity'),output=$('#lined-opacity-value');
     opacity.value=Math.round(get().linedLabelOpacity*100);output.textContent=opacity.value+'%';
     opacity.oninput=()=>output.textContent=opacity.value+'%';
-    opacity.onchange=async()=>{opacity.disabled=true;try{await persist({linedLabelOpacity:Number(opacity.value)/100});$('#settings-status').textContent='Information box opacity saved.';}catch(error){opacity.value=Math.round(get().linedLabelOpacity*100);output.textContent=opacity.value+'%';$('#settings-status').textContent='Opacity could not be saved: '+error.message;}finally{opacity.disabled=false;}};
-    $('#reset-delete-warnings').onclick=()=>{resetLinkedDeleteWarnings();$('#settings-status').textContent='Linked deletion warnings are enabled for both tabs.';};
+    opacity.onchange=async()=>{opacity.disabled=true;try{await persist({linedLabelOpacity:Number(opacity.value)/100});message.textContent='Information box opacity saved.';}catch(error){opacity.value=Math.round(get().linedLabelOpacity*100);output.textContent=opacity.value+'%';message.textContent='Opacity could not be saved: '+error.message;}finally{opacity.disabled=false;}};
+    $('#reset-delete-warnings').onclick=()=>{resetLinkedDeleteWarnings();message.textContent='Linked deletion warnings are enabled for both tabs.';};
     const buttons=[...document.querySelectorAll('[data-theme-choice]')];
     const message=$('#settings-status');
     for(const button of buttons)button.onclick=async()=>{

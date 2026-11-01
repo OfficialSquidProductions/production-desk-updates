@@ -29,7 +29,7 @@ export function coverageSummary(project,shotId){
 }
 const shotFields=['description','movement','camera','lens','size','equipment'];
 export function coverageDetails(details={},preferences={}){
-  return [details.size&&'Shot Size: '+details.size,
+  return [details.size,
     preferences.linedShowMovement&&details.movement&&'Camera movement: '+details.movement,
     preferences.linedShowDescription&&details.description&&details.description].filter(Boolean).join('\n');
 }
