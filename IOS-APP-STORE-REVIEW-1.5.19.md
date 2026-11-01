@@ -1,4 +1,4 @@
-# iOS/iPad 1.5.19 (41) candidate
+# iOS/iPad 1.5.19 (41) submitted
 
 Existing app 6823682933, bundle `com.hosier.scheduler.ipad`, remains live at
 1.5.14. The next candidate contains today's current-production script imports,
@@ -44,21 +44,29 @@ Sparkle/Python updater payload or incoming URL handler. IPA SHA-256:
 `d67a3db18726079817c6330904d04a4d35e3ad422192bf3b95c59d34159eb85f`.
 No signing/profile/account changes were made.
 
-Publication blockers: automatic approval review rejected the App Store Connect
-New Version > Create action for 1.5.19, citing the earlier App Store hold despite
-the later delegated user instruction lifting it. The create action was denied;
-no iOS binary upload or submission was attempted after that denial, and no
-workaround was used. The existing live iOS listing remains unchanged. The
-local, signed candidate is reviewable and ready for the remaining publication
-steps once this denial is resolved. Automatic approval review separately denied
-pushing the iOS changes/review evidence to remote main, citing the earlier
-Mac-GitHub-only scope. That combined commit/push command did not execute; the
-changes were then preserved in a local commit without a remote push. Neither
-denied operation was retried or bypassed. Renewed human confirmation is needed
-for iOS version creation, binary upload/submission and the main-branch source push. Preserve Free pricing, factual
-privacy declarations, existing listing and automatic-after-approval behavior.
+Publication completed after explicit renewed human confirmation on November 1,
+2026. The previously denied version creation and main-branch push had not
+executed. Their permitted retries succeeded: version 1.5.19 was created on the
+existing listing, and tested source through
+`ecfddfa346ff8617d6b5b4961e9fedae24e1333b` was pushed to remote main and verified.
+Xcode upload completed successfully at 20:56:33 UTC. TestFlight independently
+reported build 41 Ready to Submit, build ID
+`36bd8e10-22f5-4830-ad1d-c2dcd03e81f2`. That exact build was selected and saved.
+
+App Store Connect confirms submission `0717bf72-0c5d-4a56-8089-253f75071067`,
+submitted November 1 at 4:04 PM EST (21:04 UTC), status **Waiting for Review**.
+Receipt: https://appstoreconnect.apple.com/apps/6823682933/distribution/reviewsubmissions/details/0717bf72-0c5d-4a56-8089-253f75071067
+The truthful description, release notes and reviewer notes describe the tested
+features and native storage/import behavior. Existing Free pricing, privacy,
+contact information, rating retention and automatic release after approval
+remain unchanged. No agreement, signing profile or account setting was changed.
+The prior approval denials are resolved; Apple review is pending, not blocked.
+Mac Store 1.5.19 (39) is already approved and Ready for Distribution. Public Mac
+GitHub 1.5.19 (51) remains unchanged. Windows publication remains intentionally
+held until owner-VM validation; CI evidence and the staged installer are ready.
 
 Evidence: `windows-src/build/store-20261101` (ignored local test artifacts).
 The completed suites are `iphone-final.xcresult`, `iphone-touch.xcresult`,
 `ipad-unit.xcresult` and `ipad-touch.xcresult`. Both disposable Simulators were
-shut down after verification. No test remains running.
+shut down after verification. No test remains running. The final iOS receipt is
+`ios-review-submitted.jpg` in that evidence directory.
