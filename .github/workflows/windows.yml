@@ -58,6 +58,8 @@ jobs:
             windows-src/build/windows-check/*.json
             windows-src/build/windows-check/*.png
             windows-src/build/windows-check/*.pdf
+            windows-src/build/windows-check/*.fdx
+            windows-src/build/windows-check/*.productiondesk
             windows-src/build/windows-check/smoke-user-data/server.log
       - uses: actions/upload-artifact@v4
         if: success() && github.ref != 'refs/heads/main'
@@ -67,6 +69,7 @@ jobs:
             windows-src/dist/windows/Production-Desk-Windows-Setup.exe
             windows-src/dist/windows/Production-Desk-Windows-Setup.exe.blockmap
             windows-src/dist/windows/latest.yml
+            windows-src/dist/windows/win-unpacked/**
           if-no-files-found: error
       - name: Publish verified installer
         if: steps.release.outputs.publish == 'true'

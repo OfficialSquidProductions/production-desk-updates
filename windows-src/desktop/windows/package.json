@@ -43,7 +43,9 @@
       "shipping-content-regressions.cjs",
       "breakdown-editing-regressions.cjs",
       "script-pdf-regressions.cjs",
-      "shot-order-regressions.cjs"
+      "shot-order-regressions.cjs",
+      "script-session-regressions.cjs",
+      "settings-dialog-regressions.cjs"
     ],
     "extraResources": [
       {
