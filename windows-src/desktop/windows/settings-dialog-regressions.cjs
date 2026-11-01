@@ -19,6 +19,11 @@ module.exports = async function runSettingsDialogChecks(){
    $(selector).click();inside();$('#modal-close').click();expect(!$('#modal').open,'Settings X did not dismiss');
  }
  checks.push('Both Settings dialogs repeatedly close from their backdrop or X, retain inside clicks and consume outside clicks before releasing the modal');
+ $('#app-settings-open').click();
+ const rows=[...document.querySelectorAll('.lined-annotation-option')],first=rows[0].getBoundingClientRect(),second=rows[1].getBoundingClientRect(),keyBinds=$('#lined-key-binds').getBoundingClientRect();
+ expect(first.height>=32&&second.top>=first.bottom+7,'Annotation option rows are cramped');expect(keyBinds.top>=second.bottom+16,'Key Binds crowds the annotation options');
+ for(const row of rows){const box=row.querySelector('input').getBoundingClientRect(),text=row.querySelector('span').getBoundingClientRect();expect(box.width===16&&Math.abs(box.top+box.height/2-(text.top+parseFloat(getComputedStyle(row).lineHeight)/2))<3,'Checkbox and first text line are not aligned');}
+ $('#modal-close').click();checks.push('Annotation options have separate aligned sentence-case rows and a clear gap before Key Binds');
  const initial=(await preferences()).linedShowMovement??false;
  $('#app-settings-open').click();$('#lined-show-movement').click();outside();
  // Reopening another dialog while the device preference save is pending must

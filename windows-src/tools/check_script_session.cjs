@@ -21,5 +21,18 @@ const server=spawn(process.env.PYTHON||'python3',['-B',path.join(runtime,'server
  }
  await page.click('#new-open');await page.mouse.click(4,4);assert.ok(await page.locator('#modal').evaluate(e=>e.open),'Other edit dialogs should keep their drafts');await page.click('#modal-close');
  checks.push('Real mouse: inside clicks and inside-to-outside drags stay open; outside clicks over New production close without click-through; X and repeated openings work in both Settings dialogs');
- checks.push('Reload preserves production, annotation options and numbering baseline (next 3.5)');fs.writeFileSync(path.join(out,'browser-result.json'),JSON.stringify({passed:true,checks,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,checks,evidence},null,2));
+ for(const viewport of [{width:1280,height:800},{width:900,height:650},{width:700,height:560}]){
+   await page.setViewportSize(viewport);
+   for(const theme of ['light','dark']){
+     await page.click('#app-settings-open');await page.locator('[data-theme-choice="'+theme+'"]').click();await page.waitForFunction(()=>!document.querySelector('[data-theme-choice="light"]').disabled);
+     await page.locator('#lined-show-movement').scrollIntoViewIfNeeded();const layout=await page.evaluate(()=>{const rows=[...document.querySelectorAll('.lined-annotation-option')].map(e=>e.getBoundingClientRect()),button=document.querySelector('#lined-key-binds').getBoundingClientRect(),dialog=document.querySelector('#modal');return {gap:rows[1].top-rows[0].bottom,buttonGap:button.top-rows[1].bottom,scrolls:dialog.scrollHeight>dialog.clientHeight,overflow:dialog.scrollWidth>dialog.clientWidth+1};});assert.ok(layout.gap>=7&&layout.buttonGap>=16&&!layout.overflow);
+     await page.locator('#lined-show-movement').click();await page.waitForFunction(()=>!document.querySelector('#lined-show-movement').disabled);await page.locator('#lined-show-movement').click();await page.waitForFunction(()=>!document.querySelector('#lined-show-movement').disabled);
+     if(viewport.width===700)await page.screenshot({path:path.join(out,'settings-small-'+theme+'.png')});
+     if(viewport.height<=650){assert.ok(layout.scrolls,'Small Settings dialog should scroll');const scrolled=await page.locator('#modal').evaluate(e=>{e.scrollTop=e.scrollHeight;const end=e.querySelector('.lined-settings > p:last-child').getBoundingClientRect();return {top:e.scrollTop,end:end.bottom,bottom:e.getBoundingClientRect().bottom};});assert.ok(scrolled.top>0&&scrolled.end<=scrolled.bottom,'Bottom Settings content must be reachable');}
+     await page.mouse.click(4,4);assert.equal(await page.locator('#modal').evaluate(e=>e.open),false);
+   }
+ }
+ await page.setViewportSize({width:1660,height:1080});await page.click('#app-settings-open');await page.click('[data-theme-choice="light"]');await page.waitForFunction(()=>!document.querySelector('[data-theme-choice="light"]').disabled);await page.click('#modal-close');
+ checks.push('Settings spacing, scrolling, toggles and outside dismissal pass at 1280×800, 900×650 and 700×560 in light and dark themes');
+ checks.push('Reload preserves production, annotation options and numbering baseline (next 3.5)');assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'browser-result.json'),JSON.stringify({passed:true,checks,evidence,pageErrors:errors},null,2));console.log(JSON.stringify({passed:true,checks,evidence},null,2));
  }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e.stack,log);process.exitCode=1;});
