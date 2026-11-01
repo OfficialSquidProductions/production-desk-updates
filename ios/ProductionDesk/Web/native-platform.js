@@ -6,7 +6,10 @@ export async function nativeAPI(path,data,headers={}){
  switch(path){
  case '/api/workspace':
   if(data!==undefined){validateWorkspace(data);return send({operation:'save',workspace:data});}
-  {const loaded=await send({operation:'load'});if(loaded!==null)return validateWorkspace(loaded);const project=emptyProject(),workspace={version:1,activeProject:project.id,projects:[project]};await send({operation:'save',workspace});return workspace;}
+  // Foundation can bridge distinct empty JSON arrays as one shared JS array.
+  // Restore JSON tree semantics before edits (not structuredClone, which keeps
+  // aliases), so adding a scene cannot also insert IDs into the scene records.
+  {const loaded=await send({operation:'load'});if(loaded!==null)return validateWorkspace(JSON.parse(JSON.stringify(loaded)));const project=emptyProject(),workspace={version:1,activeProject:project.id,projects:[project]};await send({operation:'save',workspace});return workspace;}
  case '/api/new':return emptyProject(data.title||'Untitled production');
  case '/api/pdf':{
   if(!(data instanceof Blob)||data.size>40*1024*1024)throw Error('Choose a PDF smaller than 40 MB.');

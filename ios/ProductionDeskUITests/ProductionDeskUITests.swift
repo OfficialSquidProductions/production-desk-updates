@@ -2,6 +2,24 @@ import XCTest
 import UIKit
 
 final class ProductionDeskUITests: XCTestCase {
+    @MainActor func testBothSettingsDismissFromBackdropAndXByTouch() throws {
+        let app=XCUIApplication();app.launch()
+        let web=app.webViews["production-desk-webview"]
+        XCTAssertTrue(web.waitForExistence(timeout:15))
+        let openers=[web.buttons["Settings"],web.buttons.matching(NSPredicate(format:"label ENDSWITH %@","Production settings")).firstMatch]
+        for opener in openers { for _ in 0..<3 {
+            opener.tap();let close=web.buttons["Close dialog"];XCTAssertTrue(close.waitForExistence(timeout:5))
+            // The dialog header is inside; touching it must keep the modal open.
+            close.coordinate(withNormalizedOffset:CGVector(dx:-1,dy:0.5)).tap()
+            XCTAssertTrue(close.exists)
+            web.coordinate(withNormalizedOffset:CGVector(dx:0.005,dy:0.005)).tap()
+            let dismissed=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == false"),object:close)
+            XCTAssertEqual(XCTWaiter.wait(for:[dismissed],timeout:5),.completed)
+            opener.tap();XCTAssertTrue(close.waitForExistence(timeout:5));close.tap()
+            XCTAssertFalse(close.exists)
+        }}
+        let evidence=XCTAttachment(screenshot:app.screenshot());evidence.name="Both Settings dialogs safely dismissed by real touch";evidence.lifetime = .keepAlways;add(evidence)
+    }
     @MainActor func testTouchNavigationOrderingAndColdLaunch() throws {
         let app=XCUIApplication();XCUIDevice.shared.orientation = .portrait;app.launch()
         let web=app.webViews["production-desk-webview"]

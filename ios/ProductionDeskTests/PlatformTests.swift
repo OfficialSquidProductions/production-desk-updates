@@ -5,6 +5,25 @@ import UIKit
 @testable import ProductionDesk
 
 final class PlatformTests: XCTestCase {
+    @MainActor func testNativeLoadedEmptyCollectionsRemainIndependent() async throws {
+        let desk=DeskViewController();desk.loadViewIfNeeded()
+        for _ in 0..<150 {
+            if (try? await desk.webView.evaluateJavaScript("document.body?.dataset.appReady==='true'")) as? Bool==true {break}
+            try await Task.sleep(for:.milliseconds(100))
+        }
+        let result=try await desk.webView.callAsyncJavaScript("""
+        const {nativeAPI}=await import('/native-platform.js'),{emptyProject,importScript}=await import('/film-native.js'),{loadScriptIntoProduction}=await import('/project-file.js');
+        const p=emptyProject('Native array identity fixture');await nativeAPI('/api/workspace',{version:1,projects:[p],activeProject:p.id});
+        const raw=await window.webkit.messageHandlers.scheduler.postMessage({operation:'load'}),r=raw.projects[0];
+        const loaded=await nativeAPI('/api/workspace'),q=loaded.projects[0];
+        const merged=loadScriptIntoProduction(loaded,importScript('1 INT. ROOM - DAY\\n\\nMAYA\\nSynthetic native import.','Script.fountain')).workspace;
+        return {rawAliases:r.breakdowns===r.stripboards[0].boards[1].breakdownIds,normalizedAliases:q.breakdowns===q.stripboards[0].boards[1].breakdownIds,scenes:merged.projects[0].breakdowns.length,scheduleIDs:merged.projects[0].stripboards[0].boards[1].breakdownIds.length,identityPreserved:merged.activeProject===p.id};
+        """,arguments:[:],in:nil,contentWorld:.page)
+        let evidence=try XCTUnwrap(result as? [String:Any]);XCTAssertEqual(evidence["normalizedAliases"] as? Bool,false)
+        XCTAssertEqual(evidence["scenes"] as? Int,1);XCTAssertEqual(evidence["scheduleIDs"] as? Int,1);XCTAssertEqual(evidence["identityPreserved"] as? Bool,true)
+        let attachment=XCTAttachment(string:String(describing:evidence));attachment.name="Native bridge raw and normalized array identities";attachment.lifetime = .keepAlways;add(attachment)
+        print("Native array identity evidence: \(evidence)")
+    }
     func testOfflineResourcesAndTraversalProtection() throws {
         let root = try XCTUnwrap(Bundle.main.url(forResource: "Web", withExtension: nil))
         let scheme = LocalWebScheme(root: root)

@@ -2,15 +2,27 @@ import XCTest
 import WebKit
 import UIKit
 import PDFKit
+import Vision
 @testable import ProductionDesk
 
 /// Exercises the shipped ES modules, DOM controls and real native save bridge.
 final class RuntimeWorkflowTests: XCTestCase {
+    private var seeded = false
+    private var retainedControllers: [DeskViewController] = []
     @MainActor private func openDesk() async throws -> DeskViewController {
         let controller = DeskViewController()
+        retainedControllers.append(controller)
         controller.loadViewIfNeeded()
         for _ in 0..<150 {
-            if let ready = try? await controller.webView.evaluateJavaScript("document.body?.dataset.appReady === 'true'"), ready as? Bool == true { return controller }
+            if let ready = try? await controller.webView.evaluateJavaScript("document.body?.dataset.appReady === 'true'"), ready as? Bool == true {
+                if !seeded {
+                    seeded = true
+                    // Tests formerly depended on script import creating a fresh
+                    // production. Seed one explicitly now that imports preserve it.
+                    _ = try await controller.webView.callAsyncJavaScript("const {emptyProject}=await import('/film-native.js');const {nativeAPI}=await import('/native-platform.js');const p=emptyProject('Independent runtime fixture');p._shots=[];p._shotSettings={startTime:'07:00'};await nativeAPI('/api/workspace',{version:1,activeProject:p.id,projects:[p]});localStorage.setItem('productionDeskPreferences',JSON.stringify({theme:'light',linedShowMovement:false,linedShowDescription:false}));localStorage.setItem('productionDeskTheme','light');return true;",arguments:[:],in:nil,contentWorld:.page)
+                    return try await openDesk()
+                } else { return controller }
+            }
             try await Task.sleep(for: .milliseconds(100))
         }
         let content = try? await controller.webView.evaluateJavaScript("document.body?.innerText")
@@ -45,6 +57,44 @@ final class RuntimeWorkflowTests: XCTestCase {
     @MainActor func testLatestLinedControlsAndOpaqueRetiredOrder() async throws { try await runParityFixture("lined-controls") }
     @MainActor func testLatestShotNavigationAndDeletion() async throws { try await runParityFixture("shot-navigation") }
     @MainActor func testLatestScheduleDragPlacementAndPreservation() async throws { try await runParityFixture("schedule-drag") }
+    @MainActor func testSettingsBackdropAndCurrentScriptSessionAnnotations() async throws {
+        let desk = try await openDesk()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = try XCTUnwrap(scene.windows.first(where: { $0.isKeyWindow }))
+        let original = window.rootViewController
+        defer { window.rootViewController = original }
+        window.rootViewController = desk; desk.view.layoutIfNeeded()
+        let bundle = Bundle(for: PlatformTests.self)
+        let fixture = try String(contentsOf: XCTUnwrap(bundle.url(forResource:"script-session-parity",withExtension:"js",subdirectory:"Fixtures")),encoding:.utf8)
+        let result = try await desk.webView.callAsyncJavaScript("const run="+fixture+";return await run();",arguments:[:],in:nil,contentWorld:.page)
+        let report = try XCTUnwrap(result as? [String:Any])
+        let pdfs = try XCTUnwrap(report["pdfs"] as? [String]); XCTAssertEqual(pdfs.count,4)
+        for (index, encoded) in pdfs.enumerated() {
+            let pdf = try XCTUnwrap(PDFDocument(data:XCTUnwrap(Data(base64Encoded:encoded))))
+            XCTAssertTrue(pdf.string?.contains("A fictional clock ticks.")==true)
+            // Annotation overlays are deliberately rasterized over the original
+            // selectable PDF. Inspect their actual rendered pixels with Vision.
+            let page=try XCTUnwrap(pdf.page(at:0)),image=page.thumbnail(of:CGSize(width:2200,height:3200),for:.mediaBox)
+            let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate
+            try VNImageRequestHandler(cgImage:try XCTUnwrap(image.cgImage),options:[:]).perform([request])
+            let text=(request.results ?? []).compactMap{$0.topCandidates(1).first?.string}.joined(separator:" ").replacingOccurrences(of:"\\s+",with:" ",options:.regularExpression)
+            let data = try XCTUnwrap(Data(base64Encoded:encoded))
+            try data.write(to:FileManager.default.urls(for:.documentDirectory,in:.userDomainMask)[0].appendingPathComponent("QA-annotations-\(index).pdf"))
+            print("Annotation PDF \(index) text: \(text.prefix(1600))")
+            XCTAssertTrue(text.contains("Medium close-up")); XCTAssertFalse(text.contains("Shot Size:"))
+            XCTAssertEqual(text.contains("Slow dolly"),[1,3].contains(index))
+            XCTAssertEqual(text.contains("DESCRIPTION END"),[2,3].contains(index))
+            let attachment=XCTAttachment(data:try XCTUnwrap(Data(base64Encoded:encoded)),uniformTypeIdentifier:"com.adobe.pdf")
+            attachment.name="Lined annotations combination \(index)";attachment.lifetime = .keepAlways;add(attachment)
+        }
+        let settings = try String(contentsOf:XCTUnwrap(bundle.url(forResource:"settings-dialog-parity",withExtension:"js",subdirectory:"Fixtures")),encoding:.utf8)
+        let checks = try await desk.webView.callAsyncJavaScript("const run="+settings+";return await run();",arguments:[:],in:nil,contentWorld:.page)
+        XCTAssertEqual((checks as? [String])?.count,4)
+        let reopened = try await openDesk(); window.rootViewController = reopened;reopened.view.layoutIfNeeded()
+        let persisted = try await reopened.webView.callAsyncJavaScript("const w=await window.webkit.messageHandlers.scheduler.postMessage({operation:'load'});const p=w.projects.find(p=>p.id===w.activeProject);return p._shots.map(s=>s.number);",arguments:[:],in:nil,contentWorld:.page)
+        XCTAssertEqual(persisted as? [String],["7.1","7.2","3.2","3.3","3.4"])
+        let evidence=XCTAttachment(string:String(describing:report["checks"])+"\n"+String(describing:checks));evidence.name="Current production import, repeated renumber, settings and exports";evidence.lifetime = .keepAlways;add(evidence)
+    }
 
     @MainActor func testNavigationTabOrderPersistenceFailureAndRestore() async throws {
         let desk = try await openDesk()
@@ -134,7 +184,7 @@ final class RuntimeWorkflowTests: XCTestCase {
         $('#paste-script').value='1 INT. FIRST ROOM - DAY\n\nUntouched.\n\n2 EXT. SECOND ROOM - NIGHT\n\n'+('The copper lantern lights the road.\n\n'.repeat(140));
         $('#import-submit').click();
         for(let i=0;i<200&&$('#modal').open;i++)await new Promise(r=>setTimeout(r,25));
-        expect(!$('#modal').open,'Import failed');
+        expect(!$('#modal').open,'Import failed: '+$('#modal-error')?.textContent);
         $('#scene-picker').value=$('#scene-picker').options[1].value;$('#scene-picker').dispatchEvent(new Event('change',{bubbles:true}));
         const sceneID=$('#scene-picker').value,script=$('#script-text'),shell=$('#workspace-shell');
         const show=pane=>$('[data-workspace-pane="'+pane+'"]').click();
@@ -564,7 +614,9 @@ final class RuntimeWorkflowTests: XCTestCase {
         const noControls=!document.querySelector('#load-demo,#demo-guide,#demo-launcher');
         const web=await fetch('/demo/the-last-light.productiondesk').then(r=>r.ok).catch(()=>false);
         const field=document.querySelector('[data-field="description"]');field.value='Imported sample remains editable';field.dispatchEvent(new Event('input',{bubbles:true}));
-        const edited=await load(),portable=projectFile(edited),second=await importText();
+        const edited=await load(),active=edited.projects.find(p=>p.id===edited.activeProject),single={version:1,activeProject:active.id,projects:[active]};
+        single._pdfDocuments=await window.webkit.messageHandlers.scheduler.postMessage({operation:'backupPDFs',workspace:single});
+        const portable=projectFile(single),second=await importText();
         const retained=edited.projects.every(p=>same(p,second.projects.find(q=>q.id===p.id)));
         document.querySelector('#undo').click();const undone=await load();
         return {noControls,noAsset:!web,preserved,retained,count:first.projects.length===before.projects.length+1,
@@ -576,7 +628,7 @@ final class RuntimeWorkflowTests: XCTestCase {
         let v=try XCTUnwrap(result as? [String:Any])
         for key in ["noControls","noAsset","preserved","retained","count","secondCount","undo","script"] {XCTAssertEqual(v[key] as? Bool,true,key)}
         XCTAssertEqual(v["edit"] as? String,"Imported sample remains editable")
-        XCTAssertEqual(v["shots"] as? Int,16);XCTAssertGreaterThan(v["pdfs"] as? Int ?? 0,0)
+        XCTAssertEqual(v["shots"] as? Int,1);XCTAssertGreaterThan(v["pdfs"] as? Int ?? 0,0)
     }
 
     @MainActor func testSidebarWithoutDemoAndSaveFailureRecovery() async throws {

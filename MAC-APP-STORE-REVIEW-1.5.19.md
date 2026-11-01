@@ -48,7 +48,10 @@ required for the packaged backend's 127.0.0.1 ephemeral listener, not remote
 sharing. No entitlement was indiscriminately removed.
 
 Xcode reports upload success for 1.5.19 (39); App Store Connect independently
-shows the upload processing. Version, truthful current-feature description and
+processed it as Ready to Submit, then accepted its resubmission. It is Waiting
+for Review as of November 1, 2026, 3:11 PM local. Build UUID is
+`1fafccc7-5903-495e-9c01-a06902ea07a4`; the existing submission ID is unchanged.
+The receipt screenshot is `windows-src/build/store-20261101/mac-review-receipt.jpg`. Version, truthful current-feature description and
 3,758-character remediation/reproduction notes were saved. Free pricing,
 privacy declarations, existing release-after-approval setting, listings and
 signing/account settings were preserved. Final submission receipt is recorded

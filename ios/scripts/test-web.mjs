@@ -177,6 +177,18 @@ test('native first launch seeds and saves a valid workspace only after a confirm
   assert.deepEqual(calls[1].workspace,value);
   assert.equal(value.projects[0].source,'Production Desk — Local Film Scheduler');
 });
+test('native loads separate aliased empty arrays before importing into the current production',async()=>{
+ const p=emptyProject('Existing production'),shared=[];
+ p.breakdowns=shared;p.elements=shared;p.stripboards[0].boards[0].breakdownIds=shared;p.stripboards[0].boards[1].breakdownIds=shared;
+ const value=workspace(p);bridge(()=>value);
+ const loaded=await nativeAPI('/api/workspace');
+ assert.notEqual(loaded.projects[0].breakdowns,loaded.projects[0].stripboards[0].boards[1].breakdownIds);
+ const {loadScriptIntoProduction}=await import('../ProductionDesk/Web/project-file.js');
+ const result=loadScriptIntoProduction(loaded,importScript('1 INT. ROOM - DAY\n\nMAYA\nA clock ticks.','Script.fountain')).workspace;
+ assert.equal(result.projects.length,1);assert.equal(result.activeProject,p.id);assert.equal(result.projects[0].breakdowns.length,1);
+ assert.equal(result.projects[0].stripboards[0].boards[1].breakdownIds.length,1);assert.ok(result.projects[0].elements.length>=4);
+ validateWorkspace(result);assert.deepEqual(shared,[]);
+});
 test('native corrupt or failed loads are never overwritten with a blank project', async () => {
   let calls=bridge(()=>({version:1,projects:[]}));
   await assert.rejects(()=>nativeAPI('/api/workspace'),/Invalid workspace/);
