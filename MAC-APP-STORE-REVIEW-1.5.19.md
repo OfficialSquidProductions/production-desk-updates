@@ -61,3 +61,8 @@ Windows publication remains held until native Windows VM testing. Source
 commits use `[skip ci]` because main-path pushes otherwise trigger its installer
 publication workflow. This Store-only work does not alter the public Mac
 1.5.19 (51) feed or immutable artifacts.
+
+Final live verification: Apple completed review and **approved 1.5.19 (39)**.
+The existing macOS listing now shows **1.5.19 Ready for Distribution** under
+its unchanged automatic release setting. Approval receipt:
+`windows-src/build/store-20261101/mac-review-approved.jpg`.
