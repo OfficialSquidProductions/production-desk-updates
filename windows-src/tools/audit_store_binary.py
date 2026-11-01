@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+from audit_store_policy import audit_policy
 
 MAGIC = {bytes.fromhex(s) for s in ['feedface','cefaedfe','feedfacf','cffaedfe','cafebabe','bebafeca','cafebabf','bfbafeca']}
 TCL = '''TclBN_mp_clear TclBN_mp_init TclBN_mp_read_radix TclBN_mp_to_unsigned_bin_n
@@ -68,7 +69,9 @@ def audit(app, output):
                 failures.append({'file':relative,'externalDependency':dependency})
         records.append({'file':relative,'architectures':arches,'dependencies':dependencies,'rejectedSymbolMatches':hits})
     if not records: failures.append({'emptyNativeAudit':True})
-    result = {'passed':not failures,'rejectionDate':'2026-10-26','symbolCount':len(SYMBOLS),
+    policy = audit_policy(app)
+    failures.extend(policy['failures'])
+    result = {'passed':not failures,'rejectionDate':'2026-10-26','installerPolicyAudit':policy,'symbolCount':len(SYMBOLS),
               'forbiddenSymbols':SYMBOLS,'nativeFileCount':len(records),'files':records,'failures':failures}
     output.write_text(json.dumps(result,indent=2) + '\n')
     if failures: raise ValueError('Packaged binary audit failed; see ' + str(output))

@@ -13,7 +13,7 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
-from prepare_store_python import ABI, SHA256, VERSION, hashes, symlinks
+from prepare_store_python import ABI, SHA256, VERSION, COMPLIANCE_SHA256, hashes, symlinks
 from audit_store_binary import audit
 
 TEAM = 'FZ298DXLS3'
@@ -78,6 +78,8 @@ def build(args):
         runtime_source = json.loads((framework.parent / 'runtime-source.json').read_text())
         if framework.name != 'Python.framework' or runtime_source['version'] != VERSION or runtime_source['installerSha256'] != SHA256 or runtime_source['hashes'] != hashes(framework) or runtime_source['symlinks'] != symlinks(framework):
             raise ValueError('Prepared Python runtime differs from its pinned source manifest.')
+        if runtime_source.get('appStoreCompliance', {}).get('patchSha256') != COMPLIANCE_SHA256:
+            raise ValueError('Prepare a new runtime with the pinned CPython App Store compliance patch.')
         frameworks = contents / 'Frameworks'; frameworks.mkdir()
         shutil.copytree(framework, frameworks / framework.name, symlinks=True)
         python = frameworks / ('Python.framework/Versions/' + ABI)

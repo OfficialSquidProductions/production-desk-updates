@@ -40,7 +40,16 @@ python3 tools/prepare_store_python.py --installer /path/python-3.14.10-macos11.p
 Pass `--python-framework /absolute/new/python-runtime/Python.framework` to the
 Store builder. Preparation verifies the release checksum and Apple-trusted PSF
 signature, removes the complete unused Tk/Tcl, LZMA and SSL/OpenSSL components,
-and relocates packaged dynamic dependencies. The app uses plain loopback HTTP
+and relocates packaged dynamic dependencies. It applies the pinned official
+CPython 3.14.10 App Store compliance patch to `urllib.parse`, removing the
+`itms-services` scheme registration (the same library change as Python's
+`--with-app-store-compliance` option). Patch provenance and before/after hashes
+are recorded outside the shipped app. Old runtime manifests are rejected.
+The complete final payload, including compressed archives/bytecode, is audited
+for installer-scheme references, Sparkle components/metadata and URL handlers.
+The real native navigation policy is tested against installer/external URLs;
+only the active loopback origin and explicit support email links are allowed.
+The app uses plain loopback HTTP
 and SHA-256 for PDF integrity; hashing uses Python 3.14.10's built-in `_sha2`
 implementation. Installer scripts and pip are never run. Original Python licenses
 and installer dependency notices are retained. The builder verifies the complete

@@ -242,21 +242,28 @@ final class ProductionDeskApp: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
-        if url.scheme == "about" { decisionHandler(.allow); return }
-        if navigationAction.navigationType == .linkActivated,
-           navigationAction.sourceFrame.isMainFrame,
-           isSupportMailto(url) {
+        let destination = editorNavigationDestination(navigationAction.request.url,
+            linkActivated: navigationAction.navigationType == .linkActivated,
+            mainFrame: navigationAction.sourceFrame.isMainFrame,
+            download: navigationAction.shouldPerformDownload)
+        switch destination {
+        case .supportEmail:
+            guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
-            return
+        case .allow: decisionHandler(.allow)
+        case .download: decisionHandler(.download)
+        case .cancel: decisionHandler(.cancel)
         }
-        guard url.scheme == "http", url.host == "127.0.0.1", url.port == localOrigin?.port else {
-            decisionHandler(.cancel)
-            return
-        }
-        if navigationAction.shouldPerformDownload || url.path.hasPrefix("/api/download/") { decisionHandler(.download) }
-        else { decisionHandler(.allow) }
+    }
+
+    enum EditorNavigationDestination { case allow, cancel, download, supportEmail }
+    func editorNavigationDestination(_ url: URL?, linkActivated: Bool, mainFrame: Bool, download: Bool) -> EditorNavigationDestination {
+        guard let url = url else { return .cancel }
+        if url.scheme == "about" { return .allow }
+        if linkActivated, mainFrame, isSupportMailto(url) { return .supportEmail }
+        guard let port = localOrigin?.port, url.scheme == "http", url.host == "127.0.0.1", url.port == port else { return .cancel }
+        return download || url.path.hasPrefix("/api/download/") ? .download : .allow
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
