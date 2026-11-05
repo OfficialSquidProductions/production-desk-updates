@@ -13,3 +13,15 @@ See [portable project format](PORTABLE-PROJECTS.md) for compatibility and limits
 Shipping apps start empty and include no demo controls or screenplay. Existing productions, including previously imported samples, are retained. Synthetic fixtures live only in test targets.
 
 See [iOS 1.5.14 review evidence](IOS-APP-STORE-REVIEW-1.5.14.md) for package identity, test results, limitations and submission receipt.
+
+## Shared app icon
+
+The iPhone/iPad icon is generated from the same approved artwork as both desktop
+installers: `../windows-src/desktop/assets/ProductionDesk.png`. Run
+`swift scripts/generate-app-icon.swift` from this directory after changing that
+source. The generator preserves the full composition, scales to 1024 pixels,
+and places black behind transparent pixels for Apple's opaque iOS icon
+requirement. Do not substitute the separate Squid Productions brand logo.
+
+The icon release candidate is version 1.5.20 (42). Archive scripts prepare local
+candidates only; App Store upload and review are separate release steps.
