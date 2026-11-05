@@ -74,6 +74,11 @@ caches, proprietary fonts, Mac signing keys and Apple frameworks are excluded.
 
 ## Publishing updates
 
+The 1.5.20 icon candidate has `publication_hold: true` in this platform's
+`release.json` until owner-VM validation is complete. Builds and tests still run;
+the publish step is disabled even on main or a manual workflow. Remove the hold
+only after the requested Windows validation and release approval are complete.
+
 Increase `desktop/release.json`'s version for every new Windows release, and keep
 `desktop/windows/package.json` and `package-lock.json` in sync. The workflow validates
 code changes and pull requests, but publishes only a newer application version on
