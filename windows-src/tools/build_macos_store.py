@@ -130,7 +130,7 @@ def build(args):
         (helper_dwarf / 'extract_pdf-arm64').unlink()
         run('lipo','-create',cache / 'extract_pdf-arm64.dSYM/Contents/Resources/DWARF/extract_pdf-arm64',cache / 'extract_pdf-x86_64.dSYM/Contents/Resources/DWARF/extract_pdf-x86_64','-output',helper_dwarf / 'extract_pdf')
     run('swiftc','-module-cache-path',cache / 'swift',source_dir / 'Icon.swift','-o',cache / 'render-icon')
-    icon_source = root / ('web/assets/sp-logo.png' if pd else 'dist/assets/sp-blue.png')
+    icon_source = root / ('desktop/assets/ProductionDesk.png' if pd else 'dist/assets/sp-blue.png')
     run(cache / 'render-icon',cache / 'App.iconset',icon_source)
     run('iconutil','-c','icns',cache / 'App.iconset','-o',resources / 'App.icns')
     sdk = subprocess.check_output(['xcrun','--sdk','macosx','--show-sdk-version'],text=True).strip()

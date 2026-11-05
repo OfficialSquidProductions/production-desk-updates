@@ -18,16 +18,11 @@ def main():
     config = json.loads(package.read_text())
     config['version'] = release['version']
     package.write_text(json.dumps(config, indent=2) + '\n', encoding='utf-8')
-    from PIL import Image
-    assets = ROOT / 'desktop/windows/assets'
-    assets.mkdir(parents=True, exist_ok=True)
-    logo = Image.open(ROOT / 'web/assets/sp-logo.png').convert('RGBA')
-    logo.thumbnail((224, 224))
-    canvas = Image.new('RGBA', (256, 256), (25, 20, 25, 255))
-    canvas.alpha_composite(logo, ((256-logo.width)//2, (256-logo.height)//2))
-    canvas.save(assets / 'icon.ico', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
+    from app_icon import build_windows_icon
+    icon = build_windows_icon()
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
                     '--onedir', '--console', '--name', 'ProductionDeskServer',
+                    '--icon', str(icon),
                     '--distpath', str(ROOT / 'build/windows/backend'),
                     '--workpath', str(ROOT / 'build/windows/pyinstaller'),
                     '--specpath', str(ROOT / 'build/windows'),

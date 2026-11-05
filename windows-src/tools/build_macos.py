@@ -53,7 +53,7 @@ def build(dmg=True, share=True, update_release=False, release_notes=None, previe
     icon_helper = ROOT / ".cache" / "render-icon"
     run("swiftc", "-module-cache-path", ROOT / ".cache" / "swift", ROOT / "desktop" / "Icon.swift", "-o", icon_helper)
     iconset = ROOT / ".cache" / "ProductionDesk.iconset"
-    run(icon_helper, iconset, ROOT / "web/assets/sp-logo.png")
+    run(icon_helper, iconset, ROOT / "desktop/assets/ProductionDesk.png")
     run("iconutil", "-c", "icns", iconset, "-o", resources / "ProductionDesk.icns")
     shutil.copy2(ROOT / "README.md", resources / "README.md")
     with open(contents / "Info.plist", "wb") as file:
