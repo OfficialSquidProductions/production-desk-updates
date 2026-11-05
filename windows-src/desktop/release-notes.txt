@@ -1,11 +1,3 @@
-Production Desk 1.5.19 (51) for Mac
+Production Desk 1.5.20 (52) for Mac
 
-Lined Script annotations now show just the shot-size value, such as Medium, without a Shot Size label. PDF exports use the same clean labels. Optional camera movement and shot descriptions remain available in Settings.
-
-Click outside Settings or Production settings to close the menu, or use the X. Inside clicks keep the menu open, and outside clicks do not activate controls behind it. Global settings continue to save automatically; Production settings keep their explicit Save settings action.
-
-Settings now uses spaced, aligned annotation-option rows and a clear gap before Key Binds, with readable labels in smaller windows.
-
-Includes the current-production script-import and continuous shot-numbering fixes from Mac 1.5.18 (49).
-
-This update is for the direct-download Mac version only. Windows and App Store releases remain on hold.
+Uses the new Production Desk artwork for the installed app, Dock, Finder and installer icon. Existing projects, preferences, app identity and updater trust remain unchanged.

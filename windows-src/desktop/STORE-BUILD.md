@@ -99,3 +99,12 @@ Run `node --test tests/mac-store-exports.cjs tests/platform-branding.cjs` plus
 `swiftc desktop/StoreExports.swift tests/MacStoreExportCheck.swift -o /tmp/store-export-check`
 and `/tmp/store-export-check` for focused regressions. Actual signed sandbox
 save/cancel/CSV and portable round-trip checks are still required before upload.
+
+## Universal Production Desk icon
+
+Production Desk Store builds use `desktop/assets/ProductionDesk.png` through
+`desktop/Icon.swift`, identical to the direct-download Mac artwork. The renderer
+resizes the complete image without cropping or regenerating it. The separate
+Squid Productions logo is not the app icon. Scenic's separate source path is
+unchanged. Use the next inspected Store build number when preparing a release;
+the desktop updater's build counter is independent of the Mac App Store counter.
