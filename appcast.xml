@@ -3,6 +3,17 @@
     <channel>
         <title>Production Desk</title>
         <item>
+            <title>1.5.20</title>
+            <pubDate>Thu, 05 Nov 2026 11:20:31 -0500</pubDate>
+            <sparkle:version>52</sparkle:version>
+            <sparkle:shortVersionString>1.5.20</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[<!doctype html><html><head><meta charset="utf-8"><title>Production Desk 1.5.20 (52)</title></head><body><h1>Production Desk 1.5.20 (52) for Mac</h1><p>Uses the new Production Desk artwork for the installed app, Dock, Finder and installer icon.</p><p>Existing projects, preferences, app identity and updater trust remain unchanged.</p></body></html>
+]]></description>
+            <enclosure url="https://github.com/OfficialSquidProductions/production-desk-updates/releases/download/macos-1.5.20-build-52/Production-Desk-1.5.20-52.zip" length="23875603" type="application/octet-stream" sparkle:edSignature="coo3PX2YKscPXmmqHm8nJE4pih2VfN2+g8Zn0+t7yQxVcOwe+SIdqrCyhuyk8x8n2YH3OJOYq0z+dUeYUxjhDw=="/>
+        </item>
+        <item>
             <title>1.5.19</title>
             <pubDate>Sun, 01 Nov 2026 13:58:30 -0500</pubDate>
             <sparkle:version>51</sparkle:version>
