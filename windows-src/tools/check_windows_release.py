@@ -70,6 +70,13 @@ def main():
     args = parser.parse_args()
     config = release_config()
     candidate = config['version']
+    if config.get('publication_hold') is True:
+        if args.require_newer:
+            raise ValueError('Windows publication is on hold until owner-VM validation is complete.')
+        if args.output:
+            args.output.write_text('publish=false\nprevious_version=\n', encoding='utf-8')
+        print('Windows publication is on hold: validation only; no release will be published.')
+        return
     if config.get('channel') == 'beta':
         if args.require_newer:
             raise ValueError('Beta builds cannot publish to the production update channel.')

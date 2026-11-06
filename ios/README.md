@@ -13,3 +13,11 @@ See [portable project format](PORTABLE-PROJECTS.md) for compatibility and limits
 Shipping apps start empty and include no demo controls or screenplay. Existing productions, including previously imported samples, are retained. Synthetic fixtures live only in test targets.
 
 See [iOS 1.5.14 review evidence](IOS-APP-STORE-REVIEW-1.5.14.md) for package identity, test results, limitations and submission receipt.
+
+## Original SP app icon
+
+The iPhone/iPad asset is restored byte for byte from the pre-redesign source.
+The tracked 1024px opaque `AppIcon.png` is the red SP monogram on white.
+Archive scripts preserve that asset directly. The local replacement candidate
+is 1.5.20 (43); signing, upload and replacement of the pending review require
+current App Store Connect access.

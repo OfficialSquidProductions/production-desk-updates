@@ -99,3 +99,10 @@ Run `node --test tests/mac-store-exports.cjs tests/platform-branding.cjs` plus
 `swiftc desktop/StoreExports.swift tests/MacStoreExportCheck.swift -o /tmp/store-export-check`
 and `/tmp/store-export-check` for focused regressions. Actual signed sandbox
 save/cancel/CSV and portable round-trip checks are still required before upload.
+
+## Original SP application icon
+
+Production Desk Store builds use the original `desktop/Icon.swift` renderer
+with `web/assets/sp-logo.png`, matching the original direct-download Mac tile.
+The red SP mark stays proportional on white. Scenic's separate source path is
+unchanged. Store and direct-download build counters remain independent.

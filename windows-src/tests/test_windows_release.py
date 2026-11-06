@@ -77,3 +77,24 @@ class WindowsReleaseTests(unittest.TestCase):
                 latest.assert_not_called()
                 with patch.object(sys,'argv',args+['--require-newer']), self.assertRaisesRegex(ValueError,'Beta'):
                     release.main()
+
+    def test_owner_validation_hold_blocks_push_and_manual_publication(self):
+        import json
+        import sys
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'desktop/windows').mkdir(parents=True)
+            (root / 'desktop/windows/release.json').write_text(json.dumps({
+                'channel': 'stable', 'version': '1.5.20', 'publication_hold': True}))
+            output = root / 'outputs'
+            for event in ('push', 'workflow_dispatch'):
+                args = ['gate', '--repository', 'owner/repo', '--event', event,
+                        '--ref', 'refs/heads/main', '--output', str(output)]
+                with patch.object(release, 'ROOT', root), patch.object(sys, 'argv', args), patch.object(release, 'latest_version') as latest:
+                    release.main()
+                    self.assertIn('publish=false', output.read_text())
+                    latest.assert_not_called()
+                    with patch.object(sys, 'argv', args + ['--require-newer']), self.assertRaisesRegex(ValueError, 'on hold'):
+                        release.main()
