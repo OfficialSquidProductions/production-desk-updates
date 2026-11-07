@@ -3,6 +3,18 @@
     <channel>
         <title>Production Desk</title>
         <item>
+            <title>1.5.21</title>
+            <pubDate>Sat, 07 Nov 2026 15:14:06 +0000</pubDate>
+            <sparkle:version>53</sparkle:version>
+            <sparkle:shortVersionString>1.5.21</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[<h2>Production Desk 1.5.21</h2>
+<p>Restores the original SP application icon. Project data, editing features and update settings are unchanged.</p>
+]]></description>
+            <enclosure url="https://github.com/OfficialSquidProductions/production-desk-updates/releases/download/macos-1.5.21-build-53/Production-Desk-1.5.21-53.zip" length="21317063" type="application/octet-stream" sparkle:edSignature="EESTpzByvueLXWM8iSNEiIQAVo2PjY2s5Isy5wDU3CKqJjICBs45FQdrzB3v8g+dKKVKEij3X9fx4v6qjBNaBw=="/>
+        </item>
+        <item>
             <title>1.5.20</title>
             <pubDate>Thu, 05 Nov 2026 19:06:52 +0000</pubDate>
             <sparkle:version>52</sparkle:version>

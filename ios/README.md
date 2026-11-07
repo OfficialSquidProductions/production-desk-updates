@@ -19,5 +19,5 @@ See [iOS 1.5.14 review evidence](IOS-APP-STORE-REVIEW-1.5.14.md) for package ide
 The iPhone/iPad asset is restored byte for byte from the pre-redesign source.
 The tracked 1024px opaque `AppIcon.png` is the red SP monogram on white.
 Archive scripts preserve that asset directly. The local replacement candidate
-is 1.5.20 (43); signing, upload and replacement of the pending review require
+is 1.5.21 (43); signing, upload and replacement of the pending review require
 current App Store Connect access.
